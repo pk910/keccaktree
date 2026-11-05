@@ -29,25 +29,15 @@ all: $(libname) test bench
 # generated sources are committed; regenerate with `make gen`
 gen:
 	python3 ../tools/gen_core.py > keccak256_core.inc
-	python3 ../tools/gen_core.py --ternlog > keccak256_core_tl.inc
 	python3 ../tools/gen_hybrid.py --rc-table > keccak_lazy_rc.h
 	python3 ../tools/gen_hybrid.py --vec 0 --scal 1 --lazy > hybrid/arm_v0s1.inc
 	python3 ../tools/gen_hybrid.py --vec 1 --scal 1 --lazy > hybrid/arm_v1s1.inc
 
-# x86-64 kernels build from the committed assembly in asm/ (regenerate with
-# tools/gen_x86_asm.sh). X86_ASM=0 builds them from the intrinsics instead.
-X86_ASM ?= 1
-ifeq ($(X86_ASM),1)
-$(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S
+# x86-64 kernels are hand-written assembly; the AVX-512 ones share their
+# rounds (keccak256_avx512.inc) and all share the function frame.
+X86_INC = asm/keccak256_x86_frame.inc asm/keccak256_avx512.inc
+$(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o: $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(X86_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
-else
-$(OBJ_DIR)/keccak256_avx512_x8.o: keccak256_avx512_x8.c keccak256_core_tl.inc
-	$(CC) $(CFLAGS) -mavx512f -mavx512vl -c $< -o $@
-$(OBJ_DIR)/keccak256_avx512vl_x4.o: keccak256_avx2_x4.c keccak256_core_tl.inc
-	$(CC) $(CFLAGS) -DKT_AVX512VL -mavx2 -mavx512f -mavx512vl -c $< -o $@
-$(OBJ_DIR)/keccak256_avx2_x4.o: keccak256_avx2_x4.c keccak256_core.inc
-	$(CC) $(CFLAGS) -mavx2 -c $< -o $@
-endif
 # AArch64 kernels likewise build from asm/ (tools/gen_arm_asm.sh); ARM_ASM=0
 # builds them from C. scalar_x1 and sha3_x3 are keccak256_hybrid_arm.c.
 ARM_ASM ?= 1
