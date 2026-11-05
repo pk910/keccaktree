@@ -97,10 +97,12 @@
 .endm
 
 /* the same with the parities in lanes i1 and i2 at c in memory (the base
- * expression c must not contain spaces) */
+ * expression c must not contain spaces). c2 is loaded first: a shift with
+ * a memory operand would get an EVEX encoding from the assembler. */
 .macro THETA_DM d, c, i1, i2, t
-	vpsllq		\d, LANE(\c, \i2), 1
-	vpsrlq		\t, LANE(\c, \i2), 63
+	vmovdqa		\d, LANE(\c, \i2)
+	vpsrlq		\t, \d, 63
+	vpaddq		\d, \d, \d
 	vpor		\d, \d, \t
 	vpxor		\d, \d, LANE(\c, \i1)
 .endm
