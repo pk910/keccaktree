@@ -16,17 +16,18 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 var hasSHA3 = cpuid.CPU.Supports(cpuid.SHA3)
 
 // armLazy and armN1 pick the lazy-rotation kernels (sha3_x3 with FEAT_SHA3,
-// scalar_x1 without) on Arm Ltd cores; see keccaktree_arm_select in
+// scalar_x1 without) on Arm Ltd cores and armApple the explicit-rotation
+// hybrid sha3_x3r on Apple cores; see keccaktree_arm_select in
 // src/keccaktree.c. cpuid only knows the MIDR when the kernel exposes it.
-var armLazy, armN1 = armSelect(cpuid.CPU.VendorID, (cpuid.CPU.Model>>4)&0xfff)
+var armLazy, armN1, armApple = armSelect(cpuid.CPU.VendorID, (cpuid.CPU.Model>>4)&0xfff)
 
-func armSelect(vendor cpuid.Vendor, part int) (lazy, n1 bool) {
-	return vendor == cpuid.ARM, vendor == cpuid.ARM && part == 0xd0c
+func armSelect(vendor cpuid.Vendor, part int) (lazy, n1, apple bool) {
+	return vendor == cpuid.ARM, vendor == cpuid.ARM && part == 0xd0c, vendor == cpuid.Apple
 }
 
 func init() {
 	// NEON / Advanced SIMD is mandatory on every ARMv8-A (AArch64) CPU, so the
-	// neon_x2 path is always safe; hasSHA3 / armLazy / armN1 only select faster paths.
+	// neon_x2 path is always safe; hasSHA3 / armLazy / armN1 / armApple only select faster paths.
 	supportedCPU = true
 	keccaktreeHash = KeccaktreeHash
 }

@@ -16,8 +16,9 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 var hasSHA3 = cpuid.CPU.Supports(cpuid.SHA3)
 
 // Apple cores run EOR/BIC with a rotated operand slowly, so the
-// lazy-rotation kernels (sha3_x3, scalar_x1) are never selected here.
-var armLazy, armN1 = false, false
+// lazy-rotation kernels (sha3_x3, scalar_x1) are never selected here;
+// armApple picks sha3_x3r, the hybrid with explicit rotations.
+var armLazy, armN1, armApple = false, false, true
 
 func init() {
 	// NEON / Advanced SIMD is mandatory on every ARMv8-A (AArch64) CPU, so the
