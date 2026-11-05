@@ -28,8 +28,8 @@ call the best kernel directly, chosen with `klauspost/cpuid`:
 | Platform | Kernels |
 |---|---|
 | linux/amd64, windows/amd64 | AVX-512 x8 (ymm x4 on Intel client cores), AVX2 x4 |
-| linux/arm64 | SHA3+scalar hybrid x3 (Neoverse N2/V1/V2, Graviton 3/4), SHA3 x2 (other FEAT_SHA3 cores), scalar x1 (Neoverse N1, Graviton 2), NEON x2 |
-| darwin/arm64 | ARMv8.2 SHA3 x2 (Apple M-series) |
+| linux/arm64 | SHA3+scalar hybrid x3 (Neoverse N2/V1/V2, Graviton 3/4; the ROR variant on Apple cores), SHA3 x2 (other FEAT_SHA3 cores), scalar x1 (Neoverse N1, Graviton 2), NEON x2 |
+| darwin/arm64 | SHA3+scalar hybrid x3 with explicit rotations (Apple M-series) |
 | everything else, or `CGO_ENABLED=0` | pure Go (generated from the same core) |
 
 `lib/` is rebuilt and committed by the *Update Static Libraries* workflow
