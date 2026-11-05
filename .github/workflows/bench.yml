@@ -1,0 +1,36 @@
+name: Benchmark
+
+# C-level throughput of every keccaktree kernel next to the sha256 kernels of
+# pk910/hashtree, on GitHub's hosted CPUs (Apple M-series, Neoverse arm64,
+# x86-64). Run manually, or push to a bench/** branch.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['bench/**']
+
+jobs:
+  bench:
+    name: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-14, macos-15, ubuntu-24.04-arm, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: pk910/hashtree
+          path: hashtree
+      - name: CPU
+        run: |
+          if [ "$(uname)" = Darwin ]; then sysctl -n machdep.cpu.brand_string hw.ncpu hw.perflevel0.l1icachesize || true
+          else lscpu; fi
+      - name: Build
+        run: |
+          make -C hashtree/src CC=clang "$PWD/hashtree/src/../build/lib/libhashtree.a"
+          make -C src CC=clang HASHTREE=1 HASHTREE_DIR=../hashtree test bench
+      - name: Test
+        run: KT_TEST_SHA3=$( [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo && echo 1 ) build/test
+      - name: Benchmark
+        run: for i in 1 2 3; do build/bench; echo; done

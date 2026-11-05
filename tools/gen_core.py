@@ -31,16 +31,27 @@ import sys
 RHO = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39,
        41, 45, 15, 21, 8, 18, 2, 61, 56, 14]
 
-def emit(out, ternlog=False):
-    w = out.write
+def emit(out, ternlog=False, vp='', mp='', typ='V', rounds=None):
+    """vp prefixes variable names, mp prefixes macro names (so a second,
+    differently typed stream can share a function), typ is the lane type.
+    With rounds=[] each round's lines are appended to it as a list instead of
+    being written to out (used by tools/gen_hybrid.py to interleave streams)."""
+    cur = []
+    def w(line):
+        if rounds is None:
+            out.write(line)
+        else:
+            cur.append(line)
     # state: list of expressions/variable names, None = known zero
-    st = ['a%d' % i for i in range(8)] + [None] * 17
-    st[8] = 'KC(0x0000000000000001ULL)'
-    st[16] = 'KC(0x8000000000000000ULL)'
+    st = ['%sa%d' % (vp, i) for i in range(8)] + [None] * 17
+    st[8] = mp + 'KC(0x0000000000000001ULL)'
+    st[16] = mp + 'KC(0x8000000000000000ULL)'
     for r in range(24):
         last = (r == 23)
+        if rounds is not None and r:
+            rounds.append(cur); cur = []
         w('    /* round %d */\n' % r)
-        p = 'r%d_' % r
+        p = '%sr%d_' % (vp, r)
         # theta parity
         for x in range(5):
             terms = [st[x + 5 * y] for y in range(5) if st[x + 5 * y] is not None]
@@ -48,18 +59,18 @@ def emit(out, ternlog=False):
             rest = terms[1:]
             while rest:
                 if len(rest) >= 2:
-                    expr = 'XOR3(%s, %s, %s)' % (expr, rest[0], rest[1]); rest = rest[2:]
+                    expr = mp + 'XOR3(%s, %s, %s)' % (expr, rest[0], rest[1]); rest = rest[2:]
                 else:
-                    expr = 'XOR(%s, %s)' % (expr, rest[0]); rest = rest[1:]
-            w('    V %sc%d = %s;\n' % (p, x, expr))
+                    expr = mp + 'XOR(%s, %s)' % (expr, rest[0]); rest = rest[1:]
+            w('    %s %sc%d = %s;\n' % (typ, p, x, expr))
         need_d = (not ternlog) or any(v is None for v in st)
         for x in range(5):
             if need_d:
-                w('    V %sd%d = ROL1XOR(%sc%d, %sc%d);\n' % (p, x, p, (x + 4) % 5, p, (x + 1) % 5))
+                w('    %s %sd%d = %sROL1XOR(%sc%d, %sc%d);\n' % (typ, p, x, mp, p, (x + 4) % 5, p, (x + 1) % 5))
         if ternlog:
             # theta add fused into one 3-input XOR per lane: A ^ C[x-1] ^ rotl(C[x+1],1)
             for x in range(5):
-                w('    V %se%d = ROL(%sc%d, 1);\n' % (p, x, p, x))
+                w('    %s %se%d = %sROL(%sc%d, 1);\n' % (typ, p, x, mp, p, x))
         rows = [0] if last else range(5)
         nst = [None] * 25
         for Y in rows:
@@ -72,27 +83,29 @@ def emit(out, ternlog=False):
                 rot = RHO[i]
                 src = st[i]
                 if src is None:
-                    e = ('ROL(%s, %d)' % (d, rot)) if rot else d
+                    e = (mp + 'ROL(%s, %d)' % (d, rot)) if rot else d
                 elif ternlog:
-                    x3 = 'XOR3(%s, %sc%d, %se%d)' % (src, p, (xs + 4) % 5, p, (xs + 1) % 5)
-                    e = ('ROL(%s, %d)' % (x3, rot)) if rot else x3
+                    x3 = mp + 'XOR3(%s, %sc%d, %se%d)' % (src, p, (xs + 4) % 5, p, (xs + 1) % 5)
+                    e = (mp + 'ROL(%s, %d)' % (x3, rot)) if rot else x3
                 else:
-                    e = ('XORROL(%s, %s, %d)' % (src, d, rot)) if rot else 'XOR(%s, %s)' % (src, d)
+                    e = (mp + 'XORROL(%s, %s, %d)' % (src, d, rot)) if rot else mp + 'XOR(%s, %s)' % (src, d)
                 bn = '%sb%d_%d' % (p, Y, X)
-                w('    V %s = %s;\n' % (bn, e))
+                w('    %s %s = %s;\n' % (typ, bn, e))
                 b.append(bn)
             xr = range(4) if last else range(5)
             for X in xr:
-                nn = ('o%d' % X) if last else ('s%d_%d' % (r, X + 5 * Y))
-                e = 'CHI(%s, %s, %s)' % (b[X], b[(X + 1) % 5], b[(X + 2) % 5])
+                nn = ('%so%d' % (vp, X)) if last else ('%ss%d_%d' % (vp, r, X + 5 * Y))
+                e = mp + 'CHI(%s, %s, %s)' % (b[X], b[(X + 1) % 5], b[(X + 2) % 5])
                 if X == 0 and Y == 0:
-                    e = 'IOTA(%s, %d)' % (e, r)
+                    e = mp + 'IOTA(%s, %d)' % (e, r)
                 if last:
                     w('    %s = %s;\n' % (nn, e))
                 else:
-                    w('    V %s = %s;\n' % (nn, e))
+                    w('    %s %s = %s;\n' % (typ, nn, e))
                 nst[X + 5 * Y] = nn
         st = nst
+    if rounds is not None:
+        rounds.append(cur)
 
 if __name__ == '__main__':
     o = sys.stdout

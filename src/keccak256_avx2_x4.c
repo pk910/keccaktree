@@ -75,5 +75,13 @@ void FN(unsigned char* output, const unsigned char* input, uint64_t count) {
         output += 4 * 32;
         count -= 4;
     }
+#ifndef KT_AVX512VL
+    /* one node: a 4-lane batch costs as much as four, scalar is ~25% faster
+     * (measured on Zen 3); from two nodes on the batch wins */
+    if (count == 1) {
+        keccaktree_keccak256_generic(output, input, 1);
+        return;
+    }
+#endif
     if (count) x4_batch(output, input, (unsigned)count);
 }

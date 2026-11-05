@@ -8,6 +8,10 @@
 #ifdef __x86_64__
 #include <cpuid.h>
 #endif
+#if defined(__aarch64__) && defined(__linux__)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
 #include "keccaktree.h"
 #ifdef HAVE_HASHTREE
 #include "hashtree.h"
@@ -65,6 +69,7 @@ int main(void) {
     uint32_t a = 0, b = 0, c = 0, d = 0;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
     int avx2 = b & bit_AVX2, avx512 = (b & bit_AVX512F) && (b & bit_AVX512VL), sha = b & bit_SHA;
+    (void)sha;
     if (avx2) row("keccak256 avx2_x4", keccaktree_keccak256_avx2_x4);
     if (avx512) row("keccak256 avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
     if (avx512) row("keccak256 avx512_x8", keccaktree_keccak256_avx512_x8);
@@ -76,5 +81,29 @@ int main(void) {
     if (sha) row("sha256 hashtree shani_x2", hashtree_sha256_shani_x2);
 #endif
 #endif
+#ifdef __aarch64__
+#if defined(__APPLE__)
+    int sha3 = 1, sha2 = 1;
+#elif defined(__linux__)
+    unsigned long hw = getauxval(AT_HWCAP);
+    int sha3 = (hw & HWCAP_SHA3) != 0, sha2 = (hw & HWCAP_SHA2) != 0;
+#else
+    int sha3 = 0, sha2 = 0;
+#endif
+    (void)sha2;
+    row("keccak256 scalar_x1", keccaktree_keccak256_scalar_x1);
+    row("keccak256 neon_x2", keccaktree_keccak256_neon_x2);
+    if (sha3) {
+        row("keccak256 sha3_x2", keccaktree_keccak256_sha3_x2);
+        row("keccak256 sha3_x3", keccaktree_keccak256_sha3_x3);
+    }
+#ifdef HAVE_HASHTREE
+    row("sha256 hashtree generic", hashtree_sha256_generic);
+    row("sha256 hashtree neon_x1", hashtree_sha256_neon_x1);
+    row("sha256 hashtree neon_x4", hashtree_sha256_neon_x4);
+    if (sha2) row("sha256 hashtree sha_x1", hashtree_sha256_sha_x1);
+#endif
+#endif
+    row("keccaktree_hash (auto)", keccaktree_hash);
     return 0;
 }

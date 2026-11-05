@@ -17,7 +17,13 @@ TEXT ·KeccaktreeHash(SB), 0, $2048-24
 	JMP  epilog
 
 avx512:
+	CMPB ·avx512YMM(SB), $1
+	JE   avx512ymm
 	CALL keccaktree_keccak256_avx512_x8(SB)
+	JMP  epilog
+
+avx512ymm:
+	CALL keccaktree_keccak256_avx512vl_x4(SB)
 
 epilog:
 	MOVQ BX, SP

@@ -23,8 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Generated cores and Go fallback are up to date
         run: |
-          python3 tools/gen_core.py > src/keccak256_core.inc
-          python3 tools/gen_core.py --ternlog > src/keccak256_core_tl.inc
+          make -C src gen
           python3 tools/gen_go.py > keccak256_1_generic.go
           git diff --exit-code
 

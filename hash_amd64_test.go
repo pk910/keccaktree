@@ -8,6 +8,8 @@ func activePath() string {
 	switch {
 	case !supportedCPU:
 		return "generic"
+	case hasAVX512 && avx512YMM:
+		return "avx512vl_x4"
 	case hasAVX512:
 		return "avx512_x8"
 	default:
@@ -15,16 +17,17 @@ func activePath() string {
 	}
 }
 
-func forceAMD64(supported, avx512, avx2 bool) func() func() {
+func forceAMD64(supported, avx512, avx2, ymm bool) func() func() {
 	return func() func() {
-		s, a5, a2 := supportedCPU, hasAVX512, hasAVX2
-		supportedCPU, hasAVX512, hasAVX2 = supported, avx512, avx2
-		return func() { supportedCPU, hasAVX512, hasAVX2 = s, a5, a2 }
+		s, a5, a2, y := supportedCPU, hasAVX512, hasAVX2, avx512YMM
+		supportedCPU, hasAVX512, hasAVX2, avx512YMM = supported, avx512, avx2, ymm
+		return func() { supportedCPU, hasAVX512, hasAVX2, avx512YMM = s, a5, a2, y }
 	}
 }
 
 var forcedCases = []forcedCase{
-	{"generic", true, forceAMD64(false, false, false)},
-	{"avx2_x4", hasAVX2, forceAMD64(true, false, true)},
-	{"avx512_x8", hasAVX512, forceAMD64(true, true, false)},
+	{"generic", true, forceAMD64(false, false, false, false)},
+	{"avx2_x4", hasAVX2, forceAMD64(true, false, true, false)},
+	{"avx512_x8", hasAVX512, forceAMD64(true, true, false, false)},
+	{"avx512vl_x4", hasAVX512, forceAMD64(true, true, false, true)},
 }

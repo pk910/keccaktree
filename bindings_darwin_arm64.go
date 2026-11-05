@@ -15,6 +15,10 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 // FEAT_SHA3 (EOR3/RAX1/XAR/BCAX): Apple M-series, Graviton 3+, Neoverse V1/N2+.
 var hasSHA3 = cpuid.CPU.Supports(cpuid.SHA3)
 
+// Apple cores run EOR/BIC with a rotated operand slowly, so the
+// lazy-rotation kernels (sha3_x3, scalar_x1) are never selected here.
+var armLazy, armN1 = false, false
+
 func init() {
 	// NEON / Advanced SIMD is mandatory on every ARMv8-A (AArch64) CPU, so the
 	// neon_x2 path is always safe; hasSHA3 only selects the faster sha3_x2 path.

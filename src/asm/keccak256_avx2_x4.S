@@ -9,37 +9,47 @@ keccaktree_keccak256_avx2_x4:           # @keccaktree_keccak256_avx2_x4
 	pushq	%r15
 	pushq	%r14
 	pushq	%rbx
-	movq	%rdx, %rbx
-	movq	%rsi, %r14
-	movq	%rdi, %r15
+	movq	%rdx, %r15
+	movq	%rsi, %rbx
+	movq	%rdi, %r14
 	cmpq	$4, %rdx
 	jb	.LBB0_2
 	.p2align	4, 0x90
 .LBB0_1:                                # =>This Inner Loop Header: Depth=1
-	movq	%r15, %rdi
-	movq	%r14, %rsi
+	movq	%r14, %rdi
+	movq	%rbx, %rsi
 	movl	$4, %edx
 	callq	x4_batch
-	addq	$256, %r14                      # imm = 0x100
-	subq	$-128, %r15
-	addq	$-4, %rbx
-	cmpq	$3, %rbx
+	addq	$256, %rbx                      # imm = 0x100
+	subq	$-128, %r14
+	addq	$-4, %r15
+	cmpq	$3, %r15
 	ja	.LBB0_1
 .LBB0_2:
-	testq	%rbx, %rbx
-	je	.LBB0_3
-	movq	%r15, %rdi
-	movq	%r14, %rsi
-	movl	%ebx, %edx
+	testq	%r15, %r15
+	je	.LBB0_5
+	cmpq	$1, %r15
+	jne	.LBB0_4
+	movl	$1, %edx
+	movq	%r14, %rdi
+	movq	%rbx, %rsi
 	popq	%rbx
 	popq	%r14
 	popq	%r15
-	jmp	x4_batch                        # TAILCALL
-.LBB0_3:
+	jmp	keccaktree_keccak256_generic@PLT # TAILCALL
+.LBB0_5:
 	popq	%rbx
 	popq	%r14
 	popq	%r15
 	retq
+.LBB0_4:
+	movq	%r14, %rdi
+	movq	%rbx, %rsi
+	movl	%r15d, %edx
+	popq	%rbx
+	popq	%r14
+	popq	%r15
+	jmp	x4_batch                        # TAILCALL
 .Lfunc_end0:
 	.size	keccaktree_keccak256_avx2_x4, .Lfunc_end0-keccaktree_keccak256_avx2_x4
 	.section	.rodata.cst8,"aM",@progbits,8
@@ -5328,39 +5338,50 @@ keccaktree_keccak256_avx2_x4:           # @keccaktree_keccak256_avx2_x4
 	pushq	%rdi
 	pushq	%rbx
 	subq	$32, %rsp
-	movq	%r8, %rsi
-	movq	%rdx, %rdi
-	movq	%rcx, %rbx
+	movq	%r8, %rbx
+	movq	%rdx, %rsi
+	movq	%rcx, %rdi
 	cmpq	$4, %r8
 	jb	.LBB0_2
 	.p2align	4, 0x90
 .LBB0_1:                                # =>This Inner Loop Header: Depth=1
-	movq	%rbx, %rcx
-	movq	%rdi, %rdx
+	movq	%rdi, %rcx
+	movq	%rsi, %rdx
 	movl	$4, %r8d
 	callq	x4_batch
-	addq	$256, %rdi                      # imm = 0x100
-	subq	$-128, %rbx
-	addq	$-4, %rsi
-	cmpq	$3, %rsi
+	addq	$256, %rsi                      # imm = 0x100
+	subq	$-128, %rdi
+	addq	$-4, %rbx
+	cmpq	$3, %rbx
 	ja	.LBB0_1
 .LBB0_2:
-	testq	%rsi, %rsi
-	je	.LBB0_3
-	movq	%rbx, %rcx
-	movq	%rdi, %rdx
-	movl	%esi, %r8d
+	testq	%rbx, %rbx
+	je	.LBB0_5
+	cmpq	$1, %rbx
+	jne	.LBB0_4
+	movl	$1, %r8d
+	movq	%rdi, %rcx
+	movq	%rsi, %rdx
 	addq	$32, %rsp
 	popq	%rbx
 	popq	%rdi
 	popq	%rsi
-	jmp	x4_batch                        # TAILCALL
-.LBB0_3:
+	jmp	keccaktree_keccak256_generic    # TAILCALL
+.LBB0_5:
 	addq	$32, %rsp
 	popq	%rbx
 	popq	%rdi
 	popq	%rsi
 	retq
+.LBB0_4:
+	movq	%rdi, %rcx
+	movq	%rsi, %rdx
+	movl	%ebx, %r8d
+	addq	$32, %rsp
+	popq	%rbx
+	popq	%rdi
+	popq	%rsi
+	jmp	x4_batch                        # TAILCALL
 	.def	x4_batch;
 	.scl	3;
 	.type	32;

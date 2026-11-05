@@ -27,8 +27,9 @@ call the best kernel directly, chosen with `klauspost/cpuid`:
 
 | Platform | Kernels |
 |---|---|
-| linux/amd64, windows/amd64 | AVX-512 x8, AVX2 x4 |
-| linux/arm64, darwin/arm64 | ARMv8.2 SHA3 x2 (Apple M-series, Graviton 3+), NEON x2 |
+| linux/amd64, windows/amd64 | AVX-512 x8 (ymm x4 on Intel client cores), AVX2 x4 |
+| linux/arm64 | SHA3+scalar hybrid x3 (Neoverse N2/V1/V2, Graviton 3/4), SHA3 x2 (other FEAT_SHA3 cores), scalar x1 (Neoverse N1, Graviton 2), NEON x2 |
+| darwin/arm64 | ARMv8.2 SHA3 x2 (Apple M-series) |
 | everything else, or `CGO_ENABLED=0` | pure Go (generated from the same core) |
 
 `lib/` is rebuilt and committed by the *Update Static Libraries* workflow
@@ -49,14 +50,33 @@ case. The x86-64 kernels build from committed assembly in `src/asm/`
 (regenerated from the intrinsics sources with `tools/gen_x86_asm.sh`), so the
 library's speed does not depend on the C compiler: gcc's own output for the
 AVX-512 kernel is about 10% slower. `make X86_ASM=0` builds from the
-intrinsics instead.
+intrinsics instead. The AArch64 kernels do the same (`tools/gen_arm_asm.sh`,
+`make ARM_ASM=0`), with an ELF and a Mach-O body per file.
 
-Performance notes (llvm-mca and cycle counts on an AVX-512 Xeon): the AVX-512
-x8 kernel needs about 87 vector instructions per round and runs at the limit
-of the two 512-bit ports (~130 cycles per node); AVX2 x4 is likewise bound by
-its three vector ports (~400 cycles per node), because AVX2 has no 64-bit
-rotate or 3-input logic. Further gains on x86 need fewer instructions, not
-better scheduling.
+Performance notes:
+
+- **x86-64.** The AVX-512 x8 kernel issues about 87 vector instructions per
+  round plus the register copies `vpternlogq`'s destructive form forces (15
+  per round, the minimum for this data flow), and runs at the limit of the two
+  512-bit ports (~130 cycles per node). AVX2 x4 is likewise bound by its three
+  vector ports. Interleaving a scalar BMI2 stream with either (as on ARM) was
+  measured at 2x slower: with 16 general registers the scalar state spills.
+  Intel client cores with AVX-512 (Ice/Tiger/Rocket Lake) have only one
+  512-bit ALU port, so dispatch picks the 256-bit `avx512vl_x4` kernel there.
+  A single-node AVX2 call goes to the scalar code (25% faster on Zen 3).
+- **AArch64.** `scalar_x1` keeps every lane in a lazily rotated form
+  (`tools/gen_hybrid.py`): rho costs nothing, because EOR and BIC rotate their
+  second operand for free, leaving ~97 ALU instructions per round. `sha3_x3`
+  interleaves that scalar stream with the SHA3 x2 vector stream, so the
+  integer ALUs work while the vector pipes are busy. On Neoverse N2 (GitHub
+  `ubuntu-24.04-arm`): sha3_x3 178 ns/node vs sha3_x2 224 (1.26x), scalar_x1
+  217 vs 322 for plain C. Apple cores execute a rotated operand slowly
+  (scalar_x1 is 2x slower than plain C on M1), so they keep sha3_x2; the
+  choice is made from the MIDR implementer.
+
+`.github/workflows/bench.yml` runs `bench` (all kernels next to hashtree's
+sha256 kernels) on GitHub's Apple M1, Neoverse N2 and x86-64 runners; start it
+by hand or push to a `bench/**` branch.
 
 ```shell
 make -C src test && ./build/test

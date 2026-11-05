@@ -161,8 +161,13 @@ int main(void) {
 #endif
 #ifdef __aarch64__
     test_backend("neon_x2", keccaktree_keccak256_neon_x2);
-    if (getenv("KT_TEST_SHA3")) test_backend("sha3_x2", keccaktree_keccak256_sha3_x2);
-    else printf("  %-48s [ skipped, set KT_TEST_SHA3=1 on FEAT_SHA3 CPUs ]\n", "sha3_x2");
+    test_backend("scalar_x1", keccaktree_keccak256_scalar_x1);
+    if (getenv("KT_TEST_SHA3")) {
+        test_backend("sha3_x2", keccaktree_keccak256_sha3_x2);
+        test_backend("sha3_x3", keccaktree_keccak256_sha3_x3);
+    } else {
+        printf("  %-48s [ skipped, set KT_TEST_SHA3=1 on FEAT_SHA3 CPUs ]\n", "sha3_*");
+    }
 #endif
     printf(fails ? "\n%d FAILED\n" : "\nall passed\n", fails);
     return fails != 0;
