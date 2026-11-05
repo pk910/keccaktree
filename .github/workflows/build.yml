@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - name: Generated cores and Go fallback are up to date
+      - name: Generated C core and Go fallback are up to date
         run: |
           make -C src gen
           python3 tools/gen_go.py > keccak256_1_generic.go

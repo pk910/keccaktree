@@ -44,29 +44,33 @@ void keccaktree_hash(unsigned char *output, const unsigned char *input, uint64_t
 
 `input` holds `count` 64-byte nodes, `output` receives `count` 32-byte
 digests. Define `KECCAKTREE_HASHTREE_COMPAT` before including the header to
-get the `hashtree_*` names. All backends share one generated, fully unrolled
-permutation (`tools/gen_core.py`) specialised for the single-block 64-byte
-case. The x86-64 kernels build from committed assembly in `src/asm/`
-(regenerated from the intrinsics sources with `tools/gen_x86_asm.sh`), so the
-library's speed does not depend on the C compiler: gcc's own output for the
-AVX-512 kernel is about 10% slower. `make X86_ASM=0` builds from the
-intrinsics instead. The AArch64 kernels do the same (`tools/gen_arm_asm.sh`,
-`make ARM_ASM=0`), with an ELF and a Mach-O body per file.
+get the `hashtree_*` names. The SIMD and scalar kernels are hand-written
+assembly in `src/asm/`, one file per kernel on top of shared round and frame
+macros (`keccak256_avx512.inc`, `keccak256_neon.inc`, `keccak256_scalar.inc`):
+the 25 lanes stay in registers, every round names each lane's register, so
+pi is register renaming, and the first and last rounds skip the zero lanes
+and the unused output lanes. The AArch64 files assemble for ELF and Mach-O.
+The generic C fallback (and the pure Go one) come from one generated,
+fully unrolled permutation (`tools/gen_core.py`) specialised for the
+single-block 64-byte case.
 
 Performance notes:
 
-- **x86-64.** The AVX-512 x8 kernel issues about 87 vector instructions per
-  round plus the register copies `vpternlogq`'s destructive form forces (15
-  per round, the minimum for this data flow), and runs at the limit of the two
-  512-bit ports (~130 cycles per node). AVX2 x4 is likewise bound by its three
-  vector ports. Interleaving a scalar BMI2 stream with either (as on ARM) was
+- **x86-64.** The AVX-512 x8 kernel issues 90 vector instructions per round
+  plus 10 register copies (`vpternlogq` is destructive), keeps lanes 0..4 in
+  memory to fit the 32 registers, and runs at the limit of the two 512-bit
+  ports (~100 cycles per node on Ice Lake server). AVX2 x4 keeps the state in
+  two stack buffers (16 registers) and is likewise bound by its three vector
+  ports. Interleaving a scalar BMI2 stream with either (as on ARM) was
   measured at 2x slower: with 16 general registers the scalar state spills.
   Intel client cores with AVX-512 (Ice/Tiger/Rocket Lake) have only one
   512-bit ALU port, so dispatch picks the 256-bit `avx512vl_x4` kernel there.
   A single-node AVX2 call goes to the scalar code (25% faster on Zen 3).
-- **AArch64.** `scalar_x1` keeps every lane in a lazily rotated form
-  (`tools/gen_hybrid.py`): rho costs nothing, because EOR and BIC rotate their
-  second operand for free, leaving ~97 ALU instructions per round. `sha3_x3`
+- **AArch64.** `sha3_x2` is 67 instructions per round with no moves or
+  spills (EOR3, RAX1, XAR, BCAX). `scalar_x1` keeps every lane in a lazily
+  rotated form, with the rotation offsets tracked by the assembler: rho costs
+  nothing, because EOR and BIC rotate their second operand for free, leaving
+  106 instructions per round in 30 general registers. `sha3_x3`
   interleaves that scalar stream with the SHA3 x2 vector stream, so the
   integer ALUs work while the vector pipes are busy. On Neoverse N2 (GitHub
   `ubuntu-24.04-arm`): sha3_x3 178 ns/node vs sha3_x2 224 (1.26x), scalar_x1

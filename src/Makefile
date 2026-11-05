@@ -26,35 +26,18 @@ OBJ_LIST += $(OBJ_DIR)/keccak256_generic.o $(OBJ_DIR)/keccaktree.o
 
 all: $(libname) test bench
 
-# generated sources are committed; regenerate with `make gen`
+# the generic C core is generated and committed; regenerate with `make gen`
 gen:
 	python3 ../tools/gen_core.py > keccak256_core.inc
-	python3 ../tools/gen_hybrid.py --rc-table > keccak_lazy_rc.h
-	python3 ../tools/gen_hybrid.py --vec 0 --scal 1 --lazy > hybrid/arm_v0s1.inc
-	python3 ../tools/gen_hybrid.py --vec 1 --scal 1 --lazy > hybrid/arm_v1s1.inc
 
-# x86-64 kernels are hand-written assembly; the AVX-512 ones share their
-# rounds (keccak256_avx512.inc) and all share the function frame.
+# the SIMD/scalar kernels are hand-written assembly in asm/, one file per
+# kernel plus the shared round and frame macros they include
 X86_INC = asm/keccak256_x86_frame.inc asm/keccak256_avx512.inc
+ARM_INC = asm/keccak256_arm_frame.inc asm/keccak256_neon.inc asm/keccak256_scalar.inc
 $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o: $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(X86_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
-# AArch64 kernels likewise build from asm/ (tools/gen_arm_asm.sh); ARM_ASM=0
-# builds them from C. scalar_x1 and sha3_x3 are keccak256_hybrid_arm.c.
-ARM_ASM ?= 1
-SHA3_FLAGS = -DKT_SHA3 -march=armv8.2-a+sha3
-ifeq ($(ARM_ASM),1)
-$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S
+$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(ARM_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
-else
-$(OBJ_DIR)/keccak256_sha3_x2.o: keccak256_neon_x2.c keccak256_core.inc
-	$(CC) $(CFLAGS) $(SHA3_FLAGS) -c $< -o $@
-HYB_DEPS = keccak256_hybrid_arm.c $(wildcard hybrid/*.inc) keccak_lazy_rc.h keccak256_core.inc
-HYB = $(CC) $(CFLAGS) -c keccak256_hybrid_arm.c -o $@
-$(OBJ_DIR)/keccak256_scalar_x1.o: $(HYB_DEPS)
-	$(HYB) -DFN=keccaktree_keccak256_scalar_x1 -DKT_HV=0 -DKT_HS=1
-$(OBJ_DIR)/keccak256_sha3_x3.o: $(HYB_DEPS)
-	$(HYB) -DFN=keccaktree_keccak256_sha3_x3 $(SHA3_FLAGS) -DKT_HV=1 -DKT_HS=1
-endif
 $(OBJ_DIR)/%.o: %.c keccak256_core.inc keccaktree.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
