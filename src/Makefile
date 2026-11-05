@@ -5,6 +5,8 @@ LIB_DIR := $(OUT_DIR)/lib
 $(shell mkdir -p $(OBJ_DIR) $(LIB_DIR))
 
 CFLAGS ?= -g -Wall -Werror -O3
+ASFLAGS ?= -g
+override ASFLAGS += -fpic
 override CFLAGS += -fpic
 libname = $(LIB_DIR)/libkeccaktree.a
 
@@ -28,12 +30,20 @@ gen:
 	python3 ../tools/gen_core.py > keccak256_core.inc
 	python3 ../tools/gen_core.py --ternlog > keccak256_core_tl.inc
 
+# x86-64 kernels build from the committed assembly in asm/ (regenerate with
+# tools/gen_x86_asm.sh). X86_ASM=0 builds them from the intrinsics instead.
+X86_ASM ?= 1
+ifeq ($(X86_ASM),1)
+$(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S
+	$(CC) $(ASFLAGS) -c $< -o $@
+else
 $(OBJ_DIR)/keccak256_avx512_x8.o: keccak256_avx512_x8.c keccak256_core_tl.inc
 	$(CC) $(CFLAGS) -mavx512f -mavx512vl -c $< -o $@
 $(OBJ_DIR)/keccak256_avx512vl_x4.o: keccak256_avx2_x4.c keccak256_core_tl.inc
 	$(CC) $(CFLAGS) -DKT_AVX512VL -mavx2 -mavx512f -mavx512vl -c $< -o $@
 $(OBJ_DIR)/keccak256_avx2_x4.o: keccak256_avx2_x4.c keccak256_core.inc
 	$(CC) $(CFLAGS) -mavx2 -c $< -o $@
+endif
 $(OBJ_DIR)/keccak256_sha3_x2.o: keccak256_neon_x2.c keccak256_core.inc
 	$(CC) $(CFLAGS) -DKT_SHA3 -march=armv8.2-a+sha3 -c $< -o $@
 $(OBJ_DIR)/%.o: %.c keccak256_core.inc keccaktree.h

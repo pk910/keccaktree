@@ -27,7 +27,7 @@ typedef uint64x2_t V;
 #define KC(x) vdupq_n_u64((uint64_t)(x))
 #define IOTA(a, i) veorq_u64((a), vdupq_n_u64(KECCAK_RC[i]))
 
-static inline __attribute__((always_inline)) void x2_batch(unsigned char* output, const unsigned char* input,
+static __attribute__((noinline)) void x2_batch(unsigned char* output, const unsigned char* input,
                                                            unsigned n) {
     const uint64_t* p = (const uint64_t*)input;
     V z = vdupq_n_u64(0);

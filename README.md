@@ -45,7 +45,18 @@ void keccaktree_hash(unsigned char *output, const unsigned char *input, uint64_t
 digests. Define `KECCAKTREE_HASHTREE_COMPAT` before including the header to
 get the `hashtree_*` names. All backends share one generated, fully unrolled
 permutation (`tools/gen_core.py`) specialised for the single-block 64-byte
-case.
+case. The x86-64 kernels build from committed assembly in `src/asm/`
+(regenerated from the intrinsics sources with `tools/gen_x86_asm.sh`), so the
+library's speed does not depend on the C compiler: gcc's own output for the
+AVX-512 kernel is about 10% slower. `make X86_ASM=0` builds from the
+intrinsics instead.
+
+Performance notes (llvm-mca and cycle counts on an AVX-512 Xeon): the AVX-512
+x8 kernel needs about 87 vector instructions per round and runs at the limit
+of the two 512-bit ports (~130 cycles per node); AVX2 x4 is likewise bound by
+its three vector ports (~400 cycles per node), because AVX2 has no 64-bit
+rotate or 3-input logic. Further gains on x86 need fewer instructions, not
+better scheduling.
 
 ```shell
 make -C src test && ./build/test

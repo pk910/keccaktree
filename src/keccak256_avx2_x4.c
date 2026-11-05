@@ -38,7 +38,7 @@ static inline __attribute__((always_inline)) __m256i rol_avx2(__m256i a, int n) 
 #define KC(x) _mm256_set1_epi64x((long long)(x))
 #define IOTA(a, i) XOR((a), _mm256_set1_epi64x((long long)KECCAK_RC[i]))
 
-static inline __attribute__((always_inline)) void x4_batch(unsigned char* output, const unsigned char* input,
+static __attribute__((noinline)) void x4_batch(unsigned char* output, const unsigned char* input,
                                                            unsigned n) {
     V z = _mm256_setzero_si256();
     V l0 = _mm256_loadu_si256((const __m256i*)(input + 0));

@@ -18,7 +18,7 @@ typedef __m512i V;
 #define KC(x) _mm512_set1_epi64((long long)(x))
 #define IOTA(a, i) _mm512_xor_si512((a), _mm512_set1_epi64((long long)KECCAK_RC[i]))
 
-static inline __attribute__((always_inline)) void x8_batch(unsigned char* output, const unsigned char* input,
+static __attribute__((noinline)) void x8_batch(unsigned char* output, const unsigned char* input,
                                                            unsigned n) {
     V r0, r1, r2, r3, r4, r5, r6, r7;
     if (n == 8) {
