@@ -5,6 +5,13 @@
  * instruction per lane and BCAX for chi. 67 instructions per round, no
  * moves. Rho rotates in place, so a row's chi writes outputs 0 and 1 into
  * the free pair and 2..4 over B[2], B[0], B[1]; B[3] and B[4] are freed.
+ *
+ * Two shapes of the round share these pieces. ROUND (sha3_x2) is theta,
+ * then rho and chi row by row. The pipelined pieces at the end (THETA_IA,
+ * THETA_IB, ROW_I, LAST_ROUND_I; sha3_x3) do the same work with the chi of
+ * row 4 deferred into the next round's theta and each row's chi spread
+ * between the next row's rho, for cores whose second vector pipe takes
+ * the split chi outputs (CHI_SPLIT below) but no SHA3 instruction.
  */
 .macro XOR3 d, a, b, c
 	eor3		v\d\().16b, v\a\().16b, v\b\().16b, v\c\().16b
@@ -33,13 +40,34 @@
 	xar		v\a\().2d, v21.2d, v\d\().2d, #(64 - \n)
 .endm
 
-/* bcax d, a, b, c: d = a ^ (b & ~c) */
+/* bcax d, a, b, c: d = a ^ (b & ~c), or BIC into t then EOR when bit n-1
+ * of CHI_SPLIT is set (n = 1..5, the position of the output in CHI_ROW).
+ * Neoverse N2/V1/V2 issue every SHA3 instruction on one vector pipe (V0,
+ * one per cycle) and plain logical ones on either, so a kernel bound by
+ * that pipe gains from splitting some outputs; which ones matters more
+ * than how many (measured on N2, see keccak256_sha3_x3.S). Apple cores run
+ * SHA3 ops on all pipes and keep CHI_SPLIT at 0. */
+#ifndef CHI_SPLIT
+#define CHI_SPLIT 0
+#endif
+.macro CHI d, a, b, c, n, t
+.if CHI_SPLIT & (1 << (\n - 1))
+	bic		v\t\().16b, v\b\().16b, v\c\().16b
+	eor		v\d\().16b, v\a\().16b, v\t\().16b
+.else
+	bcax		v\d\().16b, v\a\().16b, v\b\().16b, v\c\().16b
+.endif
+.endm
+
+/* out0..out4 of a row -> f0, f1, b2, b0, b1, computed in the order 0, 1,
+ * 4, 3, 2 so that the in-place ones overwrite inputs at their last use
+ * (out2's BIC lands in b3, also at its last use) */
 .macro CHI_ROW b0, b1, b2, b3, b4, f0, f1
-	bcax		v\f0\().16b, v\b0\().16b, v\b2\().16b, v\b1\().16b
-	bcax		v\f1\().16b, v\b1\().16b, v\b3\().16b, v\b2\().16b
-	bcax		v\b1\().16b, v\b4\().16b, v\b1\().16b, v\b0\().16b
-	bcax		v\b0\().16b, v\b3\().16b, v\b0\().16b, v\b4\().16b
-	bcax		v\b2\().16b, v\b2\().16b, v\b4\().16b, v\b3\().16b
+	CHI		\f0, \b0, \b2, \b1, 1, \f0
+	CHI		\f1, \b1, \b3, \b2, 2, \f1
+	CHI		\b1, \b4, \b1, \b0, 3, \b1
+	CHI		\b0, \b3, \b0, \b4, 4, \b0
+	CHI		\b2, \b2, \b4, \b3, 5, \b3
 .endm
 
 /* rho on one row: b = rotl(a ^ d, r) in place; t scratch */
@@ -87,8 +115,10 @@
 .endm
 
 /* round 0 on the state lane i = v(i): input words in v0..v7, 0x01 in v8,
- * 0x80..0 in v16, the rest zero (not initialised; RHO_ZERO sets them) */
-.macro FIRST_ROUND
+ * 0x80..0 in v16, the rest zero (not initialised; RHO_ZERO sets them).
+ * FIRST_ROUND_PRE stops before the chi of row 4, which the pipelined
+ * rounds do themselves. */
+.macro FIRST_ROUND_PRE
 	eor		v26.16b, v0.16b, v5.16b
 	XOR3		27, 1, 6, 16
 	eor		v28.16b, v2.16b, v7.16b
@@ -130,6 +160,9 @@
 	RHO_ZERO	14, D4, 39, 23
 	RHO_ZERO	15, D0, 41, 23
 	RHO_ZERO	21, D1, 2, 23
+.endm
+.macro FIRST_ROUND
+	FIRST_ROUND_PRE
 	CHI_ROW		2, 8, 14, 15, 21, 17, 23
 .endm
 
@@ -173,4 +206,86 @@
 	ROUND		21, 3, 1, 2, 8, 18, 19, 4, 11, 24, 9, 22, 16, 12, 13, 17, 30, 14, 10, 5, 15, 7, 21, 20, 23, 6, 0, 31
 	ROUND		22, 0, 31, 12, 3, 4, 5, 6, 22, 8, 9, 14, 20, 13, 1, 11, 15, 7, 16, 18, 19, 10, 23, 17, 2, 24, 30, 21
 	LAST_ROUND	30, 21, 13, 0, 6, 18, 24, 14, 3, 9, 7, 17, 1, 31, 22, 19, 10, 20, 4, 5, 16, 2, 11, 12, 8, 15, 23
+.endm
+
+/*
+ * The pipelined round. It takes the same ROUND line (the state after the
+ * previous round, free pair p, q) but starts with that round's chi on row
+ * 4, whose inputs are still in a23, a24, a22, p, q and whose outputs go to
+ * a20..a24: each output is followed by the first half of a column parity
+ * (rows 0..2, which do not need row 4), then come the second halves, D and
+ * the round constant (into q; p is C4 once row 4 is done). Then rho on
+ * row 0, and each further row's chi lane by lane between the next row's
+ * rho. Row 4's rho ends the round; its chi opens the next one.
+ */
+.macro PARITY_H c, a0, a1, a2
+	eor3		v\c\().16b, v\a0\().16b, v\a1\().16b, v\a2\().16b
+.endm
+.macro PARITY_T c, a3, a4
+	eor3		v\c\().16b, v\c\().16b, v\a3\().16b, v\a4\().16b
+.endm
+
+/* chi on row 4 of the previous round between the parity halves */
+.macro THETA_IA ARGS
+	CHI		\a20, \a23, \a22, \a24, 1, \a20
+	PARITY_H	D1, \a0, \a5, \a10
+	CHI		\a21, \a24, \p, \a22, 2, \a21
+	PARITY_H	D2, \a1, \a6, \a11
+	CHI		\a24, \q, \a24, \a23, 3, \a24
+	PARITY_H	D3, \a2, \a7, \a12
+	CHI		\a23, \p, \a23, \q, 4, \a23
+	PARITY_H	D4, \a3, \a8, \a13
+	CHI		\a22, \a22, \q, \p, 5, \p
+	PARITY_H	\p, \a4, \a9, \a14
+.endm
+
+/* rows 3 and 4 into the parities, D0..D4 as in THETA, RC[r] into q */
+.macro THETA_IB r, ARGS
+	PARITY_T	D1, \a15, \a20
+	PARITY_T	D2, \a16, \a21
+	PARITY_T	D3, \a17, \a22
+	PARITY_T	D4, \a18, \a23
+	PARITY_T	\p, \a19, \a24
+	THETA_D		D0, \p, D2, \q
+	THETA_D		D2, D2, D4, \q
+	THETA_D		D4, D4, D1, \q
+	THETA_D		D1, D1, D3, \q
+	THETA_D		D3, D3, \p, \q
+	ldr		q\q, .LRC + 16*\r
+.endm
+
+/* chi on one row (b0..b4 -> f0, f1, b2, b0, b1 as in CHI_ROW) lane by lane
+ * between the rho of the next row (l0..l4 with d0..d4, rotations r0..r4);
+ * the first output also takes the round constant from rc if given */
+.macro ROW_I b0, b1, b2, b3, b4, f0, f1, l0, l1, l2, l3, l4, d0, d1, d2, d3, d4, r0, r1, r2, r3, r4, rc
+	RHO		\l0, \d0, \r0, \f1
+	CHI		\f0, \b0, \b2, \b1, 1, \f0
+.ifnb \rc
+	eor		v\f0\().16b, v\f0\().16b, v\rc\().16b
+.endif
+	RHO		\l1, \d1, \r1, \f1
+	CHI		\f1, \b1, \b3, \b2, 2, \f1
+	RHO		\l2, \d2, \r2, \b3
+	CHI		\b1, \b4, \b1, \b0, 3, \b1
+	RHO		\l3, \d3, \r3, \b3
+	CHI		\b0, \b3, \b0, \b4, 4, \b0
+	RHO		\l4, \d4, \r4, \b3
+	CHI		\b2, \b2, \b4, \b3, 5, \b3
+.endm
+
+/* round 23 of the pipelined kernel: row 4 of round 22, theta, row 0 with
+ * x = 0..3 only, the digests zipped into v25..v28 as in LAST_ROUND */
+.macro LAST_ROUND_I ARGS
+	THETA_IA	PASS
+	THETA_IB	23, PASS
+	RHO_ROW		\a0, \a6, \a12, \a18, \a24, D0, D1, D2, D3, D4, 0, 44, 43, 21, 14, \p
+	CHI		\p, \a0, \a12, \a6, 1, \p
+	eor		v\p\().16b, v\p\().16b, v\q\().16b
+	CHI		\q, \a6, \a18, \a12, 2, \q
+	CHI		\a0, \a18, \a0, \a24, 4, \a0
+	CHI		\a12, \a12, \a24, \a18, 5, \a18
+	zip1		v25.2d, v\p\().2d, v\q\().2d
+	zip1		v26.2d, v\a12\().2d, v\a0\().2d
+	zip2		v27.2d, v\p\().2d, v\q\().2d
+	zip2		v28.2d, v\a12\().2d, v\a0\().2d
 .endm
