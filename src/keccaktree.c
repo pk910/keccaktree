@@ -69,7 +69,7 @@ static keccaktree_hash_fcn keccaktree_detect(void) {
                                                : &keccaktree_keccak256_avx512_x8;
     }
     if (os_ymm && (b & bit_AVX2)) {
-        return &keccaktree_keccak256_avx2_x4;
+        return &keccaktree_keccak256_avx2_x8;
     }
 #endif
 #ifdef __aarch64__
