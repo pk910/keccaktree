@@ -16,47 +16,13 @@
  */
 #ifdef __aarch64__
 .arch armv8.2-a+sha3
-#define KECCAK_X3
-#define KERNEL_NAME	keccaktree_keccak256_sha3_x3
 #include "keccak256_arm_frame.inc"
 #define OUT_SLOT	160
 #define OUT_OFF		64
 #include "keccak256_scalar.inc"
 
-.macro XOR3 d, a, b, c
-	eor3		v\d\().16b, v\a\().16b, v\b\().16b, v\c\().16b
-.endm
-
-.macro PARITY c, a0, a1, a2, a3, a4
-	eor3		v\c\().16b, v\a0\().16b, v\a1\().16b, v\a2\().16b
-	eor3		v\c\().16b, v\c\().16b, v\a3\().16b, v\a4\().16b
-.endm
-
-.macro THETA_D d, c1, c2, t
-	rax1		v\d\().2d, v\c1\().2d, v\c2\().2d
-.endm
-
-.macro RHO a, d, n, t
-.if \n
-	xar		v\a\().2d, v\a\().2d, v\d\().2d, #(64 - \n)
-.else
-	eor		v\a\().16b, v\a\().16b, v\d\().16b
-.endif
-.endm
-
-.macro RHO_ZERO a, d, n, t
-	xar		v\a\().2d, v21.2d, v\d\().2d, #(64 - \n)
-.endm
-
-.macro CHI_ROW b0, b1, b2, b3, b4, f0, f1
-	bcax		v\f0\().16b, v\b0\().16b, v\b2\().16b, v\b1\().16b
-	bcax		v\f1\().16b, v\b1\().16b, v\b3\().16b, v\b2\().16b
-	bcax		v\b1\().16b, v\b4\().16b, v\b1\().16b, v\b0\().16b
-	bcax		v\b0\().16b, v\b3\().16b, v\b0\().16b, v\b4\().16b
-	bcax		v\b2\().16b, v\b2\().16b, v\b4\().16b, v\b3\().16b
-.endm
-
 #include "keccak256_neon.inc"
+#include "keccak256_sha3.inc"
 
 /* one round of both streams: vector theta and rows 0..1 (67 instructions)
  * between the scalar theta and rho (54), then the rows alternate */
@@ -99,9 +65,9 @@
 	str		x2, [sp, #176]
 	add		x3, x1, #64
 	LOAD_X2		x1, x3
-	movi		v21.2d, #0
 	add		x1, x1, #128
 	SLOAD		x1
+	movi		v21.2d, #0
 	FIRST_ROUND
 	SFIRST_ROUND
 	ROUND3		1, 30, 31, 12, 0, 6, 18, 24, 10, 3, 9, 16, 22, 13, 1, 7, 19, 20, 11, 4, 5, 17, 23, 14, 2, 8, 15, 21, 29, 30, 12, 0, 6, 19, 25, 10, 3, 9, 16, 23, 13, 1, 7, 20, 21, 11, 4, 5, 17, 24, 14, 2, 8, 26, 27, 28, 15, 22
