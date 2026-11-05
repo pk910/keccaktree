@@ -1,0 +1,103 @@
+name: Test Go Bindings
+
+# Reusable + standalone test workflow for the Go bindings.
+#
+# - push / pull_request / workflow_dispatch: tests the libs committed in lib/.
+# - From the build workflow (lib_source=artifacts): tests the freshly built
+#   libkeccaktree-* artifacts of the same run before they are published.
+#
+# The Linux job runs the cross-CPU matrix (.github/scripts/test-matrix.sh)
+# under qemu-user, so every dispatch path except AVX-512 (which qemu cannot
+# emulate) is exercised; AVX-512 runs natively when the runner has it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+  workflow_call:
+    inputs:
+      lib_source:
+        description: '"repo" (committed lib/) or "artifacts" (libkeccaktree-* from the calling run)'
+        type: string
+        default: repo
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Linux libraries
+        if: inputs.lib_source == 'artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: libkeccaktree-linux-*
+      - name: Stage libraries into lib/
+        if: inputs.lib_source == 'artifacts'
+        run: |
+          cp libkeccaktree-linux-amd64/libkeccaktree.a lib/linux_amd64/
+          cp libkeccaktree-linux-arm64/libkeccaktree.a lib/linux_arm64/
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Native test (runner CPU) and pure-Go fallback
+        run: |
+          go test -v -count=1 .
+          CGO_ENABLED=0 go test -count=1 .
+      - name: Cross-CPU test matrix (qemu)
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w debian:trixie bash -euo pipefail -c '
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y -qq ca-certificates golang-go build-essential \
+              gcc-aarch64-linux-gnu qemu-user-static >/dev/null
+            bash .github/scripts/test-matrix.sh
+          '
+
+  test-darwin:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Download Darwin library
+        if: inputs.lib_source == 'artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          name: libkeccaktree-darwin-arm64
+          path: dl-darwin
+      - name: Stage library into lib/
+        if: inputs.lib_source == 'artifacts'
+        run: cp dl-darwin/libkeccaktree.a lib/darwin_arm64/
+      - name: Test (Apple Silicon always has FEAT_SHA3)
+        env:
+          KECCAKTREE_EXPECT_PATH: sha3_x2
+        run: go test -v -count=1 .
+
+  test-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-go
+      - name: Download Windows library
+        if: inputs.lib_source == 'artifacts'
+        uses: actions/download-artifact@v4
+        with:
+          name: libkeccaktree-windows-amd64
+          path: dl-windows
+      - name: Stage library into lib/
+        if: inputs.lib_source == 'artifacts'
+        run: cp dl-windows/libkeccaktree.a lib/windows_amd64/
+      - name: Test
+        run: go test -v -count=1 .

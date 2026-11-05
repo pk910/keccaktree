@@ -1,0 +1,131 @@
+name: Build & Test
+
+# Builds the per-platform static libs from src/ and runs the full test suite
+# against the freshly built artifacts, WITHOUT committing anything.
+#
+# - On pull_request to main: validates that the PR still produces working libs.
+# - Reusable (workflow_call): "Update Static Libraries" calls this, then commits
+#   the result itself.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+  workflow_call: {}
+
+env:
+  CFLAGS_COMMON: -O3 -Wall -Werror -ffile-prefix-map=${{ github.workspace }}/src=.
+
+jobs:
+  generated-sources:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generated cores and Go fallback are up to date
+        run: |
+          python3 tools/gen_core.py > src/keccak256_core.inc
+          python3 tools/gen_core.py --ternlog > src/keccak256_core_tl.inc
+          python3 tools/gen_go.py > keccak256_1_generic.go
+          git diff --exit-code
+
+  build-linux-amd64:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, run the C tests, package
+        run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          make -C src CFLAGS="$CFLAGS_COMMON -fno-plt" test
+          ./build/test
+          mkdir -p out && cp build/lib/libkeccaktree.a out/
+          cd out
+          strip --strip-debug libkeccaktree.a && ranlib libkeccaktree.a
+          gcc --version | head -1 > libkeccaktree.a.buildinfo
+          sha256sum libkeccaktree.a > libkeccaktree.a.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libkeccaktree-linux-amd64
+          path: out/
+          retention-days: 7
+
+  build-linux-arm64:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross-compiler and qemu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu qemu-user
+      - name: Build, run the C tests under qemu, package
+        run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          make -C src CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar CFLAGS="$CFLAGS_COMMON -fno-plt" test
+          KT_TEST_SHA3=1 qemu-aarch64 -cpu max -L /usr/aarch64-linux-gnu ./build/test
+          mkdir -p out && cp build/lib/libkeccaktree.a out/
+          cd out
+          aarch64-linux-gnu-strip --strip-debug libkeccaktree.a && aarch64-linux-gnu-ranlib libkeccaktree.a
+          aarch64-linux-gnu-gcc --version | head -1 > libkeccaktree.a.buildinfo
+          sha256sum libkeccaktree.a > libkeccaktree.a.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libkeccaktree-linux-arm64
+          path: out/
+          retention-days: 7
+
+  build-darwin-arm64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, run the C tests (Apple Silicon has FEAT_SHA3), package
+        run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          make -C src CFLAGS="$CFLAGS_COMMON -mmacosx-version-min=11.0" test
+          KT_TEST_SHA3=1 ./build/test
+          mkdir -p out && cp build/lib/libkeccaktree.a out/
+          cd out
+          strip -S libkeccaktree.a && ranlib libkeccaktree.a
+          python3 "$GITHUB_WORKSPACE/.github/scripts/zero_ar_metadata.py" libkeccaktree.a
+          cc --version | head -1 > libkeccaktree.a.buildinfo
+          shasum -a 256 libkeccaktree.a > libkeccaktree.a.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libkeccaktree-darwin-arm64
+          path: out/
+          retention-days: 7
+
+  build-windows-amd64:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-gcc
+            make
+            python
+      - name: Build, run the C tests, package
+        run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          make -C src CC=gcc CFLAGS="-O3 -Wall -Werror -ffile-prefix-map=$(pwd)/src=." test
+          ./build/test.exe
+          mkdir -p out && cp build/lib/libkeccaktree.a out/
+          cd out
+          strip --strip-debug libkeccaktree.a && ranlib libkeccaktree.a
+          gcc --version | head -1 > libkeccaktree.a.buildinfo
+          sha256sum libkeccaktree.a > libkeccaktree.a.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libkeccaktree-windows-amd64
+          path: out/
+          retention-days: 7
+
+  test:
+    needs: [build-linux-amd64, build-linux-arm64, build-darwin-arm64, build-windows-amd64]
+    uses: ./.github/workflows/test.yml
+    with:
+      lib_source: artifacts

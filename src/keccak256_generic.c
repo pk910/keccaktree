@@ -1,6 +1,5 @@
 /* Portable keccak256 over 64-byte nodes, specialised single-block sponge. */
 #include <stdint.h>
-#include <string.h>
 #include "keccaktree.h"
 
 typedef uint64_t V;
@@ -25,7 +24,7 @@ static const uint64_t RC[24] = {
 static inline uint64_t ld64(const unsigned char* p) {
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     uint64_t v;
-    memcpy(&v, p, 8);
+    __builtin_memcpy(&v, p, 8);
     return v;
 #else
     return (uint64_t)p[0] | ((uint64_t)p[1] << 8) | ((uint64_t)p[2] << 16) | ((uint64_t)p[3] << 24) |
@@ -35,7 +34,7 @@ static inline uint64_t ld64(const unsigned char* p) {
 
 static inline void st64(unsigned char* p, uint64_t v) {
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    memcpy(p, &v, 8);
+    __builtin_memcpy(p, &v, 8);
 #else
     for (int i = 0; i < 8; i++) p[i] = (unsigned char)(v >> (8 * i));
 #endif

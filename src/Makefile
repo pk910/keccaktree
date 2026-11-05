@@ -4,13 +4,19 @@ OBJ_DIR := $(OUT_DIR)/obj
 LIB_DIR := $(OUT_DIR)/lib
 $(shell mkdir -p $(OBJ_DIR) $(LIB_DIR))
 
-CFLAGS += -g -Wall -Werror -O3 -fpic
+CFLAGS ?= -g -Wall -Werror -O3
+override CFLAGS += -fpic
 libname = $(LIB_DIR)/libkeccaktree.a
 
 ARCH := $(shell $(CC) -dumpmachine)
+ifneq ($(findstring mingw,$(ARCH)),)
+# gcc on Windows x64 does not realign the stack for 32/64-byte spills (gcc
+# bug 54412); have the assembler emit unaligned moves instead.
+override CFLAGS += -Wa,-muse-unaligned-vector-move
+endif
 ifneq ($(findstring x86_64,$(ARCH)),)
 OBJ_LIST = $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o
-else ifneq ($(findstring aarch64,$(ARCH)),)
+else ifneq ($(findstring aarch64,$(ARCH))$(findstring arm64,$(ARCH)),)
 OBJ_LIST = $(OBJ_DIR)/keccak256_neon_x2.o $(OBJ_DIR)/keccak256_sha3_x2.o
 endif
 OBJ_LIST += $(OBJ_DIR)/keccak256_generic.o $(OBJ_DIR)/keccaktree.o

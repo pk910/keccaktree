@@ -1,0 +1,56 @@
+name: Update Static Libraries
+
+# Rebuilds lib/<platform>/libkeccaktree.a from src/ whenever the C sources
+# change on main (or on manual dispatch), tests them through the reusable
+# Build & Test workflow, and COMMITS the result. This is the only workflow
+# that writes to the repo. Its own commits only touch lib/, which is not in
+# the path filter, so it does not retrigger itself.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tools/**'
+      - '.github/workflows/build-static-libs.yml'
+      - '.github/workflows/build.yml'
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  collect-libraries:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: libkeccaktree-*
+      - name: Move libraries into lib/
+        run: |
+          for platform in linux_amd64 linux_arm64 darwin_arm64 windows_amd64; do
+            art="libkeccaktree-${platform//_/-}"
+            mkdir -p "lib/$platform"
+            cp "$art/libkeccaktree.a" "$art/libkeccaktree.a.sha256" "$art/libkeccaktree.a.buildinfo" "lib/$platform/"
+            (cd "lib/$platform" && sha256sum -c libkeccaktree.a.sha256)
+          done
+          git rev-parse HEAD > lib/SOURCE_COMMIT
+      - name: Commit and push
+        env:
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add lib/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update static libraries for $(git rev-parse --short HEAD)
+
+          Workflow run: ${WORKFLOW_URL}"
+            git push
+          fi

@@ -1,7 +1,6 @@
 /* Runtime dispatch, same contract as hashtree.c */
 #include "keccaktree.h"
 
-#include <assert.h>
 #ifdef __x86_64__
 #include <cpuid.h>
 #endif
@@ -61,6 +60,5 @@ void keccaktree_hash(unsigned char* output, const unsigned char* input, uint64_t
 
 static void init_and_hash(unsigned char* output, const unsigned char* input, uint64_t count) {
     hash_ptr = keccaktree_detect();
-    assert(hash_ptr);
     keccaktree_hash(output, input, count);
 }

@@ -86,5 +86,9 @@ void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* 
         output += 8 * 32;
         count -= 8;
     }
-    if (count) x8_batch(output, input, (unsigned)count);
+    /* a short tail is cheaper on the 4-lane ymm kernel (same ISA requirements) */
+    if (count > 4)
+        x8_batch(output, input, (unsigned)count);
+    else if (count)
+        keccaktree_keccak256_avx512vl_x4(output, input, count);
 }
