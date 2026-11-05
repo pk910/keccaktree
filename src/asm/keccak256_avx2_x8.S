@@ -7,13 +7,15 @@
  * then the same round of batch B. The ALUs are the bottleneck of the 4-node
  * rounds of keccak256_avx2.inc, but every round starts with theta, which
  * needs all five parities of the previous round and so leaves the ports
- * idle at each round boundary while that short chain resolves; the other
- * batch's round, which does not depend on it, fills that gap.
+ * idle at each round boundary while that short chain resolves. Here each
+ * round computes the other batch's theta (from its parities in memory) in
+ * the shadow of its own last chi row, so the next round starts straight
+ * into rho and the ports stay busy.
  *
  * The 16 ymm registers only hold one batch's working set, so the parities
- * of the batch that is not in flight stay in memory: theta reads them as
- * memory operands and STORE_C writes them back after each round, which adds
- * loads and stores but no ALU work. Fewer than 8 remaining nodes go to
+ * of the batch that is not in flight stay in memory: STORE_C writes them
+ * after each round and the other batch's round reads them for theta, which
+ * adds loads and stores but no ALU work. Fewer than 8 remaining nodes go to
  * keccaktree_keccak256_avx2_x4 (which hands a single node to the scalar
  * code).
  *
@@ -52,25 +54,28 @@
 	LOAD		BIN+4*64
 	ROUND0		SB1, SB0
 	STORE_C		PB
+	THETA		PA
 
-	/* rounds 1..22, two per iteration, batch A then batch B */
+	/* rounds 1..22, two per iteration, batch A then batch B; each round
+	 * leaves the other batch's theta in D0..D4 */
 	mov		ecx, 11
 1:
-	ROUND		SA0, SA1, 32, PA
+	ROUND		SA0, SA1, 32, PB
 	STORE_C		PA
-	ROUND		SB0, SB1, 32, PB
+	ROUND		SB0, SB1, 32, PA
 	STORE_C		PB
-	ROUND		SA1, SA0, 64, PA
+	ROUND		SA1, SA0, 64, PB
 	STORE_C		PA
-	ROUND		SB1, SB0, 64, PB
+	ROUND		SB1, SB0, 64, PA
 	STORE_C		PB
 	add		RCP, 64
 	dec		ecx
 	jnz		1b
 
-	ROUND23		SA0, 32, PA
+	ROUND23		SA0, 32, D
 	OUTPUT		BOUT
-	ROUND23		SB0, 32, PB
+	THETA		PB
+	ROUND23		SB0, 32, D
 	OUTPUT		BOUT+4*32
 	ret
 

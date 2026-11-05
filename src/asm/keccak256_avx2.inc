@@ -19,10 +19,12 @@
  * Round 0 skips the 15 zero lanes and folds in the two padding constants;
  * round 23 computes only the 4 output lanes.
  *
- * The parities can also come from memory (ROUND with a c argument): theta
- * then takes them as memory operands at no extra ALU cost, and STORE_C puts
- * them back after the round, which lets a kernel alternate rounds of two
- * independent batches without keeping both sets in registers.
+ * A kernel can also alternate the rounds of two independent batches (ROUND
+ * with a c argument): the parities of the batch that is not in flight stay
+ * in memory (STORE_C after its round), and the round computes the other
+ * batch's theta from them, into D0..D4, once its own rho is done, before its
+ * last chi row. The next round then starts straight into rho while this
+ * one's chi still runs, so the ports never wait for the parity chain.
  *
  * Registers: ymm0..15 and RCP (round constants, broadcast to 4 lanes).
  */
@@ -169,11 +171,16 @@
 .endm
 
 /* one round from the state at in to out, iota constant at [RCP + rc];
- * parities in C0..C4 on entry (or at c in memory) and in C0..C4 on exit.
- * Row y gathers B[x] from lane ((x+3y)%5) + 5x (pi), so its D index is
- * (x+3y)%5. */
+ * parities in C0..C4 on entry and exit. Row y gathers B[x] from lane
+ * ((x+3y)%5) + 5x (pi), so its D index is (x+3y)%5.
+ *
+ * Without c, theta comes first. With c, D0..D4 hold this round's theta on
+ * entry and the round computes the theta of the parities at c (the other
+ * batch's) into D0..D4 after its last rho, for the round that follows. */
 .macro ROUND in, out, rc, c
-	THETA		\c
+.ifb \c
+	THETA
+.endif
 	THETA_RHO	B0, D0, \in, 0,  0
 	THETA_RHO	B1, D1, \in, 6,  R6
 	THETA_RHO	B2, D2, \in, 12, R12
@@ -203,6 +210,9 @@
 	THETA_RHO	B2, D4, \in, 14, R14
 	THETA_RHO	B3, D0, \in, 15, R15
 	THETA_RHO	B4, D1, \in, 21, R21
+.ifnb \c
+	THETA		\c
+.endif
 	CHI_ROW		\out, 4
 .endm
 
@@ -296,11 +306,17 @@
 	CHI_ROW		\out, 4
 .endm
 
-/* round 23 from the state at in, parities in C0..C4 or at c in memory,
- * iota constant at [RCP + rc]: theta, then row 0, x = 0..3 only, into
- * C0..C3 */
+/* round 23 from the state at in, iota constant at [RCP + rc]: theta
+ * (parities in C0..C4, at c in memory, or already in D0..D4 if c is "D"),
+ * then row 0, x = 0..3 only, into C0..C3 */
 .macro ROUND23 in, rc, c
+.ifb \c
+	THETA
+.else
+.ifnc \c, D
 	THETA		\c
+.endif
+.endif
 	THETA_RHO	B0, D0, \in, 0,  0
 	THETA_RHO	B1, D1, \in, 6,  R6
 	THETA_RHO	B2, D2, \in, 12, R12
