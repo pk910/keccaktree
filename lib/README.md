@@ -18,14 +18,20 @@ metadata), so a rebuild with the same compiler is byte-identical.
 
 ## Pull requests
 
-PR CI tests the Go bindings against the libraries committed here, so a PR
-that changes `src/` has to bring rebuilt libraries along. Either build all
-four on one host with zig (`.github/scripts/build-libs.sh`), or run *Build &
-Test* on your branch (`gh workflow run build.yml --ref <branch>`) and copy
-its artifacts with `.github/scripts/fetch-ci-libs.sh`. Commit them with the
-change.
+The libraries on main are always built by CI with the native toolchains in
+the table above and carry a GitHub build provenance attestation. A pull
+request cannot produce those, but its CI tests the Go bindings against the
+libraries committed here, so a PR that changes `src/` commits **temporary**
+libraries of its own:
 
-After the merge, *Update Static Libraries* rebuilds every library on main,
-replaces the PR's copies, and records a build provenance attestation:
+- `.github/scripts/build-libs.sh` cross-compiles all four on one host with
+  `zig cc`. Zig is used for nothing else: it is only a convenience for these
+  throwaway PR builds, so a contributor needs no Mac or Windows machine.
+- or `.github/scripts/fetch-ci-libs.sh` copies the artifacts of a *Build &
+  Test* run on the PR branch (`gh workflow run build.yml --ref <branch>`).
+
+After the merge, *Update Static Libraries* rebuilds every library on main
+with the native toolchains, replaces the PR's temporary copies, and records
+the attestation:
 
     gh attestation verify lib/linux_amd64/libkeccaktree.a -R pk910/keccaktree
