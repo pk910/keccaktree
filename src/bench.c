@@ -76,6 +76,7 @@ int main(void) {
     int avx2 = b & bit_AVX2, avx512 = (b & bit_AVX512F) && (b & bit_AVX512VL), sha = b & bit_SHA;
     (void)sha;
     if (avx2) row("keccak256 avx2_x4", keccaktree_keccak256_avx2_x4);
+    if (avx2) row("keccak256 avx2_x8", keccaktree_keccak256_avx2_x8);
     if (avx512) row("keccak256 avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
     if (avx512) row("keccak256 avx512_x8", keccaktree_keccak256_avx512_x8);
 #ifdef HAVE_HASHTREE

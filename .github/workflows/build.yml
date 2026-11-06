@@ -19,6 +19,7 @@ env:
 jobs:
   generated-sources:
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Generated C core and Go fallback are up to date
@@ -29,6 +30,7 @@ jobs:
 
   build-linux-amd64:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Build, run the C tests, package
@@ -48,22 +50,21 @@ jobs:
           retention-days: 7
 
   build-linux-arm64:
-    runs-on: ubuntu-22.04
+    # native arm64 runner (Neoverse N2, FEAT_SHA3): no cross toolchain or
+    # qemu to install, and the C tests run on real hardware
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Install cross-compiler and qemu
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu qemu-user
-      - name: Build, run the C tests under qemu, package
+      - name: Build, run the C tests, package
         run: |
           export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
-          make -C src CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar CFLAGS="$CFLAGS_COMMON -fno-plt" test
-          KT_TEST_SHA3=1 qemu-aarch64 -cpu max -L /usr/aarch64-linux-gnu ./build/test
+          make -C src CFLAGS="$CFLAGS_COMMON -fno-plt" test
+          KT_TEST_SHA3=$(grep -qw sha3 /proc/cpuinfo && echo 1) ./build/test
           mkdir -p out && cp build/lib/libkeccaktree.a out/
           cd out
-          aarch64-linux-gnu-strip --strip-debug libkeccaktree.a && aarch64-linux-gnu-ranlib libkeccaktree.a
-          aarch64-linux-gnu-gcc --version | head -1 > libkeccaktree.a.buildinfo
+          strip --strip-debug libkeccaktree.a && ranlib libkeccaktree.a
+          gcc --version | head -1 > libkeccaktree.a.buildinfo
           sha256sum libkeccaktree.a > libkeccaktree.a.sha256
       - uses: actions/upload-artifact@v4
         with:
@@ -74,6 +75,7 @@ jobs:
   build-linux-riscv64:
     # 24.04 for binutils >= 2.42 (Zvkb) and qemu 8.2 (RVV 1.0, Zvbb, riscv_hwprobe)
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Install cross-compiler and qemu
@@ -103,6 +105,7 @@ jobs:
 
   build-darwin-arm64:
     runs-on: macos-15
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Build, run the C tests (Apple Silicon has FEAT_SHA3), package
@@ -124,6 +127,7 @@ jobs:
 
   build-windows-amd64:
     runs-on: windows-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: msys2 {0}

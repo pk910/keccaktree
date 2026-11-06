@@ -17,7 +17,7 @@ ifneq ($(findstring mingw,$(ARCH)),)
 override CFLAGS += -Wa,-muse-unaligned-vector-move
 endif
 ifneq ($(findstring x86_64,$(ARCH)),)
-OBJ_LIST = $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o
+OBJ_LIST = $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o $(OBJ_DIR)/keccak256_avx2_x8.o
 else ifneq ($(findstring aarch64,$(ARCH))$(findstring arm64,$(ARCH)),)
 ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r
 OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS))
@@ -36,9 +36,9 @@ gen:
 
 # the SIMD/scalar kernels are hand-written assembly in asm/, one file per
 # kernel plus the shared round and frame macros they include
-X86_INC = asm/keccak256_x86_frame.inc asm/keccak256_avx512.inc
+X86_INC = asm/keccak256_x86_frame.inc asm/keccak256_avx512.inc asm/keccak256_avx2.inc
 ARM_INC = asm/keccak256_arm_frame.inc asm/keccak256_neon.inc asm/keccak256_sha3.inc asm/keccak256_scalar.inc asm/keccak256_scalar_ror.inc
-$(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o: $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(X86_INC)
+$(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o $(OBJ_DIR)/keccak256_avx2_x8.o: $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(X86_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
 $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(ARM_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
