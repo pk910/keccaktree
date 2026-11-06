@@ -74,12 +74,12 @@
 /* void name(unsigned char *output, const unsigned char *input,
  *           uint64_t count)
  * Full pairs in a loop; a single remaining node is hashed alongside a copy
- * of itself, with the copy's digest going to the stack. PERMUTATION is
- * round 0 .. 23 on v0..v7 (+ the padding lanes), leaving the digests in
- * v25..v28. */
+ * of itself, with the copy's digest going to the stack (sp + 64; sp + 96
+ * is a 16-byte scratch slot for the kernel). PERMUTATION is round 0 .. 23
+ * on v0..v7 (+ the padding lanes), leaving the digests in v25..v28. */
 .macro X2_FUNCTION name
 	FUNCTION \name
-	stp		d8, d9, [sp, #-96]!
+	stp		d8, d9, [sp, #-112]!
 	stp		d10, d11, [sp, #16]
 	stp		d12, d13, [sp, #32]
 	stp		d14, d15, [sp, #48]
@@ -103,7 +103,7 @@
 	ldp		d10, d11, [sp, #16]
 	ldp		d12, d13, [sp, #32]
 	ldp		d14, d15, [sp, #48]
-	ldp		d8, d9, [sp], #96
+	ldp		d8, d9, [sp], #112
 	ret
 	END_FUNCTION \name
 
