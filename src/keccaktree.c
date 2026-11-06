@@ -61,27 +61,29 @@ static inline uint64_t keccaktree_ticks(void) {
 #endif
 }
 
-/* a multiple of every kernel's batch (2, 3, 4, 8), long enough that the
- * 24 MHz counter of Apple cores resolves a few percent */
-#define CALIB_NODES 96
+/* A multiple of every kernel's batch (2, 3, 4, 8). Each sample hashes the
+ * buffer in place twice (96 nodes, long enough for the 24 MHz counter of
+ * Apple cores to resolve a few percent; keccak's timing does not depend on
+ * the data); one 3 KB buffer keeps the frame below the 4 KB at which
+ * Windows compilers emit a stack probe call. */
+#define CALIB_NODES 48
 #define CALIB_REPS  7
 
-/* Times each candidate on CALIB_NODES nodes, interleaved so a frequency
- * change hits all of them alike, and returns the one with the lowest
- * minimum. */
+/* Times each candidate, interleaved so a frequency change hits all of them
+ * alike, and returns the one with the lowest minimum. */
 static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
-    unsigned char in[CALIB_NODES * 64] __attribute__((aligned(64)));
-    unsigned char out[CALIB_NODES * 32] __attribute__((aligned(64)));
+    unsigned char buf[CALIB_NODES * 64] __attribute__((aligned(64)));
     uint64_t best[4];
-    for (int i = 0; i < CALIB_NODES * 64; i++) in[i] = (unsigned char)(i * 131 + 7);
+    for (int i = 0; i < CALIB_NODES * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
     for (int i = 0; i < n; i++) {
-        fns[i](out, in, CALIB_NODES); /* warm code, data and vector units */
+        fns[i](buf, buf, CALIB_NODES); /* warm code, data and vector units */
         best[i] = UINT64_MAX;
     }
     for (int r = 0; r < CALIB_REPS; r++) {
         for (int i = 0; i < n; i++) {
             uint64_t t0 = keccaktree_ticks();
-            fns[i](out, in, CALIB_NODES);
+            fns[i](buf, buf, CALIB_NODES);
+            fns[i](buf, buf, CALIB_NODES);
             uint64_t t = keccaktree_ticks() - t0;
             if (t < best[i]) best[i] = t;
         }
