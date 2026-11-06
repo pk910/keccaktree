@@ -11,6 +11,8 @@ static int kt_cpu(int f) {
   __builtin_cpu_init();
   return f == 1 ? __builtin_cpu_supports("avx2")
        : f == 2 ? __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl")
+       : f == 7 ? __builtin_cpu_supports("avx2") && __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2")
+       : f == 8 ? __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2")
        : 0;
 }
 #elif defined(__aarch64__) && defined(__APPLE__)
@@ -120,13 +122,19 @@ type Kernel = tuple[name: string, fn: KeccaktreeHashFcn, feature: int]
 proc kernels(): seq[Kernel] =
   result.add (name: "generic", fn: KeccaktreeHashFcn(keccaktree_keccak256_generic), feature: 0)
   when keccaktreeAsm and defined(amd64):
-    result.add (name: "avx2_x4", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x4), feature: 1)
-    result.add (name: "avx2_x8", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x8), feature: 1)
+    result.add (name: "x86_x1", fn: KeccaktreeHashFcn(keccaktree_keccak256_x86_x1), feature: 8)
+    result.add (name: "avx2_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x2), feature: 7)
+    result.add (name: "avx2_x4", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x4), feature: 7)
+    result.add (name: "avx2_x8", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x8), feature: 7)
+    result.add (name: "avx2_x5", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x5), feature: 7)
+    result.add (name: "avx2_x9", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x9), feature: 7)
+    result.add (name: "avx2_x10", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x10), feature: 7)
     result.add (name: "avx512vl_x4", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512vl_x4), feature: 2)
     result.add (name: "avx512_x8", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512_x8), feature: 2)
   when keccaktreeAsm and defined(arm64):
     result.add (name: "neon_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_neon_x2), feature: 0)
     result.add (name: "scalar_x1", fn: KeccaktreeHashFcn(keccaktree_keccak256_scalar_x1), feature: 0)
+    result.add (name: "neon_x3", fn: KeccaktreeHashFcn(keccaktree_keccak256_neon_x3), feature: 0)
     result.add (name: "sha3_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x2), feature: 3)
     result.add (name: "sha3_x3", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x3), feature: 3)
     result.add (name: "sha3_x3r", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x3r), feature: 3)

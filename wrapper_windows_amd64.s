@@ -2,8 +2,19 @@
 
 // Windows x64 ABI: arguments in CX, DX, R8. R8 is saved in R12, which the
 // callee preserves. The C kernels run on this frame's 8192 bytes of stack
-// (deepest: avx2_x8, about 4.5 KB). The top 32 bytes are the shadow space
-// the Windows ABI gives every callee, which compiled C code may write to.
+// (deepest: avx2_x10, under 5.9 KB including its pushed registers, see
+// wrapper_linux_amd64.s). The top 32 bytes are the shadow space the
+// Windows ABI gives every callee, which compiled C code may write to.
+//
+// Kernel ids, as in bindings_windows_amd64.go (kernelAVX2X8 is the default).
+#define KERNEL_AVX2_X4     1
+#define KERNEL_AVX2_X5     2
+#define KERNEL_AVX2_X9     3
+#define KERNEL_AVX2_X10    4
+#define KERNEL_X86_X1      5
+#define KERNEL_AVX512VL_X4 6
+#define KERNEL_AVX512_X8   7
+
 TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	MOVQ output+0(FP), CX
 	MOVQ input+8(FP), DX
@@ -14,24 +25,49 @@ TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	ADDQ $(8192-32), SP
 	ANDQ $~31, SP
 
-	CMPB ·hasAVX512(SB), $1
-	JE   avx512
-	CMPB ·avx2X4(SB), $1
+	MOVBLZX ·kernel(SB), AX
+	CMPB AX, $KERNEL_AVX2_X10
+	JE   avx2x10
+	CMPB AX, $KERNEL_AVX2_X9
+	JE   avx2x9
+	CMPB AX, $KERNEL_AVX2_X5
+	JE   avx2x5
+	CMPB AX, $KERNEL_AVX2_X4
 	JE   avx2x4
+	CMPB AX, $KERNEL_X86_X1
+	JE   x86x1
+	CMPB AX, $KERNEL_AVX512_X8
+	JE   avx512x8
+	CMPB AX, $KERNEL_AVX512VL_X4
+	JE   avx512vlx4
 	CALL keccaktree_keccak256_avx2_x8(SB)
+	JMP  epilog
+
+avx2x10:
+	CALL keccaktree_keccak256_avx2_x10(SB)
+	JMP  epilog
+
+avx2x9:
+	CALL keccaktree_keccak256_avx2_x9(SB)
+	JMP  epilog
+
+avx2x5:
+	CALL keccaktree_keccak256_avx2_x5(SB)
 	JMP  epilog
 
 avx2x4:
 	CALL keccaktree_keccak256_avx2_x4(SB)
 	JMP  epilog
 
-avx512:
-	CMPB ·avx512YMM(SB), $1
-	JE   avx512ymm
+x86x1:
+	CALL keccaktree_keccak256_x86_x1(SB)
+	JMP  epilog
+
+avx512x8:
 	CALL keccaktree_keccak256_avx512_x8(SB)
 	JMP  epilog
 
-avx512ymm:
+avx512vlx4:
 	CALL keccaktree_keccak256_avx512vl_x4(SB)
 
 epilog:

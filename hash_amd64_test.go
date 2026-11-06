@@ -2,35 +2,31 @@
 
 package keccaktree
 
-// activePath mirrors the precedence in wrapper_*_amd64.s (avx512 > avx2) and
+// activePath mirrors wrapper_*_amd64.s: the kernel id picked by init, behind
 // the supportedCPU gate.
 func activePath() string {
-	switch {
-	case !supportedCPU:
+	if !supportedCPU {
 		return "generic"
-	case hasAVX512 && avx512YMM:
-		return "avx512vl_x4"
-	case hasAVX512:
-		return "avx512_x8"
-	case avx2X4:
-		return "avx2_x4"
-	default:
-		return "avx2_x8"
 	}
+	return kernelNames[kernel]
 }
 
-func forceAMD64(supported, avx512, avx2, ymm, x4 bool) func() func() {
+func forceAMD64(supported bool, k uint8) func() func() {
 	return func() func() {
-		s, a5, a2, y, q := supportedCPU, hasAVX512, hasAVX2, avx512YMM, avx2X4
-		supportedCPU, hasAVX512, hasAVX2, avx512YMM, avx2X4 = supported, avx512, avx2, ymm, x4
-		return func() { supportedCPU, hasAVX512, hasAVX2, avx512YMM, avx2X4 = s, a5, a2, y, q }
+		s, id := supportedCPU, kernel
+		supportedCPU, kernel = supported, k
+		return func() { supportedCPU, kernel = s, id }
 	}
 }
 
 var forcedCases = []forcedCase{
-	{"generic", true, forceAMD64(false, false, false, false, false)},
-	{"avx2_x8", hasAVX2, forceAMD64(true, false, true, false, false)},
-	{"avx2_x4", hasAVX2, forceAMD64(true, false, true, false, true)},
-	{"avx512_x8", hasAVX512, forceAMD64(true, true, false, false, false)},
-	{"avx512vl_x4", hasAVX512, forceAMD64(true, true, false, true, false)},
+	{"generic", true, forceAMD64(false, kernelAVX2X8)},
+	{"avx2_x8", hasAVX2 && hasBMI, forceAMD64(true, kernelAVX2X8)},
+	{"avx2_x4", hasAVX2 && hasBMI, forceAMD64(true, kernelAVX2X4)},
+	{"avx2_x5", hasAVX2 && hasBMI, forceAMD64(true, kernelAVX2X5)},
+	{"avx2_x9", hasAVX2 && hasBMI, forceAMD64(true, kernelAVX2X9)},
+	{"avx2_x10", hasAVX2 && hasBMI, forceAMD64(true, kernelAVX2X10)},
+	{"x86_x1", hasBMI, forceAMD64(true, kernelX86X1)},
+	{"avx512_x8", hasAVX512, forceAMD64(true, kernelAVX512X8)},
+	{"avx512vl_x4", hasAVX512, forceAMD64(true, kernelAVX512VLX4)},
 }
