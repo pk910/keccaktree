@@ -26,6 +26,7 @@ on:
 jobs:
   test-linux:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Download Linux libraries
@@ -57,6 +58,7 @@ jobs:
 
   test-darwin:
     runs-on: macos-15
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -78,6 +80,7 @@ jobs:
 
   test-windows:
     runs-on: windows-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: msys2 {0}
