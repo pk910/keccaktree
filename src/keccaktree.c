@@ -163,9 +163,11 @@ static void keccaktree_avx2_tail_calibrate(void) {
     keccaktree_avx2_small_tail(best[0] < best[1] ? 2 : 1);
 }
 
-/* 6..9 nodes left after the avx2_x10 batches: a padded x10 batch, or
- * avx2_x5 with its tail (5 always go to x5: 1126 vs 1330 ns on Zen 3 for
- * 15 nodes). On Zen 3 the padded batch wins for 6 (x5 and then the
+/* 5..9 nodes left after the avx2_x10 batches (keccaktree_avx2_x10_mid_tail;
+ * the kernel's default, 4, pads all of them, for an explicit
+ * keccaktree_init without this timing): 5 go to avx2_x5 with either
+ * setting timed here (1126 vs 1330 ns on Zen 3 for 15 nodes), 6..9 to a
+ * padded x10 batch (5) or to avx2_x5 and its tail (9). On Zen 3 the padded batch wins for 6 (x5 and then the
  * scalar kernel: 1443 vs 1301 ns for 16 nodes), where the x5 chain stays
  * ahead (Gracemont, 5000 vs 5685 for 26 nodes) x5 wins. Timed like
  * keccaktree_calibrate on 26 nodes (two batches, 6 left). */

@@ -157,22 +157,44 @@ int main(void) {
     }
     if ((b & bit_AVX2) && (b & bit_BMI) && (b & bit_BMI2)) {
         test_backend("avx2_x2", keccaktree_keccak256_avx2_x2);
-        /* both remainder paths of avx2_x4 (and so of avx2_x8): 2 nodes
-         * padded, or handed to avx2_x2 */
-        keccaktree_avx2_small_tail(1);
-        test_backend("avx2_x4 (padded pair)", keccaktree_keccak256_avx2_x4);
-        test_backend("avx2_x8 (padded pair)", keccaktree_keccak256_avx2_x8);
-        keccaktree_avx2_small_tail(2);
-        test_backend("avx2_x4 (avx2_x2 pair)", keccaktree_keccak256_avx2_x4);
-        test_backend("avx2_x8 (avx2_x2 pair)", keccaktree_keccak256_avx2_x8);
-        test_backend("avx2_x9", keccaktree_keccak256_avx2_x9);
-        test_backend("avx2_x10", keccaktree_keccak256_avx2_x10);
-        test_backend("avx2_x5", keccaktree_keccak256_avx2_x5);
-        test_backend("avx2_x6", keccaktree_keccak256_avx2_x6);
+        /* every calibrated tail policy, whatever keccaktree_detect set on
+         * this host: 2 remaining nodes of avx2_x4 (and so of every kernel
+         * that ends in it) padded (small_tail 1) or handed to avx2_x2 (2);
+         * 5..9 nodes left after an avx2_x10 batch all padded (mid_tail 4),
+         * 5 to avx2_x5 (5), or 5..9 to avx2_x5 and its tail (9) */
+        static const struct {
+            const char* name;
+            keccaktree_hash_fcn f;
+            int mid; /* uses the x10 mid tail */
+        } avx2[] = {{"avx2_x4", keccaktree_keccak256_avx2_x4, 0},
+                    {"avx2_x8", keccaktree_keccak256_avx2_x8, 0},
+                    {"avx2_x5", keccaktree_keccak256_avx2_x5, 0},
+                    {"avx2_x6", keccaktree_keccak256_avx2_x6, 0},
+                    {"avx2_x9", keccaktree_keccak256_avx2_x9, 0},
+                    {"avx2_x10", keccaktree_keccak256_avx2_x10, 1}};
+        static const uint64_t mids[3] = {4, 5, 9};
+        for (int s = 1; s <= 2; s++) {
+            keccaktree_avx2_small_tail(s);
+            for (size_t k = 0; k < sizeof(avx2) / sizeof(avx2[0]); k++) {
+                for (int m = 0; m < (avx2[k].mid ? 3 : 1); m++) {
+                    char name[64];
+                    if (avx2[k].mid) {
+                        keccaktree_avx2_x10_mid_tail(mids[m]);
+                        snprintf(name, sizeof name, "%s (small_tail %d, mid_tail %d)", avx2[k].name, s,
+                                 (int)mids[m]);
+                    } else {
+                        snprintf(name, sizeof name, "%s (small_tail %d)", avx2[k].name, s);
+                    }
+                    test_backend(name, avx2[k].f);
+                }
+            }
+        }
+        keccaktree_init(NULL); /* back to the host's own tail policies */
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx2");
     }
-    if ((b & bit_AVX512F) && (b & bit_AVX512VL)) {
+    /* the AVX-512 kernels hand single nodes to x86_x1 too */
+    if ((b & bit_AVX512F) && (b & bit_AVX512VL) && (b & bit_BMI) && (b & bit_BMI2)) {
         test_backend("avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
         test_backend("avx512_x8", keccaktree_keccak256_avx512_x8);
         test_backend("avx512_x9", keccaktree_keccak256_avx512_x9);
