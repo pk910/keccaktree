@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# TEMPORARY PR LIBRARIES ONLY. Builds lib/<platform>/libkeccaktree.a for all
-# four platforms on one host with zig's cross-compiling clang, so a pull
+# TEMPORARY PR LIBRARIES ONLY. Builds lib/<platform>/libkeccaktree.a for every
+# platform on one host with zig's cross-compiling clang, so a pull
 # request that changes src/ can carry matching libraries and its Go binding
 # tests pass. Zig is not the project's build system: after the merge,
 # "Update Static Libraries" rebuilds every library on main with the native
@@ -49,5 +49,6 @@ build linux_amd64   x86_64-linux-gnu    gnu
 build linux_arm64   aarch64-linux-gnu   gnu
 build darwin_arm64  aarch64-macos.11.0  darwin
 build windows_amd64 x86_64-windows-gnu  gnu
+build linux_riscv64 riscv64-linux-gnu   gnu
 git rev-parse HEAD > lib/SOURCE_COMMIT
 echo "lib/ rebuilt for $(git rev-parse --short HEAD); commit it with your change"

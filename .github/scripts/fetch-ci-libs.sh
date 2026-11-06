@@ -26,7 +26,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 gh run download "$run_id" -p 'libkeccaktree-*' -D "$tmp"
 
-for platform in linux_amd64 linux_arm64 darwin_arm64 windows_amd64; do
+for platform in linux_amd64 linux_arm64 linux_riscv64 darwin_arm64 windows_amd64; do
 	art="$tmp/libkeccaktree-${platform//_/-}"
 	(cd "$art" && sha256sum -c libkeccaktree.a.sha256 >/dev/null)
 	cp "$art/libkeccaktree.a" "$art/libkeccaktree.a.sha256" "$art/libkeccaktree.a.buildinfo" "lib/$platform/"

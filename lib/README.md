@@ -9,6 +9,7 @@ exact compiler. `SOURCE_COMMIT` names the commit the libraries were built from.
 |---|---|---|
 | linux_amd64 | ubuntu-22.04 gcc | avx512_x8, avx512vl_x4, avx2_x4, generic |
 | linux_arm64 | ubuntu-22.04 gcc-aarch64-linux-gnu | sha3_x2, neon_x2, generic |
+| linux_riscv64 | ubuntu-24.04 gcc-riscv64-linux-gnu | rvv_zvkb, rvv, zbb_x1, rv64_x1, generic |
 | darwin_arm64 | macos-15 Apple clang | sha3_x2, neon_x2, generic |
 | windows_amd64 | MSYS2 MINGW64 gcc | avx512_x8, avx512vl_x4, avx2_x4, generic |
 
@@ -24,7 +25,7 @@ request cannot produce those, but its CI tests the Go bindings against the
 libraries committed here, so a PR that changes `src/` commits **temporary**
 libraries of its own:
 
-- `.github/scripts/build-libs.sh` cross-compiles all four on one host with
+- `.github/scripts/build-libs.sh` cross-compiles all of them on one host with
   `zig cc`. Zig is used for nothing else: it is only a convenience for these
   throwaway PR builds, so a contributor needs no Mac or Windows machine.
 - or `.github/scripts/fetch-ci-libs.sh` copies the artifacts of a *Build &

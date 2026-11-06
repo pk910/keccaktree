@@ -21,6 +21,10 @@ OBJ_LIST = $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $
 else ifneq ($(findstring aarch64,$(ARCH))$(findstring arm64,$(ARCH)),)
 ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r
 OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS))
+else ifneq ($(findstring riscv64,$(ARCH)),)
+# the kernels enable their extensions with .option arch, the C code stays rv64gc
+RISCV_KERNELS = rv64_x1 zbb_x1 rvv rvv_zvkb
+OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(RISCV_KERNELS))
 endif
 OBJ_LIST += $(OBJ_DIR)/keccak256_generic.o $(OBJ_DIR)/keccaktree.o
 
@@ -37,6 +41,9 @@ ARM_INC = asm/keccak256_arm_frame.inc asm/keccak256_neon.inc asm/keccak256_sha3.
 $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o: $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(X86_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
 $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(ARM_INC)
+	$(CC) $(ASFLAGS) -c $< -o $@
+RISCV_INC = asm/keccak256_riscv_frame.inc asm/keccak256_rv64.inc asm/keccak256_rvv.inc
+$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(RISCV_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(RISCV_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
 $(OBJ_DIR)/%.o: %.c keccak256_core.inc keccaktree.h
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -38,6 +38,7 @@ jobs:
         run: |
           cp libkeccaktree-linux-amd64/libkeccaktree.a lib/linux_amd64/
           cp libkeccaktree-linux-arm64/libkeccaktree.a lib/linux_arm64/
+          cp libkeccaktree-linux-riscv64/libkeccaktree.a lib/linux_riscv64/
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -51,7 +52,7 @@ jobs:
             export DEBIAN_FRONTEND=noninteractive
             apt-get update -qq
             apt-get install -y -qq ca-certificates golang-go build-essential \
-              gcc-aarch64-linux-gnu qemu-user-static >/dev/null
+              gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu qemu-user-static >/dev/null
             bash .github/scripts/test-matrix.sh
           '
 

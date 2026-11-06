@@ -170,6 +170,17 @@ int main(void) {
         printf("  %-48s [ skipped, set KT_TEST_SHA3=1 on FEAT_SHA3 CPUs ]\n", "sha3_*");
     }
 #endif
+#if defined(__riscv) && __riscv_xlen == 64
+    test_backend("rv64_x1", keccaktree_keccak256_rv64_x1);
+    /* the extension kernels only where qemu / the CPU has the extension:
+     * KT_TEST_ZBB=1, KT_TEST_RVV=1, KT_TEST_ZVKB=1 */
+    if (getenv("KT_TEST_ZBB")) test_backend("zbb_x1", keccaktree_keccak256_zbb_x1);
+    else printf("  %-48s [ skipped, set KT_TEST_ZBB=1 on Zbb CPUs ]\n", "zbb_x1");
+    if (getenv("KT_TEST_RVV")) test_backend("rvv", keccaktree_keccak256_rvv);
+    else printf("  %-48s [ skipped, set KT_TEST_RVV=1 on RVV 1.0 CPUs ]\n", "rvv");
+    if (getenv("KT_TEST_ZVKB")) test_backend("rvv_zvkb", keccaktree_keccak256_rvv_zvkb);
+    else printf("  %-48s [ skipped, set KT_TEST_ZVKB=1 on RVV + Zvkb CPUs ]\n", "rvv_zvkb");
+#endif
     printf(fails ? "\n%d FAILED\n" : "\nall passed\n", fails);
     return fails != 0;
 }

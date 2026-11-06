@@ -71,6 +71,36 @@ jobs:
           path: out/
           retention-days: 7
 
+  build-linux-riscv64:
+    # 24.04 for binutils >= 2.42 (Zvkb) and qemu 8.2 (RVV 1.0, Zvbb, riscv_hwprobe)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross-compiler and qemu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-linux-gnu qemu-user
+      - name: Build, run the C tests under qemu, package
+        run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          make -C src CC=riscv64-linux-gnu-gcc AR=riscv64-linux-gnu-ar CFLAGS="$CFLAGS_COMMON -fno-plt" test
+          q="qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu"
+          $q rv64,zbb=false ./build/test
+          KT_TEST_ZBB=1 KT_TEST_RVV=1 $q rv64,v=true,vlen=128 ./build/test
+          # qemu 8.2 has no zvkb property; Zvbb is a superset
+          KT_TEST_ZBB=1 KT_TEST_RVV=1 KT_TEST_ZVKB=1 $q rv64,v=true,vlen=256,zvbb=true ./build/test
+          KT_TEST_ZBB=1 KT_TEST_RVV=1 KT_TEST_ZVKB=1 $q rv64,v=true,vlen=1024,zvbb=true ./build/test
+          mkdir -p out && cp build/lib/libkeccaktree.a out/
+          cd out
+          riscv64-linux-gnu-strip --strip-debug libkeccaktree.a && riscv64-linux-gnu-ranlib libkeccaktree.a
+          riscv64-linux-gnu-gcc --version | head -1 > libkeccaktree.a.buildinfo
+          sha256sum libkeccaktree.a > libkeccaktree.a.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libkeccaktree-linux-riscv64
+          path: out/
+          retention-days: 7
+
   build-darwin-arm64:
     runs-on: macos-15
     steps:
@@ -124,7 +154,7 @@ jobs:
           retention-days: 7
 
   test:
-    needs: [build-linux-amd64, build-linux-arm64, build-darwin-arm64, build-windows-amd64]
+    needs: [build-linux-amd64, build-linux-arm64, build-linux-riscv64, build-darwin-arm64, build-windows-amd64]
     uses: ./.github/workflows/test.yml
     with:
       lib_source: artifacts
