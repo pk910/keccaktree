@@ -56,6 +56,9 @@ else:
       {.compile(asmDir & "keccak256_avx512vl_x4.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x8.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_x9.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_x10.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_x5.S", asmFlags).}
     elif defined(arm64):
       {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
       {.compile(asmDir & "keccak256_sha3_x2.S", asmFlags).}
@@ -89,6 +92,14 @@ when keccaktreeAsm and defined(amd64):
   func keccaktree_keccak256_avx2_x4*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_avx2_x8*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  # avx2_x4 / avx2_x8 with one or two extra nodes in the integer registers
+  # (AVX2 + BMI1 + BMI2)
+  func keccaktree_keccak256_avx2_x5*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  func keccaktree_keccak256_avx2_x9*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  func keccaktree_keccak256_avx2_x10*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_avx512vl_x4*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
