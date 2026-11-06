@@ -5,10 +5,19 @@
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 3 at a time on
  * cores with FEAT_SHA3 whose integer pipes would otherwise idle (Neoverse
  * V1/N2/V2, Graviton 3/4): two nodes in the vector registers
- * (keccak256_neon.inc, as keccak256_sha3_x2.S) and one in the general
+ * (keccak256_neon.inc, keccak256_sha3.inc) and one in the general
  * registers with lazy rotations (keccak256_scalar.inc, as
- * keccak256_scalar_x1.S), their rounds interleaved row by row. Fewer than 3
+ * keccak256_scalar_x1.S), their rounds interleaved. Fewer than 3
  * remaining nodes go to keccak256_scalar_x1, which takes as long for them.
+ *
+ * These cores issue all SHA3 instructions on one vector pipe, one per
+ * cycle, and the vector stream of sha3_x2 is exactly that: 64 SHA3
+ * instructions per round. Here it uses the pipelined round of
+ * keccak256_sha3.inc with chi outputs 0..3 of every row as BIC + EOR for
+ * the second pipe (CHI_SPLIT 15: 44 SHA3 + 43 plain instructions per
+ * round). On Neoverse N2 that takes sha3_x3 from 148 to 122 ns per node;
+ * every other mask and the unpipelined order were measured slower
+ * (which outputs are split matters, 2..4 of them is the useful range).
  *
  * Each ROUND3 line names the 25 lane registers and the free pair of the
  * vector stream, then the 25 lane registers and the five parity registers
@@ -21,29 +30,39 @@
 #define OUT_OFF		64
 #include "keccak256_scalar.inc"
 
+#define CHI_SPLIT	15
 #include "keccak256_neon.inc"
 #include "keccak256_sha3.inc"
 
-/* one round of both streams: vector theta and rows 0..1 (67 instructions)
- * between the scalar theta and rho (54), then the rows alternate */
+/* one round of both streams: the vector pieces (chi of the previous row 4
+ * with the parities, D, rho of row 0, then each row's chi within the next
+ * row's rho) with the scalar theta, rho and chi rows in the gaps */
 .macro ROUND3 r, ARGS, SARGS
-	THETA		PASS
-	STHETA		SPASS
-	ROUND_ROWS01	\r, PASS
-	SRHO		SPASS
-	ROUND_ROW2	PASS
+	THETA_IA	PASS
+	STHETA_C01	SPASS
+	STHETA_C2	SPASS
+	THETA_IB	\r, PASS
+	STHETA_C3	SPASS
+	STHETA_C4	SPASS
+	RHO_ROW		\a0, \a6, \a12, \a18, \a24, D0, D1, D2, D3, D4, 0, 44, 43, 21, 14, \p
+	STHETA_COL4	SPASS
+	ROW_I		\a0, \a6, \a12, \a18, \a24, \p, \q, \a3, \a9, \a10, \a16, \a22, D3, D4, D0, D1, D2, 28, 20, 3, 45, 61, \q
+	STHETA_D	SPASS
+	SRHO_ROWS01	SPASS
+	ROW_I		\a3, \a9, \a10, \a16, \a22, \a18, \a24, \a1, \a7, \a13, \a19, \a20, D1, D2, D3, D4, D0, 1, 6, 25, 8, 18
+	SRHO_ROWS234	SPASS
+	ROW_I		\a1, \a7, \a13, \a19, \a20, \a16, \a22, \a4, \a5, \a11, \a17, \a23, D4, D0, D1, D2, D3, 27, 36, 10, 15, 56
 	SCHI_ROW0	\r, SPASS
-	ROUND_ROW3	PASS
+	ROW_I		\a4, \a5, \a11, \a17, \a23, \a19, \a20, \a2, \a8, \a14, \a15, \a21, D2, D3, D4, D0, D1, 62, 55, 39, 41, 2
 	SCHI_ROW1	SPASS
 	SCHI_ROW2	SPASS
-	ROUND_ROW4	PASS
 	SCHI_ROW3	SPASS
 	SCHI_ROW4	SPASS
 	SNEXT
 .endm
 
 .macro LAST_ROUND3 ARGS, SARGS
-	LAST_ROUND	PASS
+	LAST_ROUND_I	PASS
 	SLAST_ROUND	SPASS
 .endm
 
@@ -68,7 +87,7 @@
 	add		x1, x1, #128
 	SLOAD		x1
 	movi		v21.2d, #0
-	FIRST_ROUND
+	FIRST_ROUND_PRE
 	SFIRST_ROUND
 	ROUND3		1, 30, 31, 12, 0, 6, 18, 24, 10, 3, 9, 16, 22, 13, 1, 7, 19, 20, 11, 4, 5, 17, 23, 14, 2, 8, 15, 21, 29, 30, 12, 0, 6, 19, 25, 10, 3, 9, 16, 23, 13, 1, 7, 20, 21, 11, 4, 5, 17, 24, 14, 2, 8, 26, 27, 28, 15, 22
 	ROUND3		2, 15, 21, 13, 30, 24, 4, 8, 16, 0, 9, 20, 14, 1, 31, 10, 5, 17, 22, 6, 18, 11, 2, 7, 12, 3, 19, 23, 15, 22, 13, 29, 25, 4, 8, 16, 0, 9, 21, 14, 1, 30, 10, 5, 17, 23, 6, 19, 11, 2, 7, 12, 3, 26, 27, 28, 20, 24

@@ -169,6 +169,7 @@ int main(void) {
     if (getenv("KT_TEST_SHA3")) {
         test_backend("sha3_x2", keccaktree_keccak256_sha3_x2);
         test_backend("sha3_x3", keccaktree_keccak256_sha3_x3);
+        test_backend("sha3_x3r", keccaktree_keccak256_sha3_x3r);
     } else {
         printf("  %-48s [ skipped, set KT_TEST_SHA3=1 on FEAT_SHA3 CPUs ]\n", "sha3_*");
     }

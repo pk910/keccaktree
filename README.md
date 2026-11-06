@@ -28,8 +28,8 @@ call the best kernel directly, chosen with `klauspost/cpuid`:
 | Platform | Kernels |
 |---|---|
 | linux/amd64, windows/amd64 | AVX-512 x8 (ymm x4 on Intel client cores), AVX2 x8 (two interleaved x4 batches) |
-| linux/arm64 | SHA3+scalar hybrid x3 (Neoverse N2/V1/V2, Graviton 3/4), SHA3 x2 (other FEAT_SHA3 cores), scalar x1 (Neoverse N1, Graviton 2), NEON x2 |
-| darwin/arm64 | ARMv8.2 SHA3 x2 (Apple M-series) |
+| linux/arm64 | SHA3+scalar hybrid x3 (Neoverse N2/V1/V2, Graviton 3/4; the ROR variant on Apple cores), SHA3 x2 (other FEAT_SHA3 cores), scalar x1 (Neoverse N1, Graviton 2), NEON x2 |
+| darwin/arm64 | SHA3+scalar hybrid x3 with explicit rotations (Apple M-series) |
 | everything else, or `CGO_ENABLED=0` | pure Go (generated from the same core) |
 
 `lib/` is rebuilt and committed by the *Update Static Libraries* workflow
@@ -75,11 +75,20 @@ Performance notes:
   nothing, because EOR and BIC rotate their second operand for free, leaving
   106 instructions per round in 30 general registers. `sha3_x3`
   interleaves that scalar stream with the SHA3 x2 vector stream, so the
-  integer ALUs work while the vector pipes are busy. On Neoverse N2 (GitHub
-  `ubuntu-24.04-arm`): sha3_x3 178 ns/node vs sha3_x2 224 (1.26x), scalar_x1
-  217 vs 322 for plain C. Apple cores execute a rotated operand slowly
-  (scalar_x1 is 2x slower than plain C on M1), so they keep sha3_x2; the
-  choice is made from the MIDR implementer.
+  integer ALUs work while the vector pipes are busy. Neoverse cores issue
+  every SHA3 instruction on a single vector pipe, one per cycle, so
+  `sha3_x3` additionally computes four of the five chi outputs of each row
+  as BIC + EOR for the second pipe and pipelines the round (row 4's chi
+  overlaps the next theta, each row's chi the next row's rho) to keep both
+  pipes fed. On Neoverse N2 (GitHub `ubuntu-24.04-arm`): sha3_x3 122
+  ns/node vs sha3_x2 220 (1.8x), scalar_x1 195 vs 322 for plain C. Apple
+  cores execute a rotated operand at 2 cycles latency on half their integer
+  pipes (scalar_x1 is 2x slower than plain C on M1), so they get
+  `sha3_x3r`: the SHA3 x2 vector stream with a scalar stream that rotates
+  in place with ROR (130 instructions per round, 9 of them shifted). On M1
+  that runs at the 8-wide front end (~7.6 IPC): 66 ns/node vs 77 for
+  sha3_x2 (1.16x). The choice is made from the MIDR implementer (0x41 Arm,
+  0x61 Apple; macOS always takes the Apple path).
 
 `.github/workflows/bench.yml` runs `bench` (all kernels next to hashtree's
 sha256 kernels) on GitHub's Apple M1, Neoverse N2 and x86-64 runners; start it

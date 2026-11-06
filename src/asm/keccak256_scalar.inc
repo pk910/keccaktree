@@ -62,28 +62,38 @@
 
 /* parities C0..C4 (at the offsets of row 0), column 4 of the state
  * updated with D4 = C3 ^ rotl(C0, 1), then D1, D3, D0, D2 over
- * c0, c2, c4, c1 in that order (each C's last use first); c3 is free */
-.macro STHETA SARGS
+ * c0, c2, c4, c1 in that order (each C's last use first); c3 is free.
+ * In pieces (rows 0+1, 2, 3, 4 of the parities; column 4; D) so that
+ * keccak256_sha3_x3.S can interleave them with the vector stream. */
+.macro STHETA_C01 SARGS
 	SXOR		\c0, \s0, \s5, O0, O5
 	SXOR		\c1, \s1, \s6, O1, O6
 	SXOR		\c2, \s2, \s7, O2, O7
 	SXOR		\c3, \s3, \s8, O3, O8
 	SXOR		\c4, \s4, \s9, O4, O9
+.endm
+.macro STHETA_C2 SARGS
 	SXOR		\c0, \c0, \s10, O0, O10
 	SXOR		\c1, \c1, \s11, O1, O11
 	SXOR		\c2, \c2, \s12, O2, O12
 	SXOR		\c3, \c3, \s13, O3, O13
 	SXOR		\c4, \c4, \s14, O4, O14
+.endm
+.macro STHETA_C3 SARGS
 	SXOR		\c0, \c0, \s15, O0, O15
 	SXOR		\c1, \c1, \s16, O1, O16
 	SXOR		\c2, \c2, \s17, O2, O17
 	SXOR		\c3, \c3, \s18, O3, O18
 	SXOR		\c4, \c4, \s19, O4, O19
+.endm
+.macro STHETA_C4 SARGS
 	SXOR		\c0, \c0, \s20, O0, O20
 	SXOR		\c1, \c1, \s21, O1, O21
 	SXOR		\c2, \c2, \s22, O2, O22
 	SXOR		\c3, \c3, \s23, O3, O23
 	SXOR		\c4, \c4, \s24, O4, O24
+.endm
+.macro STHETA_COL4 SARGS
 	SXOR		\s4, \s4, \c3, O4, O3
 	SXOR		\s9, \s9, \c3, O9, O3
 	SXOR		\s14, \s14, \c3, O14, O3
@@ -94,14 +104,25 @@
 	SXOR		\s14, \s14, \c0, O14, O0 + 1
 	SXOR		\s19, \s19, \c0, O19, O0 + 1
 	SXOR		\s24, \s24, \c0, O24, O0 + 1
+.endm
+.macro STHETA_D SARGS
 	SXOR		\c0, \c0, \c2, O0, O2 + 1
 	SXOR		\c2, \c2, \c4, O2, O4 + 1
 	SXOR		\c4, \c4, \c1, O4, O1 + 1
 	SXOR		\c1, \c1, \c3, O1, O3 + 1
 .endm
+.macro STHETA SARGS
+	STHETA_C01	SPASS
+	STHETA_C2	SPASS
+	STHETA_C3	SPASS
+	STHETA_C4	SPASS
+	STHETA_COL4	SPASS
+	STHETA_D	SPASS
+.endm
 
-/* theta on columns 0..3: D0 in c4, D1 in c0, D2 in c1, D3 in c2 */
-.macro SRHO SARGS
+/* theta on columns 0..3: D0 in c4, D1 in c0, D2 in c1, D3 in c2; rows
+ * 0..1 and 2..4 separately */
+.macro SRHO_ROWS01 SARGS
 	SXOR		\s0, \s0, \c4, O0, O4
 	SXOR		\s1, \s1, \c0, O1, O0
 	SXOR		\s2, \s2, \c1, O2, O1
@@ -110,6 +131,8 @@
 	SXOR		\s6, \s6, \c0, O6, O0
 	SXOR		\s7, \s7, \c1, O7, O1
 	SXOR		\s8, \s8, \c2, O8, O2
+.endm
+.macro SRHO_ROWS234 SARGS
 	SXOR		\s10, \s10, \c4, O10, O4
 	SXOR		\s11, \s11, \c0, O11, O0
 	SXOR		\s12, \s12, \c1, O12, O1
@@ -122,6 +145,10 @@
 	SXOR		\s21, \s21, \c0, O21, O0
 	SXOR		\s22, \s22, \c1, O22, O1
 	SXOR		\s23, \s23, \c2, O23, O2
+.endm
+.macro SRHO SARGS
+	SRHO_ROWS01	SPASS
+	SRHO_ROWS234	SPASS
 .endm
 
 /* chi on a row, b[x] at offset o[x]: out[x] = b[x] ^ (~b[x+1] & b[x+2])
