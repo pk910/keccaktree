@@ -1,16 +1,15 @@
-/* Portable keccak256 over 64-byte nodes, specialised single-block sponge. */
+/*
+ * Portable keccak256 over 64-byte nodes: digest = keccak256(node).
+ *
+ * A node fits in one 136-byte block, so the sponge is a single permutation:
+ * lanes 0..7 hold the input, lane 8 the Keccak padding byte 0x01, lane 16 the
+ * final padding bit, every other lane is zero. The digest is lanes 0..3.
+ *
+ * This is the fallback for CPUs without a dedicated kernel; it is written for
+ * clarity, the fast paths are the assembly kernels.
+ */
 #include <stdint.h>
 #include "keccaktree.h"
-
-typedef uint64_t V;
-#define XOR(a, b) ((a) ^ (b))
-#define XOR3(a, b, c) ((a) ^ (b) ^ (c))
-#define ROL(a, n) (((a) << (n)) | ((a) >> (64 - (n))))
-#define ROL1XOR(a, b) ((a) ^ ROL((b), 1))
-#define XORROL(a, b, n) ROL(((a) ^ (b)), n)
-#define CHI(a, b, c) ((a) ^ (~(b) & (c)))
-#define KC(x) ((V)(x))
-#define IOTA(a, i) ((a) ^ RC[i])
 
 static const uint64_t RC[24] = {
     0x0000000000000001ULL, 0x0000000000008082ULL, 0x800000000000808aULL, 0x8000000080008000ULL,
@@ -21,36 +20,59 @@ static const uint64_t RC[24] = {
     0x8000000080008081ULL, 0x8000000000008080ULL, 0x0000000080000001ULL, 0x8000000080008008ULL,
 };
 
-static inline uint64_t ld64(const unsigned char* p) {
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    uint64_t v;
-    __builtin_memcpy(&v, p, 8);
+/* rho offsets and pi destinations along pi's 24-cycle starting at lane 1 */
+static const unsigned RHO[24] = {
+    1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
+};
+static const unsigned PI[24] = {
+    10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4, 15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1,
+};
+
+#define ROL(a, n) (((a) << (n)) | ((a) >> (64 - (n))))
+
+static inline uint64_t ld64(const unsigned char *p) {
+    uint64_t v = 0;
+    for (int i = 7; i >= 0; i--) v = (v << 8) | p[i];
     return v;
-#else
-    return (uint64_t)p[0] | ((uint64_t)p[1] << 8) | ((uint64_t)p[2] << 16) | ((uint64_t)p[3] << 24) |
-           ((uint64_t)p[4] << 32) | ((uint64_t)p[5] << 40) | ((uint64_t)p[6] << 48) | ((uint64_t)p[7] << 56);
-#endif
 }
 
-static inline void st64(unsigned char* p, uint64_t v) {
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    __builtin_memcpy(p, &v, 8);
-#else
+static inline void st64(unsigned char *p, uint64_t v) {
     for (int i = 0; i < 8; i++) p[i] = (unsigned char)(v >> (8 * i));
-#endif
 }
 
-void keccaktree_keccak256_generic(unsigned char* output, const unsigned char* input, uint64_t count) {
+static void keccak_f1600(uint64_t a[25]) {
+    uint64_t c[5], d, t, u;
+    for (int r = 0; r < 24; r++) {
+        /* theta */
+        for (int x = 0; x < 5; x++) c[x] = a[x] ^ a[x + 5] ^ a[x + 10] ^ a[x + 15] ^ a[x + 20];
+        for (int x = 0; x < 5; x++) {
+            d = c[(x + 4) % 5] ^ ROL(c[(x + 1) % 5], 1);
+            for (int y = 0; y < 25; y += 5) a[y + x] ^= d;
+        }
+        /* rho and pi */
+        t = a[1];
+        for (int i = 0; i < 24; i++) {
+            u = a[PI[i]];
+            a[PI[i]] = ROL(t, RHO[i]);
+            t = u;
+        }
+        /* chi */
+        for (int y = 0; y < 25; y += 5) {
+            for (int x = 0; x < 5; x++) c[x] = a[y + x];
+            for (int x = 0; x < 5; x++) a[y + x] = c[x] ^ (~c[(x + 1) % 5] & c[(x + 2) % 5]);
+        }
+        /* iota */
+        a[0] ^= RC[r];
+    }
+}
+
+void keccaktree_keccak256_generic(unsigned char *output, const unsigned char *input, uint64_t count) {
     for (uint64_t k = 0; k < count; k++) {
-        const unsigned char* in = input + 64 * k;
-        V a0 = ld64(in), a1 = ld64(in + 8), a2 = ld64(in + 16), a3 = ld64(in + 24);
-        V a4 = ld64(in + 32), a5 = ld64(in + 40), a6 = ld64(in + 48), a7 = ld64(in + 56);
-        V o0, o1, o2, o3;
-#include "keccak256_core.inc"
-        unsigned char* out = output + 32 * k;
-        st64(out, o0);
-        st64(out + 8, o1);
-        st64(out + 16, o2);
-        st64(out + 24, o3);
+        uint64_t a[25] = {0};
+        for (int i = 0; i < 8; i++) a[i] = ld64(input + 64 * k + 8 * i);
+        a[8] = 0x01;
+        a[16] = 0x8000000000000000ULL;
+        keccak_f1600(a);
+        for (int i = 0; i < 4; i++) st64(output + 32 * k + 8 * i, a[i]);
     }
 }

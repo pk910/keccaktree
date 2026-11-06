@@ -30,10 +30,6 @@ OBJ_LIST += $(OBJ_DIR)/keccak256_generic.o $(OBJ_DIR)/keccaktree.o
 
 all: $(libname) test bench
 
-# the generic C core is generated and committed; regenerate with `make gen`
-gen:
-	python3 ../tools/gen_core.py > keccak256_core.inc
-
 # the SIMD/scalar kernels are hand-written assembly in asm/, one file per
 # kernel plus the shared round and frame macros they include
 X86_INC = asm/keccak256_x86_frame.inc asm/keccak256_avx512.inc asm/keccak256_avx2.inc
@@ -45,7 +41,7 @@ $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o:
 RISCV_INC = asm/keccak256_riscv_frame.inc asm/keccak256_rv64.inc asm/keccak256_rvv.inc
 $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(RISCV_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(RISCV_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
-$(OBJ_DIR)/%.o: %.c keccak256_core.inc keccaktree.h
+$(OBJ_DIR)/%.o: %.c keccaktree.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(libname): $(OBJ_LIST)
@@ -65,4 +61,4 @@ bench: bench.c $(libname)
 clean:
 	rm -rf $(OUT_DIR)
 
-.PHONY: all test bench clean gen
+.PHONY: all test bench clean
