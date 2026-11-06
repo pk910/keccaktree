@@ -23,13 +23,18 @@ reduction).
 
 The bindings follow the hashtree-bindings layout: the `cgo` subpackage links a
 prebuilt static library from `lib/<platform>/`, and small Go assembly wrappers
-call the best kernel directly, chosen with `klauspost/cpuid`:
+call the kernel picked from the CPU features (`klauspost/cpuid`; the C
+library probes the same features itself). Dispatch never looks at the CPU
+vendor, family or model; where several kernels run, the default is fixed:
 
-| Platform | Kernels |
-|---|---|
-| linux/amd64, windows/amd64 | AVX-512 x8 (ymm x4 on Intel client cores), AVX2 x8 (two interleaved x4 batches) |
-| linux/arm64 | SHA3+scalar hybrid x3 (Neoverse N2/V1/V2, Graviton 3/4; the ROR variant on Apple cores), SHA3 x2 (other FEAT_SHA3 cores), scalar x1 (Neoverse N1, Graviton 2), NEON x2 |
-| darwin/arm64 | SHA3+scalar hybrid x3 with explicit rotations (Apple M-series) |
+| Platform | Feature probed | Kernel |
+|---|---|---|
+| linux/amd64, windows/amd64 | AVX-512F + AVX-512VL, OS zmm state | AVX-512 x8 |
+| | AVX2, OS ymm state | AVX2 x8 (two interleaved x4 batches) |
+| linux/arm64 | FEAT_SHA3 (`AT_HWCAP`) | SHA3+scalar hybrid x3, lazy rotations |
+| | Advanced SIMD | NEON x2 |
+| darwin/arm64 | FEAT_SHA3 (`hw.optional` sysctl) | SHA3+scalar hybrid x3 with explicit rotations |
+| | Advanced SIMD | NEON x2 |
 | everything else, or `CGO_ENABLED=0` | pure Go (generated from the same core) |
 
 `lib/` is rebuilt and committed by the *Update Static Libraries* workflow
@@ -85,8 +90,9 @@ Performance notes:
   the rounds of two independent 4-node batches to fill that gap (10% faster
   on Zen) and keeps the idle batch's parities in memory. Interleaving a scalar BMI2 stream with either (as on ARM) was
   measured at 2x slower: with 16 general registers the scalar state spills.
-  Intel client cores with AVX-512 (Ice/Tiger/Rocket Lake) have only one
-  512-bit ALU port, so dispatch picks the 256-bit `avx512vl_x4` kernel there.
+  On cores with only one 512-bit ALU port (Intel's AVX-512 client parts)
+  the 256-bit `avx512vl_x4` kernel can be faster; it is not auto-selected
+  but can be passed to `keccaktree_init`.
   A single-node AVX2 call goes to the scalar code (25% faster on Zen 3).
 - **AArch64.** `sha3_x2` is 67 instructions per round with no moves or
   spills (EOR3, RAX1, XAR, BCAX). `scalar_x1` keeps every lane in a lazily
@@ -106,8 +112,10 @@ Performance notes:
   `sha3_x3r`: the SHA3 x2 vector stream with a scalar stream that rotates
   in place with ROR (130 instructions per round, 9 of them shifted). On M1
   that runs at the 8-wide front end (~7.6 IPC): 66 ns/node vs 77 for
-  sha3_x2 (1.16x). The choice is made from the MIDR implementer (0x41 Arm,
-  0x61 Apple; macOS always takes the Apple path).
+  sha3_x2 (1.16x). Dispatch takes `sha3_x3` on Linux and `sha3_x3r` on
+  macOS when FEAT_SHA3 is present; the other kernels (`sha3_x2`,
+  `scalar_x1`, and `sha3_x3r` on Linux) are available through
+  `keccaktree_init`.
 
 `.github/workflows/bench.yml` runs `bench` (all kernels next to hashtree's
 sha256 kernels) on GitHub's Apple M1, Neoverse N2 and x86-64 runners; start it

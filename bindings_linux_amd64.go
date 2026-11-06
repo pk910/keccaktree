@@ -16,10 +16,11 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 var hasAVX512 = cpuid.CPU.Supports(cpuid.AVX512F, cpuid.AVX512VL)
 var hasAVX2 = cpuid.CPU.Supports(cpuid.AVX2)
 
-// avx512YMM selects the 256-bit avx512vl_x4 kernel over avx512_x8 on Intel
-// client cores whose 512-bit integer ops issue on a single port (see
-// keccaktree_avx512_single_port in src/keccaktree.c).
-var avx512YMM = hasAVX512 && avx512SinglePort(cpuid.CPU.VendorID, cpuid.CPU.Family, cpuid.CPU.Model)
+// avx512YMM switches the AVX-512 path from avx512_x8 to the 256-bit
+// avx512vl_x4 kernel. Off by default, as in keccaktree_detect
+// (src/keccaktree.c): kernels are chosen by feature bits only; the tests
+// use it to force the ymm kernel.
+var avx512YMM = false
 
 func init() {
 	supportedCPU = hasAVX2 || hasAVX512

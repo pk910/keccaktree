@@ -50,8 +50,8 @@ echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
 run amd64 qemu-x86_64  'Haswell'    avx2_x8
 run arm64 qemu-aarch64 'cortex-a57' neon_x2
-run arm64 qemu-aarch64 'max'        sha3_x2
-run arm64 qemu-aarch64 'neoverse-n1' scalar_x1
+run arm64 qemu-aarch64 'max'        sha3_x3
+run arm64 qemu-aarch64 'neoverse-n1' neon_x2
 run arm64 qemu-aarch64 'neoverse-n2' sha3_x3
 
 echo "=== result: $([ $fail -eq 0 ] && echo ALL GREEN || echo FAILURES) ==="

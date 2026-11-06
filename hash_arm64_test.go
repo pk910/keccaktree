@@ -10,22 +10,22 @@ func activePath() string {
 		return "generic"
 	case hasSHA3 && armLazy:
 		return "sha3_x3"
-	case hasSHA3 && armApple:
+	case hasSHA3 && armROR:
 		return "sha3_x3r"
 	case hasSHA3:
 		return "sha3_x2"
-	case armN1:
+	case armScalar:
 		return "scalar_x1"
 	default:
 		return "neon_x2"
 	}
 }
 
-func forceARM64(supported, sha3, lazy, n1, apple bool) func() func() {
+func forceARM64(supported, sha3, lazy, scalar, ror bool) func() func() {
 	return func() func() {
-		s, s3, l, n, a := supportedCPU, hasSHA3, armLazy, armN1, armApple
-		supportedCPU, hasSHA3, armLazy, armN1, armApple = supported, sha3, lazy, n1, apple
-		return func() { supportedCPU, hasSHA3, armLazy, armN1, armApple = s, s3, l, n, a }
+		s, s3, l, n, a := supportedCPU, hasSHA3, armLazy, armScalar, armROR
+		supportedCPU, hasSHA3, armLazy, armScalar, armROR = supported, sha3, lazy, scalar, ror
+		return func() { supportedCPU, hasSHA3, armLazy, armScalar, armROR = s, s3, l, n, a }
 	}
 }
 

@@ -33,18 +33,17 @@ void keccaktree_keccak256_avx2_x4(unsigned char* output, const unsigned char* in
 void keccaktree_keccak256_avx2_x8(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);
-/* 1 on Intel client cores whose 512-bit integer ops issue on one port only;
- * keccaktree_hash then uses avx512vl_x4 instead of avx512_x8 */
-int keccaktree_avx512_single_port(void);
 #endif
 
 #ifdef __aarch64__
 void keccaktree_keccak256_neon_x2(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_sha3_x2(unsigned char* output, const unsigned char* input, uint64_t count);
-/* lazy-rotation scalar, and sha3_x2 interleaved with it (Arm Ltd cores) */
+/* lazy-rotation scalar, and sha3_x2 interleaved with it (cores that run a
+ * shifted-operand EOR/BIC at full rate) */
 void keccaktree_keccak256_scalar_x1(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_sha3_x3(unsigned char* output, const unsigned char* input, uint64_t count);
-/* sha3_x2 interleaved with a plain-rotation scalar node (Apple cores) */
+/* sha3_x2 interleaved with a plain-rotation scalar node (cores where a
+ * shifted operand costs extra) */
 void keccaktree_keccak256_sha3_x3r(unsigned char* output, const unsigned char* input, uint64_t count);
 
 #endif

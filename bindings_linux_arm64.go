@@ -12,22 +12,18 @@ import (
 //go:noescape
 func KeccaktreeHash(output *byte, input *byte, count uint64)
 
-// FEAT_SHA3 (EOR3/RAX1/XAR/BCAX): Apple M-series, Graviton 3+, Neoverse V1/N2+.
+// FEAT_SHA3 (EOR3/RAX1/XAR/BCAX), from AT_HWCAP.
 var hasSHA3 = cpuid.CPU.Supports(cpuid.SHA3)
 
-// armLazy and armN1 pick the lazy-rotation kernels (sha3_x3 with FEAT_SHA3,
-// scalar_x1 without) on Arm Ltd cores and armApple the explicit-rotation
-// hybrid sha3_x3r on Apple cores; see keccaktree_arm_select in
-// src/keccaktree.c. cpuid only knows the MIDR when the kernel exposes it.
-var armLazy, armN1, armApple = armSelect(cpuid.CPU.VendorID, (cpuid.CPU.Model>>4)&0xfff)
-
-func armSelect(vendor cpuid.Vendor, part int) (lazy, n1, apple bool) {
-	return vendor == cpuid.ARM, vendor == cpuid.ARM && part == 0xd0c, vendor == cpuid.Apple
-}
+// Kernel choice between supported kernels, fixed as in keccaktree_detect
+// (src/keccaktree.c): with FEAT_SHA3 sha3_x3 (armLazy), without it
+// neon_x2. armROR (sha3_x3r) and armScalar (scalar_x1) are off by default
+// and only set by the tests to force those kernels.
+var armLazy, armROR, armScalar = true, false, false
 
 func init() {
 	// NEON / Advanced SIMD is mandatory on every ARMv8-A (AArch64) CPU, so the
-	// neon_x2 path is always safe; hasSHA3 / armLazy / armN1 / armApple only select faster paths.
+	// neon_x2 path is always safe; hasSHA3 only selects the faster sha3_x3 path.
 	supportedCPU = true
 	keccaktreeHash = KeccaktreeHash
 }

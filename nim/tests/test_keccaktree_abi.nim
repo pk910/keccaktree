@@ -14,7 +14,15 @@ static int kt_cpu(int f) {
        : 0;
 }
 #elif defined(__aarch64__) && defined(__APPLE__)
-static int kt_cpu(int f) { return f == 3; }
+#include <sys/sysctl.h>
+static int kt_sysctl(const char* name) {
+  int v = 0;
+  size_t len = sizeof(v);
+  return sysctlbyname(name, &v, &len, NULL, 0) == 0 && v != 0;
+}
+static int kt_cpu(int f) {
+  return f == 3 && (kt_sysctl("hw.optional.arm.FEAT_SHA3") || kt_sysctl("hw.optional.armv8_2_sha3"));
+}
 #elif defined(__aarch64__) && defined(__linux__)
 #include <sys/auxv.h>
 static int kt_cpu(int f) { return f == 3 && (getauxval(AT_HWCAP) & (1UL << 17)); }
