@@ -73,5 +73,8 @@ jobs:
 
           Workflow run: ${WORKFLOW_URL}
           Verify: gh attestation verify lib/<platform>/libkeccaktree.a -R ${{ github.repository }}"
-            git push
+            # main may have moved on with commits outside the path filter
+            # (docs, scripts); replay the lib/ commit on top of them
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
