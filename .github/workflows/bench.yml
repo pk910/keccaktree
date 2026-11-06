@@ -43,6 +43,12 @@ jobs:
         run: KT_TEST_SHA3=$( [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo && echo 1 ) build/test
       - name: Benchmark
         run: build/bench
+      # the Go wrapper's dispatch and forced paths against the committed lib/
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Go forced paths (committed lib)
+        run: go test -count=1 -run 'TestForcedPaths|TestActivePathMatchesEnv|TestHash' -v .
       # interleaved A/B of this tree against main (bench/ab): ratio > 1 =
       # this tree faster; min and median of -n rounds per size
       - name: A/B vs main

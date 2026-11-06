@@ -110,6 +110,7 @@ WEAK(keccaktree_keccak256_avx512_x9)
 WEAK(keccaktree_keccak256_avx512_x10)
 WEAK(keccaktree_keccak256_avx512vl_x5)
 WEAK(keccaktree_keccak256_avx512_x16)
+WEAK(keccaktree_keccak256_avx2_x6)
 #else
 #define keccaktree_keccak256_avx2_x4 NULL
 #define keccaktree_keccak256_avx2_x8 NULL
@@ -132,6 +133,7 @@ WEAK(keccaktree_keccak256_avx512_x16)
 #define keccaktree_keccak256_avx512_x10 NULL
 #define keccaktree_keccak256_avx512vl_x5 NULL
 #define keccaktree_keccak256_avx512_x16 NULL
+#define keccaktree_keccak256_avx2_x6 NULL
 #endif
 
 static double now(void) {
