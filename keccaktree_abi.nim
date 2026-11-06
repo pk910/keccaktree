@@ -54,6 +54,7 @@ else:
       {.compile(asmDir & "keccak256_avx512_x8.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx512vl_x4.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_x8.S", asmFlags).}
     elif defined(arm64):
       {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
       {.compile(asmDir & "keccak256_sha3_x2.S", asmFlags).}
@@ -80,6 +81,8 @@ when keccaktreeAsm and defined(amd64):
   # Undefined behavior on CPUs without the instructions; keccaktree_hash
   # picks a supported one.
   func keccaktree_keccak256_avx2_x4*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  func keccaktree_keccak256_avx2_x8*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_avx512vl_x4*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
