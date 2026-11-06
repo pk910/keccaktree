@@ -48,7 +48,10 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Go forced paths (committed lib)
-        run: go test -count=1 -run 'TestForcedPaths|TestActivePathMatchesEnv|TestHash' -v .
+        run: |
+          if [ "$(uname -m)" = x86_64 ]; then export KECCAKTREE_EXPECT_PATH='avx512_x9|avx512_x8|avx512vl_x4|avx2_x10|avx2_x9|avx2_x6|avx2_x5|avx2_x8|avx2_x4'
+          else export KECCAKTREE_EXPECT_PATH='sha3_x3|sha3_x3r|sha3_x2|neon_x3|neon_x2|scalar_x1'; fi
+          go test -count=1 -run 'TestForcedPaths|TestActivePathMatchesEnv|TestHash' -v .
       # interleaved A/B of this tree against main (bench/ab): ratio > 1 =
       # this tree faster; min and median of -n rounds per size
       - name: A/B vs main
