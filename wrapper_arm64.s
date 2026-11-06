@@ -26,8 +26,14 @@ sha3x3r:
 
 nosha3:
 	MOVBU ·armScalar(SB), R20
+	MOVBU ·armHybrid(SB), R21
 	CBNZ  R20, scalar
+	CBNZ  R21, neonx3
 	BL    keccaktree_keccak256_neon_x2(SB)
+	RET
+
+neonx3:
+	BL keccaktree_keccak256_neon_x3(SB)
 	RET
 
 scalar:

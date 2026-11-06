@@ -23,8 +23,9 @@
  * with a single 512-bit ALU port, avx2_x10, avx2_x9 and avx2_x5 (scalar
  * nodes interleaved into the AVX2 rounds) win only where the integer ALUs
  * are separate from the vector pipes, sha3_x3 (lazy rotations) needs EOR/BIC
- * with a rotated operand at full rate, sha3_x3r does not, and scalar_x1
- * beats neon_x2 where the integer side outruns the vector side; on RISC-V
+ * with a rotated operand at full rate, sha3_x3r does not, and neon_x3 or
+ * scalar_x1 beat neon_x2 where the integer side keeps up with the vector
+ * side; on RISC-V
  * the scalar and vector kernels trade places with VLEN and the core. For these,
  * detection runs every feature-qualified candidate once on a small warm
  * batch and keeps the fastest (keccaktree_calibrate): tens of microseconds
@@ -165,18 +166,19 @@ keccaktree_hash_fcn keccaktree_detect(void) {
     static const keccaktree_hash_fcn sha3[] = {&keccaktree_keccak256_sha3_x3,
                                                &keccaktree_keccak256_sha3_x3r,
                                                &keccaktree_keccak256_sha3_x2};
-    static const keccaktree_hash_fcn simd[] = {&keccaktree_keccak256_neon_x2,
-                                               &keccaktree_keccak256_scalar_x1};
+    static const keccaktree_hash_fcn simd[] = {&keccaktree_keccak256_neon_x3,
+                                               &keccaktree_keccak256_scalar_x1,
+                                               &keccaktree_keccak256_neon_x2};
 #if defined(__APPLE__)
     if (keccaktree_sysctl_flag("hw.optional.arm.FEAT_SHA3") || keccaktree_sysctl_flag("hw.optional.armv8_2_sha3"))
         return keccaktree_calibrate(sha3, 3);
-    return keccaktree_calibrate(simd, 2); /* Advanced SIMD is mandatory on AArch64 */
+    return keccaktree_calibrate(simd, 3); /* Advanced SIMD is mandatory on AArch64 */
 #elif defined(__linux__)
     unsigned long hwcaps = getauxval(AT_HWCAP);
 #ifdef HWCAP_SHA3
     if (hwcaps & HWCAP_SHA3) return keccaktree_calibrate(sha3, 3);
 #endif
-    if (hwcaps & HWCAP_ASIMD) return keccaktree_calibrate(simd, 2);
+    if (hwcaps & HWCAP_ASIMD) return keccaktree_calibrate(simd, 3);
 #endif
 #endif
 #if defined(__riscv) && __riscv_xlen == 64

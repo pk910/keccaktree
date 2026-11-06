@@ -171,6 +171,7 @@ int main(void) {
 #ifdef __aarch64__
     test_backend("neon_x2", keccaktree_keccak256_neon_x2);
     test_backend("scalar_x1", keccaktree_keccak256_scalar_x1);
+    test_backend("neon_x3", keccaktree_keccak256_neon_x3);
     if (getenv("KT_TEST_SHA3")) {
         test_backend("sha3_x2", keccaktree_keccak256_sha3_x2);
         test_backend("sha3_x3", keccaktree_keccak256_sha3_x3);

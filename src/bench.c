@@ -115,6 +115,7 @@ int main(void) {
     (void)sha2;
     row("keccak256 scalar_x1", keccaktree_keccak256_scalar_x1);
     row("keccak256 neon_x2", keccaktree_keccak256_neon_x2);
+    row("keccak256 neon_x3", keccaktree_keccak256_neon_x3);
     if (sha3) {
         row("keccak256 sha3_x2", keccaktree_keccak256_sha3_x2);
         row("keccak256 sha3_x3", keccaktree_keccak256_sha3_x3);

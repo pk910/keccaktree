@@ -31,7 +31,7 @@ round and frame macros (`.inc`). The header of each file explains its design.
 | x86-64 AVX2 + BMI2 | `avx2_x10`, `avx2_x9`, `avx2_x5`: the AVX2 batches plus one or two nodes hashed in the integer registers (rorx, andn) in the gaps of the vector rounds; picked where the integer ALUs are separate from the vector pipes (Zen 3, Gracemont) | see PR |
 | x86-64 AVX2 | `avx2_x8`, `avx2_x4` | 96 (Zen 3; hashtree shani: 38) |
 | AArch64 FEAT_SHA3 | `sha3_x3` (Neoverse), `sha3_x3r` (Apple), `sha3_x2` | 122 (Neoverse N2), 66 (Apple M1) |
-| AArch64 | `neon_x2`, `scalar_x1` | |
+| AArch64 | `neon_x3` (Neoverse N1), `scalar_x1`, `neon_x2` | 216 (Neoverse N1; hashtree neon_x4: 257) |
 | RISC-V 64 | `rvv_zvkb`, `rvv`, `zbb_x1`, `rv64_x1` | not measured on hardware |
 | any | `generic` (portable C, fully unrolled lane-complemented rounds; also the single-node tail of the x86-64 kernels) | see PR |
 
