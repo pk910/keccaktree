@@ -48,7 +48,7 @@ build arm64 aarch64-linux-gnu-gcc
 
 echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
-run amd64 qemu-x86_64  'Haswell'    avx2_x4
+run amd64 qemu-x86_64  'Haswell'    avx2_x8
 run arm64 qemu-aarch64 'cortex-a57' neon_x2
 run arm64 qemu-aarch64 'max'        sha3_x2
 run arm64 qemu-aarch64 'neoverse-n1' scalar_x1
