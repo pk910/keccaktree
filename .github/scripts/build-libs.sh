@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# Builds lib/<platform>/libkeccaktree.a for all four platforms on one host
-# with zig's cross-compiling clang, so a pull request that changes src/ can
-# carry matching libraries and its Go binding tests pass. These builds are
-# temporary: after the merge, "Update Static Libraries" rebuilds every
-# library on main with the native toolchains and attests it.
+# TEMPORARY PR LIBRARIES ONLY. Builds lib/<platform>/libkeccaktree.a for all
+# four platforms on one host with zig's cross-compiling clang, so a pull
+# request that changes src/ can carry matching libraries and its Go binding
+# tests pass. Zig is not the project's build system: after the merge,
+# "Update Static Libraries" rebuilds every library on main with the native
+# toolchains (gcc, Apple clang, MSYS2 gcc) and attests it, replacing these.
 #
 #   .github/scripts/build-libs.sh
 #
@@ -39,7 +40,7 @@ build() { # platform zig-target ar-format
 	(
 		cd "lib/$platform"
 		llvm-ranlib libkeccaktree.a
-		echo "zig cc $zig_version -target $target (contributor build)" > libkeccaktree.a.buildinfo
+		echo "zig cc $zig_version -target $target (temporary PR build, replaced on merge)" > libkeccaktree.a.buildinfo
 		sha256sum libkeccaktree.a > libkeccaktree.a.sha256
 	)
 }
