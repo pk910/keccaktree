@@ -10,6 +10,7 @@
  *   VMEM(i)    vector-sized stack slot i, i = 0..9
  *   RC(r)      round constant r as an embedded broadcast operand
  *   K1, K63    0x01 and 0x80..00 (the two padding lanes) as broadcasts
+ *   ROT8, ROT56  vpshufb controls rotating each qword left by 8 / 56 bits
  *   OUTPUT     macro taking the four digest-word registers
  *
  * State: lane i = x + 5*y of the 5x5 state. 30 of the 32 registers are
@@ -26,9 +27,15 @@
  * 5 stores:
  *   theta:  C[x] = A[x,0]^..^A[x,4]                 10 vpternlogq
  *           E[x] = rotl(C[x],1)                      5 vprolq
- *   rho/pi: B = rotl(A ^ C[x-1] ^ E[x+1], r)         25 vpternlogq, 24 vprolq
+ *   rho/pi: B = rotl(A ^ C[x-1] ^ E[x+1], r)         25 vpternlogq, 24 rotations
  *   chi:    A' = B[x] ^ (~B[x+1] & B[x+2])           25 vpternlogq
  *   iota:   A'[0] ^= RC                              1 vpxorq (broadcast)
+ *
+ * On Intel, vpternlogq runs on ports 0 and 5 but vprolq on port 0 only, so
+ * the two rotations by a whole number of bytes (8 and 56) are byte shuffles
+ * (vpshufb, port 5), and theta rotates each column sum as soon as it is
+ * complete, which spreads the port-0-only work out. The including file
+ * defines ROT8 and ROT56, the vpshufb controls, as memory operands.
  *
  * Shortcuts (keccak256 of 64 bytes is a single permutation):
  *   - round 0: only lanes 0..7 hold data, lane 8 and lane 16 are padding
@@ -85,7 +92,11 @@
 /* B = rotl(A ^ C[x-1] ^ E[x+1], rot), in place */
 .macro THETA_RHO a, cm1, ep1, rot
 	vpternlogq	VR\a, VR\cm1, VR\ep1, 0x96
-.if \rot
+.if \rot == 8
+	vpshufb		VR\a, VR\a, ROT8
+.elseif \rot == 56
+	vpshufb		VR\a, VR\a, ROT56
+.elseif \rot
 	vprolq		VR\a, VR\a, \rot
 .endif
 .endm
@@ -127,22 +138,22 @@
 	vmovdqa64	VREG(C0), LIN(\r, 0)
 	vpternlogq	VREG(C0), VR\a5, VR\a10, 0x96
 	vpternlogq	VREG(C0), VR\a15, VR\a20, 0x96
+	vprolq		VREG(E0), VREG(C0), 1
 	vmovdqa64	VREG(C1), LIN(\r, 1)
 	vpternlogq	VREG(C1), VR\a6, VR\a11, 0x96
 	vpternlogq	VREG(C1), VR\a16, VR\a21, 0x96
+	vprolq		VREG(E1), VREG(C1), 1
 	vmovdqa64	VREG(C2), LIN(\r, 2)
 	vpternlogq	VREG(C2), VR\a7, VR\a12, 0x96
 	vpternlogq	VREG(C2), VR\a17, VR\a22, 0x96
+	vprolq		VREG(E2), VREG(C2), 1
 	vmovdqa64	VREG(C3), LIN(\r, 3)
 	vpternlogq	VREG(C3), VR\a8, VR\a13, 0x96
 	vpternlogq	VREG(C3), VR\a18, VR\a23, 0x96
+	vprolq		VREG(E3), VREG(C3), 1
 	vmovdqa64	VREG(C4), LIN(\r, 4)
 	vpternlogq	VREG(C4), VR\a9, VR\a14, 0x96
 	vpternlogq	VREG(C4), VR\a19, VR\a24, 0x96
-	vprolq		VREG(E0), VREG(C0), 1
-	vprolq		VREG(E1), VREG(C1), 1
-	vprolq		VREG(E2), VREG(C2), 1
-	vprolq		VREG(E3), VREG(C3), 1
 	vprolq		VREG(E4), VREG(C4), 1
 .endm
 
