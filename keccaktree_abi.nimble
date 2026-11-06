@@ -12,4 +12,4 @@ installFiles  = @["keccaktree_abi.nim"]
 requires "nim >= 1.6.0"
 
 task test, "Run the keccaktree tests":
-  exec "nim c -r -d:release nim/tests/test_keccaktree_abi.nim"
+  exec "nim c -r -d:release tests/test_keccaktree_abi.nim"

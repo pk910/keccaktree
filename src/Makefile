@@ -30,16 +30,17 @@ OBJ_LIST += $(OBJ_DIR)/keccak256_generic.o $(OBJ_DIR)/keccaktree.o
 
 all: $(libname) test bench
 
-# the SIMD/scalar kernels are hand-written assembly in asm/, one file per
-# kernel plus the shared round and frame macros they include
-X86_INC = asm/keccak256_x86_frame.inc asm/keccak256_avx512.inc asm/keccak256_avx2.inc
-ARM_INC = asm/keccak256_arm_frame.inc asm/keccak256_neon.inc asm/keccak256_sha3.inc asm/keccak256_scalar.inc asm/keccak256_scalar_ror.inc
-$(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o $(OBJ_DIR)/keccak256_avx2_x8.o: $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(X86_INC)
+lib: $(libname)
+
+# one .S per kernel, built on the shared round and frame macros (.inc)
+X86_INC = keccak256_x86_frame.inc keccak256_avx512.inc keccak256_avx2.inc
+ARM_INC = keccak256_arm_frame.inc keccak256_neon.inc keccak256_sha3.inc keccak256_scalar.inc keccak256_scalar_ror.inc
+$(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o $(OBJ_DIR)/keccak256_avx2_x8.o: $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(X86_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
-$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(ARM_INC)
+$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(ARM_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
-RISCV_INC = asm/keccak256_riscv_frame.inc asm/keccak256_rv64.inc asm/keccak256_rvv.inc
-$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(RISCV_KERNELS)): $(OBJ_DIR)/keccak256_%.o: asm/keccak256_%.S $(RISCV_INC)
+RISCV_INC = keccak256_riscv_frame.inc keccak256_rv64.inc keccak256_rvv.inc
+$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(RISCV_KERNELS)): $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(RISCV_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
 $(OBJ_DIR)/%.o: %.c keccaktree.h
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -61,4 +62,4 @@ bench: bench.c $(libname)
 clean:
 	rm -rf $(OUT_DIR)
 
-.PHONY: all test bench clean
+.PHONY: all lib test bench clean

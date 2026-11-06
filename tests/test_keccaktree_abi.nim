@@ -2,7 +2,7 @@
 # reference keccak256 for 0..300 nodes, unaligned buffers and in-place use.
 
 import std/strutils
-import ../../keccaktree_abi
+import ../keccaktree_abi
 
 # CPU feature checks for the direct kernel calls (the library does its own)
 {.emit: """

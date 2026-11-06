@@ -42,7 +42,7 @@ else:
     (defined(amd64) or defined(arm64) or defined(riscv64))
 
   when keccaktreeAsm:
-    const asmDir = srcDir & "asm/"
+    const asmDir = srcDir
     const asmFlags =
       when defined(windows) and defined(gcc):
         # as in src/Makefile: gcc on Windows does not realign the stack for
