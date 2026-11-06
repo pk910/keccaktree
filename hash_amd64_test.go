@@ -13,7 +13,7 @@ func activePath() string {
 	case hasAVX512:
 		return "avx512_x8"
 	default:
-		return "avx2_x4"
+		return "avx2_x8"
 	}
 }
 
@@ -27,7 +27,7 @@ func forceAMD64(supported, avx512, avx2, ymm bool) func() func() {
 
 var forcedCases = []forcedCase{
 	{"generic", true, forceAMD64(false, false, false, false)},
-	{"avx2_x4", hasAVX2, forceAMD64(true, false, true, false)},
+	{"avx2_x8", hasAVX2, forceAMD64(true, false, true, false)},
 	{"avx512_x8", hasAVX512, forceAMD64(true, true, false, false)},
 	{"avx512vl_x4", hasAVX512, forceAMD64(true, true, false, true)},
 }

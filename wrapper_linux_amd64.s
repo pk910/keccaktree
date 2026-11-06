@@ -1,19 +1,19 @@
 //go:build cgo && linux && amd64
 
-// The C kernels run on this frame's 2048 bytes of stack (deepest: avx2_x4,
-// about 1.3 KB). SP is moved to the top of the frame and 32-byte aligned.
-TEXT ·KeccaktreeHash(SB), 0, $2048-24
+// The C kernels run on this frame's 8192 bytes of stack (deepest: avx2_x8,
+// about 4.5 KB). SP is moved to the top of the frame and 32-byte aligned.
+TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	MOVQ output+0(FP), DI
 	MOVQ input+8(FP), SI
 	MOVQ count+16(FP), DX
 
 	MOVQ SP, BX
-	ADDQ $2048, SP
+	ADDQ $8192, SP
 	ANDQ $~31, SP
 
 	CMPB ·hasAVX512(SB), $1
 	JE   avx512
-	CALL keccaktree_keccak256_avx2_x4(SB)
+	CALL keccaktree_keccak256_avx2_x8(SB)
 	JMP  epilog
 
 avx512:
