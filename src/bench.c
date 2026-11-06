@@ -2,6 +2,9 @@
  * Build with `make bench HASHTREE=1` to include the sha256 comparison. */
 #define _POSIX_C_SOURCE 199309L
 #define _DEFAULT_SOURCE /* syscall() for riscv_hwprobe */
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE /* sysctlbyname */
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +15,15 @@
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
+#endif
+#if defined(__aarch64__) && defined(__APPLE__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+static int sysctl_flag(const char* name) {
+    int v = 0;
+    size_t len = sizeof(v);
+    return sysctlbyname(name, &v, &len, NULL, 0) == 0 && v != 0;
+}
 #endif
 #if defined(__riscv) && defined(__linux__)
 #include <sys/syscall.h>
@@ -89,7 +101,8 @@ int main(void) {
 #endif
 #ifdef __aarch64__
 #if defined(__APPLE__)
-    int sha3 = 1, sha2 = 1;
+    int sha3 = sysctl_flag("hw.optional.arm.FEAT_SHA3") || sysctl_flag("hw.optional.armv8_2_sha3");
+    int sha2 = sysctl_flag("hw.optional.arm.FEAT_SHA256");
 #elif defined(__linux__)
     unsigned long hw = getauxval(AT_HWCAP);
     int sha3 = (hw & HWCAP_SHA3) != 0, sha2 = (hw & HWCAP_SHA2) != 0;

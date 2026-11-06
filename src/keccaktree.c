@@ -8,6 +8,25 @@
 #include <asm/hwcap.h>
 #include <sys/auxv.h>
 #endif
+#if defined(__aarch64__) && defined(__APPLE__)
+#include <sys/sysctl.h>
+#endif
+
+/* Kernel selection probes the instruction set extensions a kernel needs
+ * (CPUID feature bits plus the OS register state from XGETBV on x86-64,
+ * AT_HWCAP on Linux/AArch64, hw.optional sysctls on macOS, riscv_hwprobe
+ * and vlenb on Linux/RISC-V), never CPU
+ * vendors, families or models.
+ *
+ * Some kernels differ only in how they suit the microarchitecture, a
+ * property no feature bit reports: avx512vl_x4 beats avx512_x8 on cores
+ * with a single 512-bit ALU port, sha3_x3 (lazy rotations) needs EOR/BIC
+ * with a rotated operand at full rate, sha3_x3r does not, and scalar_x1
+ * beats neon_x2 where the integer side outruns the vector side; on RISC-V
+ * the scalar and vector kernels trade places with VLEN and the core. For these,
+ * detection runs every feature-qualified candidate once on a small warm
+ * batch and keeps the fastest (keccaktree_calibrate): tens of microseconds
+ * up to ~0.5 ms, once per process. keccaktree_init(fn) skips it. */
 
 #if defined(__riscv) && __riscv_xlen == 64
 #ifdef __linux__
@@ -28,68 +47,23 @@ struct keccaktree_hwprobe { int64_t key; uint64_t value; };
 static void init_and_hash(unsigned char* output, const unsigned char* input, uint64_t count);
 static keccaktree_hash_fcn hash_ptr = init_and_hash;
 
+#if defined(__aarch64__) && defined(__APPLE__)
+static int keccaktree_sysctl_flag(const char* name) {
+    int v = 0;
+    size_t len = sizeof(v);
+    return sysctlbyname(name, &v, &len, NULL, 0) == 0 && v != 0;
+}
+#endif
+
 #ifdef __x86_64__
 static uint64_t xgetbv0(void) {
     uint32_t lo, hi;
     __asm__ volatile("xgetbv" : "=a"(lo), "=d"(hi) : "c"(0));
     return ((uint64_t)hi << 32) | lo;
 }
-
-/* Intel client cores with AVX-512 (Cannon/Ice/Tiger/Rocket Lake) execute
- * 512-bit integer ops on a single port (p0+p1 fused, no 512-bit ALU on p5),
- * while 256-bit ops still use three. There the 4-lane ymm kernel moves 12
- * lanes per cycle against 8 for the zmm kernel. Server parts (Skylake-SP and
- * later) and AMD Zen 4/5 have two 512-bit pipes and keep the zmm kernel. */
-int keccaktree_avx512_single_port(void) {
-    uint32_t a = 0, b = 0, c = 0, d = 0;
-    __get_cpuid(0, &a, &b, &c, &d);
-    if (b != 0x756e6547 || d != 0x49656e69 || c != 0x6c65746e) return 0; /* GenuineIntel */
-    __get_cpuid(1, &a, &b, &c, &d);
-    unsigned family = (a >> 8) & 0xf, model = ((a >> 4) & 0xf) | (((a >> 16) & 0xf) << 4);
-    if (family != 6) return 0;
-    switch (model) {
-    case 0x66:             /* Cannon Lake */
-    case 0x7d: case 0x7e:  /* Ice Lake client */
-    case 0x8c: case 0x8d:  /* Tiger Lake */
-    case 0xa7:             /* Rocket Lake */
-        return 1;
-    }
-    return 0;
-}
-#endif
-
-#if defined(__aarch64__) && defined(__linux__)
-/* The lazy-rotation kernels (scalar_x1, sha3_x3) rely on EOR/BIC with a
- * rotated operand being as cheap as a plain one: true on Arm Ltd cores
- * (implementer 0x41: Neoverse, Cortex-A7xx/X), false on Apple's. Without
- * FEAT_SHA3 the scalar kernel is only picked on Neoverse N1 (Graviton 2,
- * Ampere Altra), whose integer pipes take the rotated form at full rate;
- * older Cortex-A cores (A72, A57) run it on one pipe and keep neon_x2.
- * Apple cores (implementer 0x61, also under Linux) get sha3_x3r, the
- * hybrid with explicit rotations. */
-static void keccaktree_arm_select(unsigned implementer, unsigned part, int* arm_core, int* n1, int* apple) {
-    *arm_core = implementer == 0x41;
-    *n1 = implementer == 0x41 && part == 0xd0c;
-    *apple = implementer == 0x61;
-}
 #endif
 
 #if defined(__riscv) && __riscv_xlen == 64
-/* Not measured on hardware yet, chosen by instruction counts: per batch and
- * round rvv_zvkb issues 131 vector instructions, rvv 214, while one node
- * costs zbb_x1 145 and rv64_x1 228 scalar ones. With Zvkb the vector
- * kernel wins at any VLEN; without, only from VLEN = 256 (4 nodes) on, as
- * at VLEN = 128 its 107 instructions per node are no better than the dual-
- * issue scalar pipes running zbb_x1. */
-keccaktree_hash_fcn keccaktree_riscv_select(uint64_t ext, uint64_t vlenb) {
-    int v = (ext & KT_HWPROBE_IMA_V) && vlenb >= 16;
-    if (v && (ext & KT_HWPROBE_EXT_ZVKB)) return &keccaktree_keccak256_rvv_zvkb;
-    if (v && vlenb >= 32) return &keccaktree_keccak256_rvv;
-    if (ext & KT_HWPROBE_EXT_ZBB) return &keccaktree_keccak256_zbb_x1;
-    if (v) return &keccaktree_keccak256_rvv;
-    return &keccaktree_keccak256_rv64_x1;
-}
-
 static uint64_t keccaktree_riscv_vlenb(void) {
     uint64_t vlenb;
     __asm__ volatile(".option push\n.option arch, +v\ncsrr %0, vlenb\n.option pop" : "=r"(vlenb));
@@ -97,7 +71,62 @@ static uint64_t keccaktree_riscv_vlenb(void) {
 }
 #endif
 
-static keccaktree_hash_fcn keccaktree_detect(void) {
+#if defined(__x86_64__) || defined(__aarch64__) || (defined(__riscv) && __riscv_xlen == 64)
+/* Cheap monotonic tick counter, only compared against itself: the TSC on
+ * x86-64, the generic timer's virtual count on AArch64 (readable from user
+ * space on Linux and macOS), the time CSR on RISC-V (Zicntr, readable from
+ * user space on Linux). */
+static inline uint64_t keccaktree_ticks(void) {
+#ifdef __x86_64__
+    uint32_t lo, hi;
+    __asm__ volatile("lfence\n\trdtsc" : "=a"(lo), "=d"(hi) : : "memory");
+    return ((uint64_t)hi << 32) | lo;
+#elif defined(__aarch64__)
+    uint64_t t;
+    __asm__ volatile("isb\n\tmrs %0, cntvct_el0" : "=r"(t) : : "memory");
+    return t;
+#else
+    uint64_t t;
+    __asm__ volatile(".option push\n.option arch, +zicsr\ncsrr %0, time\n.option pop" : "=r"(t) : : "memory");
+    return t;
+#endif
+}
+
+/* A multiple of every kernel's batch (2, 3, 4, 8). Each sample hashes the
+ * buffer in place twice (96 nodes, long enough for the 24 MHz counter of
+ * Apple cores to resolve a few percent; keccak's timing does not depend on
+ * the data); one 3 KB buffer keeps the frame below the 4 KB at which
+ * Windows compilers emit a stack probe call. */
+#define CALIB_NODES 48
+#define CALIB_REPS  7
+
+/* Times each candidate, interleaved so a frequency change hits all of them
+ * alike, and returns the one with the lowest minimum. */
+static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
+    unsigned char buf[CALIB_NODES * 64] __attribute__((aligned(64)));
+    uint64_t best[4];
+    for (int i = 0; i < CALIB_NODES * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
+    for (int i = 0; i < n; i++) {
+        fns[i](buf, buf, CALIB_NODES); /* warm code, data and vector units */
+        best[i] = UINT64_MAX;
+    }
+    for (int r = 0; r < CALIB_REPS; r++) {
+        for (int i = 0; i < n; i++) {
+            uint64_t t0 = keccaktree_ticks();
+            fns[i](buf, buf, CALIB_NODES);
+            fns[i](buf, buf, CALIB_NODES);
+            uint64_t t = keccaktree_ticks() - t0;
+            if (t < best[i]) best[i] = t;
+        }
+    }
+    int pick = 0;
+    for (int i = 1; i < n; i++)
+        if (best[i] < best[pick]) pick = i;
+    return fns[pick];
+}
+#endif
+
+keccaktree_hash_fcn keccaktree_detect(void) {
 #ifdef __x86_64__
     uint32_t a = 0, b = 0, c = 0, d = 0;
     __get_cpuid_count(1, 0, &a, &b, &c, &d);
@@ -107,34 +136,32 @@ static keccaktree_hash_fcn keccaktree_detect(void) {
     int os_zmm = (xcr0 & 0xe6) == 0xe6;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
     if (os_zmm && (b & bit_AVX512F) && (b & bit_AVX512VL)) {
-        return keccaktree_avx512_single_port() ? &keccaktree_keccak256_avx512vl_x4
-                                               : &keccaktree_keccak256_avx512_x8;
+        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx512_x8,
+                                                &keccaktree_keccak256_avx512vl_x4};
+        return keccaktree_calibrate(c, 2);
     }
     if (os_ymm && (b & bit_AVX2)) {
-        return &keccaktree_keccak256_avx2_x8;
+        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x8,
+                                                &keccaktree_keccak256_avx2_x4};
+        return keccaktree_calibrate(c, 2);
     }
 #endif
 #ifdef __aarch64__
+    static const keccaktree_hash_fcn sha3[] = {&keccaktree_keccak256_sha3_x3,
+                                               &keccaktree_keccak256_sha3_x3r,
+                                               &keccaktree_keccak256_sha3_x2};
+    static const keccaktree_hash_fcn simd[] = {&keccaktree_keccak256_neon_x2,
+                                               &keccaktree_keccak256_scalar_x1};
 #if defined(__APPLE__)
-    return &keccaktree_keccak256_sha3_x3r; /* every Apple M-series core has FEAT_SHA3 */
+    if (keccaktree_sysctl_flag("hw.optional.arm.FEAT_SHA3") || keccaktree_sysctl_flag("hw.optional.armv8_2_sha3"))
+        return keccaktree_calibrate(sha3, 3);
+    return keccaktree_calibrate(simd, 2); /* Advanced SIMD is mandatory on AArch64 */
 #elif defined(__linux__)
     unsigned long hwcaps = getauxval(AT_HWCAP);
-    int arm_core = 0, n1 = 0, apple = 0;
-#ifdef HWCAP_CPUID
-    if (hwcaps & HWCAP_CPUID) { /* the kernel emulates MIDR_EL1 reads */
-        uint64_t midr;
-        __asm__("mrs %0, MIDR_EL1" : "=r"(midr));
-        keccaktree_arm_select((unsigned)(midr >> 24) & 0xff, (unsigned)(midr >> 4) & 0xfff, &arm_core, &n1, &apple);
-    }
-#endif
 #ifdef HWCAP_SHA3
-    if (hwcaps & HWCAP_SHA3)
-        return arm_core ? &keccaktree_keccak256_sha3_x3
-             : apple    ? &keccaktree_keccak256_sha3_x3r
-                        : &keccaktree_keccak256_sha3_x2;
+    if (hwcaps & HWCAP_SHA3) return keccaktree_calibrate(sha3, 3);
 #endif
-    if (n1) return &keccaktree_keccak256_scalar_x1;
-    if (hwcaps & HWCAP_ASIMD) return &keccaktree_keccak256_neon_x2;
+    if (hwcaps & HWCAP_ASIMD) return keccaktree_calibrate(simd, 2);
 #endif
 #endif
 #if defined(__riscv) && __riscv_xlen == 64
@@ -144,8 +171,16 @@ static keccaktree_hash_fcn keccaktree_detect(void) {
     if (syscall(__NR_riscv_hwprobe, &probe, 1, 0, NULL, 0) == 0 && probe.key == KT_HWPROBE_KEY_IMA_EXT_0)
         ext = probe.value;
 #endif
-    /* V in IMA_EXT_0 means the kernel has enabled it, so vlenb is readable */
-    return keccaktree_riscv_select(ext, (ext & KT_HWPROBE_IMA_V) ? keccaktree_riscv_vlenb() : 0);
+    /* V in IMA_EXT_0 means the kernel has enabled it, so vlenb is readable;
+     * the vector kernels need VLEN >= 128 (2 nodes per register) */
+    int v = (ext & KT_HWPROBE_IMA_V) && keccaktree_riscv_vlenb() >= 16;
+    keccaktree_hash_fcn c[4];
+    int n = 0;
+    c[n++] = &keccaktree_keccak256_rv64_x1;
+    if (ext & KT_HWPROBE_EXT_ZBB) c[n++] = &keccaktree_keccak256_zbb_x1;
+    if (v) c[n++] = &keccaktree_keccak256_rvv;
+    if (v && (ext & KT_HWPROBE_EXT_ZVKB)) c[n++] = &keccaktree_keccak256_rvv_zvkb;
+    return keccaktree_calibrate(c, n);
 #endif
     return &keccaktree_keccak256_generic;
 }

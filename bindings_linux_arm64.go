@@ -5,29 +5,34 @@ package keccaktree
 import (
 	"github.com/klauspost/cpuid/v2"
 
-	// link to the static library via cgo
-	_ "github.com/pk910/keccaktree/cgo"
+	// links the static library; Detect runs its kernel selection
+	ktcgo "github.com/pk910/keccaktree/cgo"
 )
 
 //go:noescape
 func KeccaktreeHash(output *byte, input *byte, count uint64)
 
-// FEAT_SHA3 (EOR3/RAX1/XAR/BCAX): Apple M-series, Graviton 3+, Neoverse V1/N2+.
+// FEAT_SHA3 (EOR3/RAX1/XAR/BCAX), from AT_HWCAP.
 var hasSHA3 = cpuid.CPU.Supports(cpuid.SHA3)
 
-// armLazy and armN1 pick the lazy-rotation kernels (sha3_x3 with FEAT_SHA3,
-// scalar_x1 without) on Arm Ltd cores and armApple the explicit-rotation
-// hybrid sha3_x3r on Apple cores; see keccaktree_arm_select in
-// src/keccaktree.c. cpuid only knows the MIDR when the kernel exposes it.
-var armLazy, armN1, armApple = armSelect(cpuid.CPU.VendorID, (cpuid.CPU.Model>>4)&0xfff)
-
-func armSelect(vendor cpuid.Vendor, part int) (lazy, n1, apple bool) {
-	return vendor == cpuid.ARM, vendor == cpuid.ARM && part == 0xd0c, vendor == cpuid.Apple
-}
+// armLazy picks sha3_x3, armROR sha3_x3r (else sha3_x2) when hasSHA3,
+// armScalar scalar_x1 over neon_x2 without it. Which supported kernel is
+// fastest depends on the core, not on a feature bit, so init takes the
+// choice of the C library's detection, which times them once
+// (keccaktree_detect in src/keccaktree.c).
+var armLazy, armROR, armScalar bool
 
 func init() {
 	// NEON / Advanced SIMD is mandatory on every ARMv8-A (AArch64) CPU, so the
-	// neon_x2 path is always safe; hasSHA3 / armLazy / armN1 / armApple only select faster paths.
+	// neon_x2 path is always safe; the flags only select faster paths.
 	supportedCPU = true
 	keccaktreeHash = KeccaktreeHash
+	switch ktcgo.Detect() {
+	case "sha3_x3":
+		armLazy = true
+	case "sha3_x3r":
+		armROR = true
+	case "scalar_x1":
+		armScalar = true
+	}
 }

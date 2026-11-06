@@ -18,9 +18,16 @@ extern "C" {
  * `output` may alias `input` (in-place layer reduction, output == input). */
 typedef void (*keccaktree_hash_fcn)(unsigned char*, const unsigned char*, uint64_t);
 
-/** Select the implementation, or auto-detect from the CPU when `NULL`.
+/** Select the implementation, or auto-detect from the CPU when `NULL`:
+ * probe the CPU features, then time the kernels the CPU supports once on a
+ * small batch and keep the fastest (well under a millisecond).
  * Optional: auto-detection also happens on the first hash call. */
 void keccaktree_init(keccaktree_hash_fcn override);
+
+/** The kernel auto-detection picks (feature probe plus the one-time timing
+ * of the supported kernels), without installing it. Each call measures
+ * again; keccaktree_init(NULL) caches the result. */
+keccaktree_hash_fcn keccaktree_detect(void);
 
 void keccaktree_hash(unsigned char* output, const unsigned char* input, uint64_t count);
 
@@ -33,18 +40,17 @@ void keccaktree_keccak256_avx2_x4(unsigned char* output, const unsigned char* in
 void keccaktree_keccak256_avx2_x8(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);
-/* 1 on Intel client cores whose 512-bit integer ops issue on one port only;
- * keccaktree_hash then uses avx512vl_x4 instead of avx512_x8 */
-int keccaktree_avx512_single_port(void);
 #endif
 
 #ifdef __aarch64__
 void keccaktree_keccak256_neon_x2(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_sha3_x2(unsigned char* output, const unsigned char* input, uint64_t count);
-/* lazy-rotation scalar, and sha3_x2 interleaved with it (Arm Ltd cores) */
+/* lazy-rotation scalar, and sha3_x2 interleaved with it (cores that run a
+ * shifted-operand EOR/BIC at full rate) */
 void keccaktree_keccak256_scalar_x1(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_sha3_x3(unsigned char* output, const unsigned char* input, uint64_t count);
-/* sha3_x2 interleaved with a plain-rotation scalar node (Apple cores) */
+/* sha3_x2 interleaved with a plain-rotation scalar node (cores where a
+ * shifted operand costs extra) */
 void keccaktree_keccak256_sha3_x3r(unsigned char* output, const unsigned char* input, uint64_t count);
 
 #endif
@@ -56,9 +62,6 @@ void keccaktree_keccak256_zbb_x1(unsigned char* output, const unsigned char* inp
 /* VLEN/64 nodes at a time with RVV 1.0, and with RVV 1.0 + Zvkb */
 void keccaktree_keccak256_rvv(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_rvv_zvkb(unsigned char* output, const unsigned char* input, uint64_t count);
-/* the kernel keccaktree_init picks for riscv_hwprobe's IMA_EXT_0 bits and
- * the vector register size in bytes (0 without V) */
-keccaktree_hash_fcn keccaktree_riscv_select(uint64_t ima_ext_0, uint64_t vlenb);
 #endif
 
 #ifdef KECCAKTREE_HASHTREE_COMPAT

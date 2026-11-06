@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"testing"
 
 	"golang.org/x/crypto/sha3"
@@ -220,15 +221,21 @@ func TestForcedPaths(t *testing.T) {
 	}
 }
 
-// TestActivePathMatchesEnv asserts the naturally selected implementation
-// matches KECCAKTREE_EXPECT_PATH (set per emulated -cpu by the CI matrix).
+// TestActivePathMatchesEnv asserts the naturally selected implementation is
+// one of KECCAKTREE_EXPECT_PATH ("|"-separated; set per emulated -cpu by the
+// CI matrix). Several names are listed where detection times the supported
+// kernels and the winner depends on the core.
 func TestActivePathMatchesEnv(t *testing.T) {
 	want := os.Getenv("KECCAKTREE_EXPECT_PATH")
 	if want == "" {
 		t.Skip("KECCAKTREE_EXPECT_PATH not set")
 	}
-	if got := activePath(); got != want {
-		t.Fatalf("active path = %q, want %q (CPU detection / -cpu mismatch)", got, want)
+	got := activePath()
+	for _, w := range strings.Split(want, "|") {
+		if got == w {
+			t.Logf("active path = %q (supportedCPU=%v)", got, supportedCPU)
+			return
+		}
 	}
-	t.Logf("active path = %q (supportedCPU=%v)", want, supportedCPU)
+	t.Fatalf("active path = %q, want one of %q (CPU detection / -cpu mismatch)", got, want)
 }

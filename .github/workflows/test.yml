@@ -74,9 +74,9 @@ jobs:
       - name: Stage library into lib/
         if: inputs.lib_source == 'artifacts'
         run: cp dl-darwin/libkeccaktree.a lib/darwin_arm64/
-      - name: Test (Apple Silicon always has FEAT_SHA3)
+      - name: Test (the macos-15 runner has FEAT_SHA3)
         env:
-          KECCAKTREE_EXPECT_PATH: sha3_x3r
+          KECCAKTREE_EXPECT_PATH: sha3_x3r|sha3_x3|sha3_x2
         run: go test -v -count=1 .
 
   test-windows:

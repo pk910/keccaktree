@@ -5,7 +5,7 @@
 # Cross-compiles a statically linked cgo test binary per Linux target (linking
 # lib/<platform>/libkeccaktree.a) and runs it under qemu-user with several -cpu
 # models, so every runtime-detected path (and the pure-Go fallback) runs on one
-# host. KECCAKTREE_EXPECT_PATH makes the binary assert which path it selected.
+# host. KECCAKTREE_EXPECT_PATH makes the binary assert which path(s) it may select.
 #
 # NOTE: qemu-user (TCG) cannot emulate AVX-512; that path runs natively.
 # RISC-V selection reads riscv_hwprobe, which qemu-user answers from -cpu.
@@ -48,19 +48,23 @@ build amd64 gcc
 build arm64 aarch64-linux-gnu-gcc
 build riscv64 riscv64-linux-gnu-gcc
 
+# Where several kernels run, detection times them and keeps the fastest, so
+# under TCG any of them may win: the matrix checks the feature tier.
+SHA3='sha3_x3|sha3_x3r|sha3_x2'
+
 echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
-run amd64 qemu-x86_64  'Haswell'    avx2_x8
-run arm64 qemu-aarch64 'cortex-a57' neon_x2
-run arm64 qemu-aarch64 'max'        sha3_x2
-run arm64 qemu-aarch64 'neoverse-n1' scalar_x1
-run arm64 qemu-aarch64 'neoverse-n2' sha3_x3
-run riscv64 qemu-riscv64 'rv64,zbb=false'                rv64_x1
-run riscv64 qemu-riscv64 'rv64'                          zbb_x1
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=128'          zbb_x1
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=256'          rvv
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zbb=false' rvv
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zvkb=true' rvv_zvkb
+run amd64 qemu-x86_64  'Haswell'    'avx2_x8|avx2_x4'
+run arm64 qemu-aarch64 'cortex-a57' 'neon_x2|scalar_x1'
+run arm64 qemu-aarch64 'max'        "$SHA3"
+run arm64 qemu-aarch64 'neoverse-n1' 'neon_x2|scalar_x1'
+run arm64 qemu-aarch64 'neoverse-n2' "$SHA3"
+run riscv64 qemu-riscv64 'rv64,zbb=false'                 rv64_x1
+run riscv64 qemu-riscv64 'rv64'                           'rv64_x1|zbb_x1'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128'           'rv64_x1|zbb_x1|rvv'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=256'           'rv64_x1|zbb_x1|rvv'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zbb=false' 'rv64_x1|rvv'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zvkb=true' 'rv64_x1|zbb_x1|rvv|rvv_zvkb'
 
 echo "=== result: $([ $fail -eq 0 ] && echo ALL GREEN || echo FAILURES) ==="
 exit $fail
