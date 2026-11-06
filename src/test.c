@@ -150,14 +150,24 @@ int main(void) {
 #ifdef __x86_64__
     uint32_t a = 0, b = 0, c = 0, d = 0;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
-    if (b & bit_AVX2) {
-        test_backend("avx2_x4", keccaktree_keccak256_avx2_x4);
-        test_backend("avx2_x8", keccaktree_keccak256_avx2_x8);
-        if ((b & bit_BMI) && (b & bit_BMI2)) {
-            test_backend("avx2_x9", keccaktree_keccak256_avx2_x9);
-            test_backend("avx2_x10", keccaktree_keccak256_avx2_x10);
-            test_backend("avx2_x5", keccaktree_keccak256_avx2_x5);
-        }
+    if ((b & bit_BMI) && (b & bit_BMI2)) {
+        test_backend("x86_x1", keccaktree_keccak256_x86_x1);
+    } else {
+        printf("  %-48s [ no CPU support ]\n", "x86_x1");
+    }
+    if ((b & bit_AVX2) && (b & bit_BMI) && (b & bit_BMI2)) {
+        test_backend("avx2_x2", keccaktree_keccak256_avx2_x2);
+        /* both remainder paths of avx2_x4 (and so of avx2_x8): 2 nodes
+         * padded, or handed to avx2_x2 */
+        keccaktree_avx2_small_tail(1);
+        test_backend("avx2_x4 (padded pair)", keccaktree_keccak256_avx2_x4);
+        test_backend("avx2_x8 (padded pair)", keccaktree_keccak256_avx2_x8);
+        keccaktree_avx2_small_tail(2);
+        test_backend("avx2_x4 (avx2_x2 pair)", keccaktree_keccak256_avx2_x4);
+        test_backend("avx2_x8 (avx2_x2 pair)", keccaktree_keccak256_avx2_x8);
+        test_backend("avx2_x9", keccaktree_keccak256_avx2_x9);
+        test_backend("avx2_x10", keccaktree_keccak256_avx2_x10);
+        test_backend("avx2_x5", keccaktree_keccak256_avx2_x5);
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx2");
     }

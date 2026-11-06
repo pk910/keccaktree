@@ -15,9 +15,9 @@
  * The 16 ymm registers only hold one batch's working set, so the parities
  * of the batch that is not in flight stay in memory: STORE_C writes them
  * after each round and the other batch's round reads them for theta, which
- * adds loads and stores but no ALU work. Fewer than 8 remaining nodes go to
- * keccaktree_keccak256_avx2_x4 (which hands a single node to the scalar
- * code).
+ * adds loads and stores but no ALU work. 2..7 remaining nodes go to
+ * keccaktree_keccak256_avx2_x4 (which hands 2 to the lane-pair kernel and
+ * pads 3), a single one straight to the scalar code.
  *
  * Registers: ymm0..15; rcx, rsi here and the frame's r9..r11.
  */
@@ -27,6 +27,7 @@
 #define NODES		8
 #define VBYTES		32
 #define SLOTS		(110*32)		/* 4 state buffers, 2 parity rows */
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1
 #define SMALL_TAIL	keccaktree_keccak256_avx2_x4
 #define SMALL_TAIL_MAX	7
 #include "keccak256_x86_frame.inc"

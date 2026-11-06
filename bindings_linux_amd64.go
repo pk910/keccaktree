@@ -14,7 +14,8 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 
 // The AVX-512 path also uses the 256-bit (VL) encodings for short tails.
 var hasAVX512 = cpuid.CPU.Supports(cpuid.AVX512F, cpuid.AVX512VL)
-var hasAVX2 = cpuid.CPU.Supports(cpuid.AVX2)
+// The AVX2 kernels hand their last node to the scalar BMI1/BMI2 kernel.
+var hasAVX2 = cpuid.CPU.Supports(cpuid.AVX2, cpuid.BMI1, cpuid.BMI2)
 
 // The hybrid AVX2 kernels (avx2_x10, avx2_x9, avx2_x5) hash one or two
 // extra nodes in the integer registers with BMI1 andn and BMI2 rorx.

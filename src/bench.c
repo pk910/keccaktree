@@ -85,8 +85,11 @@ int main(void) {
 #ifdef __x86_64__
     uint32_t a = 0, b = 0, c = 0, d = 0;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
-    int avx2 = b & bit_AVX2, avx512 = (b & bit_AVX512F) && (b & bit_AVX512VL), sha = b & bit_SHA;
+    int bmi = (b & bit_BMI) && (b & bit_BMI2), avx2 = bmi && (b & bit_AVX2);
+    int avx512 = (b & bit_AVX512F) && (b & bit_AVX512VL), sha = b & bit_SHA;
     (void)sha;
+    if (bmi) row("keccak256 x86_x1", keccaktree_keccak256_x86_x1);
+    if (avx2) row("keccak256 avx2_x2", keccaktree_keccak256_avx2_x2);
     if (avx2) row("keccak256 avx2_x4", keccaktree_keccak256_avx2_x4);
     if (avx2) row("keccak256 avx2_x8", keccaktree_keccak256_avx2_x8);
     if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x9", keccaktree_keccak256_avx2_x9);

@@ -2,9 +2,13 @@
  * Function frame shared by the x86-64 batch kernels. The including file
  * defines NODES (nodes per batch), VBYTES (vector register size), a local
  * label .Lbatch that hashes NODES nodes from [BIN] to [BOUT], and
- * optionally SLOTS (bytes of kernel scratch, default two rows of lanes) and
- * SMALL_TAIL, a function that handles 1..SMALL_TAIL_MAX
- * remaining nodes faster than a padded batch.
+ * optionally SLOTS (bytes of kernel scratch, default two rows of lanes),
+ * SMALL_TAIL, a function that handles 1..SMALL_TAIL_MAX remaining nodes
+ * faster than a padded batch (or, with SMALL_TAIL_MAX_VAR, up to the count
+ * in that quadword, which the kernel can expose for run-time calibration),
+ * and SMALL_TAIL_X1, one that handles a single remaining node (so that a
+ * node need not pass through every smaller kernel's frame on its way to
+ * the scalar code).
  *
  * Calling convention: SysV (rdi, rsi, rdx) or Windows x64 (rcx, rdx, r8),
  * where xmm6..15, rsi and rdi are callee-saved. Inside, rdi = output,
@@ -83,8 +87,19 @@
 2:	/* 0 < count < NODES */
 	test		rdx, rdx
 	jz		4f
+#ifdef SMALL_TAIL_X1
+	cmp		rdx, 1
+	jne		7f
+	mov		eax, 2
+	jmp		5f
+7:
+#endif
 #ifdef SMALL_TAIL
+#ifdef SMALL_TAIL_MAX_VAR
+	cmp		rdx, qword ptr [rip + SMALL_TAIL_MAX_VAR]
+#else
 	cmp		rdx, SMALL_TAIL_MAX
+#endif
 	ja		3f
 	mov		eax, 1
 	jmp		5f
@@ -121,7 +136,8 @@
 	jnz		8b
 4:	/* done */
 	xor		eax, eax
-5:	/* eax != 0: tail-call SMALL_TAIL for the rest (rdx nodes) */
+5:	/* eax != 0: tail-call SMALL_TAIL (1) or SMALL_TAIL_X1 (2) for the
+	 * rest (rdx nodes) */
 	vzeroupper
 #ifdef _WIN64
 	vmovdqu		xmm6,  xmmword ptr [rsp + SAVE + 0*16]
@@ -148,13 +164,19 @@
 	mov		rsp, rbp
 #endif
 	pop		rbp
-#ifdef SMALL_TAIL
+#if defined(SMALL_TAIL) || defined(SMALL_TAIL_X1)
 	test		eax, eax
 	jz		6f
 	mov		ARG_COUNT, rdx
 	mov		ARG_OUT, BOUT
 	mov		ARG_IN, BIN
+#ifdef SMALL_TAIL_X1
+	cmp		eax, 2
+	je		SMALL_TAIL_X1
+#endif
+#ifdef SMALL_TAIL
 	jmp		SMALL_TAIL
+#endif
 6:
 #endif
 	ret
