@@ -3,7 +3,7 @@
  *                                  const unsigned char *input, uint64_t count)
  *
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, one at a time in
- * the general registers with the rounds of keccak256_x86_scalar.inc
+ * the general registers with the rounds of keccak256_x86_x1.inc
  * (rounds 1..22 as a two-round loop). Needs BMI1 (andn) and BMI2 (rorx). This is the single-node
  * path of the AVX2 kernels: a padded 4-node vector batch costs four
  * nodes' worth of vector work, and the portable C code it replaces spends
@@ -47,7 +47,7 @@
 #define RCP	432
 #define FRAME_X1	440
 
-#include "keccak256_x86_scalar.inc"
+#include "keccak256_x86_x1.inc"
 
 .macro X1_FUNCTION name, body
 .text

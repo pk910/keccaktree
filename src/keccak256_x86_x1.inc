@@ -1,6 +1,7 @@
 /*
  * Keccak-f[1600] on one node in the x86-64 general registers, shared by
- * keccak256_x86_x1.S (and open to interleaving with a vector kernel).
+ * keccak256_x86_x1.S (the hybrid kernels use keccak256_x86_scalar.inc, a
+ * variant arranged for interleaving with the vector rounds).
  *
  * 15 registers cannot hold the 25-lane state, so the state lives in two
  * 25-lane buffers on the stack and each round reads one and writes the
