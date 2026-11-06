@@ -1,0 +1,6 @@
+name = "keccaktree"
+version = "0.1.0"
+defaultTargets = ["Keccaktree"]
+
+[[lean_lib]]
+name = "Keccaktree"
