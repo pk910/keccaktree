@@ -27,7 +27,7 @@ typedef struct {
 static int cpu_supports(const char* name) {
 #if defined(__x86_64__)
     __builtin_cpu_init();
-    if (!strcmp(name, "avx2_x4")) return __builtin_cpu_supports("avx2");
+    if (!strcmp(name, "avx2_x4") || !strcmp(name, "avx2_x8")) return __builtin_cpu_supports("avx2");
     if (!strcmp(name, "avx512vl_x4") || !strcmp(name, "avx512_x8"))
         return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl");
 #elif defined(__aarch64__) && defined(__APPLE__)
@@ -43,6 +43,7 @@ static const kernel kernels[] = {
     {"generic", keccaktree_keccak256_generic},
 #ifdef __x86_64__
     {"avx2_x4", keccaktree_keccak256_avx2_x4},
+    {"avx2_x8", keccaktree_keccak256_avx2_x8},
     {"avx512vl_x4", keccaktree_keccak256_avx512vl_x4},
     {"avx512_x8", keccaktree_keccak256_avx512_x8},
 #endif

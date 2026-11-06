@@ -35,6 +35,7 @@ rather than on a feature bit, times them once on a small batch at startup
 | | AVX2, OS ymm state | AVX2 x8 (two interleaved x4 batches); AVX2 x4 |
 | linux/arm64, darwin/arm64 | FEAT_SHA3 (`AT_HWCAP` / `hw.optional` sysctl) | SHA3+scalar hybrid x3 with lazy rotations (Neoverse); x3 with explicit rotations (Apple); SHA3 x2 |
 | | Advanced SIMD | NEON x2; scalar x1 (cores whose integer side outruns NEON) |
+| linux/riscv64 | `riscv_hwprobe` IMA_EXT_0 + `vlenb` | RVV x(VLEN/64) with Zvkb; RVV x(VLEN/64) (VLEN >= 128); Zbb scalar x1; RV64I scalar x1 |
 | everything else, or `CGO_ENABLED=0` | pure Go (generated from the same core) |
 
 `lib/` is rebuilt and committed by the *Update Static Libraries* workflow
@@ -70,7 +71,8 @@ void keccaktree_hash(unsigned char *output, const unsigned char *input, uint64_t
 digests. Define `KECCAKTREE_HASHTREE_COMPAT` before including the header to
 get the `hashtree_*` names. The SIMD and scalar kernels are hand-written
 assembly in `src/asm/`, one file per kernel on top of shared round and frame
-macros (`keccak256_avx512.inc`, `keccak256_neon.inc`, `keccak256_scalar.inc`):
+macros (`keccak256_avx512.inc`, `keccak256_neon.inc`, `keccak256_scalar.inc`,
+`keccak256_rv64.inc`, `keccak256_rvv.inc`):
 the 25 lanes stay in registers, every round names each lane's register, so
 pi is register renaming, and the first and last rounds skip the zero lanes
 and the unused output lanes. The AArch64 files assemble for ELF and Mach-O.
@@ -114,6 +116,18 @@ Performance notes:
   sha3_x2 (1.16x). No feature bit says whether a rotated operand is
   cheap, so detection times `sha3_x3`, `sha3_x3r` and `sha3_x2` (and
   `neon_x2` against `scalar_x1` without FEAT_SHA3) and keeps the fastest.
+- **RISC-V (RV64).** The scalar kernels keep the 25 lanes in fixed registers
+  (25 of the 28 allocatable ones, so pointers and four column parities live
+  on the stack) and do rho and pi as one chain along pi's 24-cycle, each lane
+  rotated straight into its destination register: 145 instructions per round
+  with Zbb (`rori`, `andn`), 228 on plain RV64I. The vector kernels are
+  vector-length agnostic (SEW 64, LMUL 1): one register holds a lane of
+  VLEN/64 nodes, a segment load transposes the input, and a round is
+  131 vector instructions with Zvkb (`vror.vi`, `vandn`) and 214
+  without. Which wins depends on VLEN and the core (not yet measured on
+  hardware: GitHub has no RISC-V runners), so detection times every kernel
+  the extensions allow and keeps the fastest. Misaligned buffers go through a bounce buffer with
+  byte accesses, as RVV may fault on misaligned elements.
 
 `.github/workflows/bench.yml` runs `bench` (all kernels next to hashtree's
 sha256 kernels) on GitHub's Apple M1, Neoverse N2 and x86-64 runners; start it

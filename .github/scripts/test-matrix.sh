@@ -8,6 +8,7 @@
 # host. KECCAKTREE_EXPECT_PATH makes the binary assert which path(s) it may select.
 #
 # NOTE: qemu-user (TCG) cannot emulate AVX-512; that path runs natively.
+# RISC-V selection reads riscv_hwprobe, which qemu-user answers from -cpu.
 
 set -u
 cd "$(cd "$(dirname "$0")/../.." && pwd)"
@@ -34,9 +35,9 @@ run() { # arch qemu cpu expect
 		>"$log" 2>&1
 	local rc=$?
 	if [ $rc -eq 0 ]; then
-		printf '  PASS  %-8s %-14s -> %s\n' "$arch" "$cpu" "$expect"
+		printf '  PASS  %-8s %-32s -> %s\n' "$arch" "$cpu" "$expect"
 	else
-		printf '  FAIL  %-8s %-14s -> %s\n' "$arch" "$cpu" "$expect"
+		printf '  FAIL  %-8s %-32s -> %s\n' "$arch" "$cpu" "$expect"
 		grep -E '^(---|    |FAIL|panic|SIGILL|SIGSEGV)' "$log" | head -10 | sed 's/^/        /'
 		fail=1
 	fi
@@ -45,6 +46,7 @@ run() { # arch qemu cpu expect
 go version
 build amd64 gcc
 build arm64 aarch64-linux-gnu-gcc
+build riscv64 riscv64-linux-gnu-gcc
 
 # Where several kernels run, detection times them and keeps the fastest, so
 # under TCG any of them may win: the matrix checks the feature tier.
@@ -57,6 +59,12 @@ run arm64 qemu-aarch64 'cortex-a57' 'neon_x2|scalar_x1'
 run arm64 qemu-aarch64 'max'        "$SHA3"
 run arm64 qemu-aarch64 'neoverse-n1' 'neon_x2|scalar_x1'
 run arm64 qemu-aarch64 'neoverse-n2' "$SHA3"
+run riscv64 qemu-riscv64 'rv64,zbb=false'                 rv64_x1
+run riscv64 qemu-riscv64 'rv64'                           'rv64_x1|zbb_x1'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128'           'rv64_x1|zbb_x1|rvv'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=256'           'rv64_x1|zbb_x1|rvv'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zbb=false' 'rv64_x1|rvv'
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zvkb=true' 'rv64_x1|zbb_x1|rvv|rvv_zvkb'
 
 echo "=== result: $([ $fail -eq 0 ] && echo ALL GREEN || echo FAILURES) ==="
 exit $fail

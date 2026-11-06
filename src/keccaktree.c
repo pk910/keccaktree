@@ -14,17 +14,35 @@
 
 /* Kernel selection probes the instruction set extensions a kernel needs
  * (CPUID feature bits plus the OS register state from XGETBV on x86-64,
- * AT_HWCAP on Linux/AArch64, hw.optional sysctls on macOS), never CPU
+ * AT_HWCAP on Linux/AArch64, hw.optional sysctls on macOS, riscv_hwprobe
+ * and vlenb on Linux/RISC-V), never CPU
  * vendors, families or models.
  *
  * Some kernels differ only in how they suit the microarchitecture, a
  * property no feature bit reports: avx512vl_x4 beats avx512_x8 on cores
  * with a single 512-bit ALU port, sha3_x3 (lazy rotations) needs EOR/BIC
  * with a rotated operand at full rate, sha3_x3r does not, and scalar_x1
- * beats neon_x2 where the integer side outruns the vector side. For these,
+ * beats neon_x2 where the integer side outruns the vector side; on RISC-V
+ * the scalar and vector kernels trade places with VLEN and the core. For these,
  * detection runs every feature-qualified candidate once on a small warm
  * batch and keeps the fastest (keccaktree_calibrate): tens of microseconds
  * up to ~0.5 ms, once per process. keccaktree_init(fn) skips it. */
+
+#if defined(__riscv) && __riscv_xlen == 64
+#ifdef __linux__
+#include <sys/syscall.h>
+#include <unistd.h>
+#ifndef __NR_riscv_hwprobe
+#define __NR_riscv_hwprobe 258 /* Linux 6.4+ */
+#endif
+#endif
+/* riscv_hwprobe key and bits (asm/hwprobe.h, defined here for older headers) */
+struct keccaktree_hwprobe { int64_t key; uint64_t value; };
+#define KT_HWPROBE_KEY_IMA_EXT_0 4
+#define KT_HWPROBE_IMA_V         (1ULL << 2)
+#define KT_HWPROBE_EXT_ZBB       (1ULL << 4)
+#define KT_HWPROBE_EXT_ZVKB      (1ULL << 19)
+#endif
 
 static void init_and_hash(unsigned char* output, const unsigned char* input, uint64_t count);
 static keccaktree_hash_fcn hash_ptr = init_and_hash;
@@ -45,18 +63,31 @@ static uint64_t xgetbv0(void) {
 }
 #endif
 
-#if defined(__x86_64__) || defined(__aarch64__)
+#if defined(__riscv) && __riscv_xlen == 64
+static uint64_t keccaktree_riscv_vlenb(void) {
+    uint64_t vlenb;
+    __asm__ volatile(".option push\n.option arch, +v\ncsrr %0, vlenb\n.option pop" : "=r"(vlenb));
+    return vlenb;
+}
+#endif
+
+#if defined(__x86_64__) || defined(__aarch64__) || (defined(__riscv) && __riscv_xlen == 64)
 /* Cheap monotonic tick counter, only compared against itself: the TSC on
  * x86-64, the generic timer's virtual count on AArch64 (readable from user
- * space on Linux and macOS). */
+ * space on Linux and macOS), the time CSR on RISC-V (Zicntr, readable from
+ * user space on Linux). */
 static inline uint64_t keccaktree_ticks(void) {
 #ifdef __x86_64__
     uint32_t lo, hi;
     __asm__ volatile("lfence\n\trdtsc" : "=a"(lo), "=d"(hi) : : "memory");
     return ((uint64_t)hi << 32) | lo;
-#else
+#elif defined(__aarch64__)
     uint64_t t;
     __asm__ volatile("isb\n\tmrs %0, cntvct_el0" : "=r"(t) : : "memory");
+    return t;
+#else
+    uint64_t t;
+    __asm__ volatile(".option push\n.option arch, +zicsr\ncsrr %0, time\n.option pop" : "=r"(t) : : "memory");
     return t;
 #endif
 }
@@ -132,6 +163,24 @@ keccaktree_hash_fcn keccaktree_detect(void) {
 #endif
     if (hwcaps & HWCAP_ASIMD) return keccaktree_calibrate(simd, 2);
 #endif
+#endif
+#if defined(__riscv) && __riscv_xlen == 64
+    uint64_t ext = 0;
+#ifdef __linux__
+    struct keccaktree_hwprobe probe = {KT_HWPROBE_KEY_IMA_EXT_0, 0};
+    if (syscall(__NR_riscv_hwprobe, &probe, 1, 0, NULL, 0) == 0 && probe.key == KT_HWPROBE_KEY_IMA_EXT_0)
+        ext = probe.value;
+#endif
+    /* V in IMA_EXT_0 means the kernel has enabled it, so vlenb is readable;
+     * the vector kernels need VLEN >= 128 (2 nodes per register) */
+    int v = (ext & KT_HWPROBE_IMA_V) && keccaktree_riscv_vlenb() >= 16;
+    keccaktree_hash_fcn c[4];
+    int n = 0;
+    c[n++] = &keccaktree_keccak256_rv64_x1;
+    if (ext & KT_HWPROBE_EXT_ZBB) c[n++] = &keccaktree_keccak256_zbb_x1;
+    if (v) c[n++] = &keccaktree_keccak256_rvv;
+    if (v && (ext & KT_HWPROBE_EXT_ZVKB)) c[n++] = &keccaktree_keccak256_rvv_zvkb;
+    return keccaktree_calibrate(c, n);
 #endif
     return &keccaktree_keccak256_generic;
 }

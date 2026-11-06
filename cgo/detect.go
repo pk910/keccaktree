@@ -1,4 +1,4 @@
-//go:build ((linux || windows) && amd64) || ((linux || darwin) && arm64)
+//go:build ((linux || windows) && amd64) || ((linux || darwin) && arm64) || (linux && riscv64)
 
 package cgo
 
@@ -22,6 +22,12 @@ static const char* keccaktree_go_detect(void) {
 	if (f == keccaktree_keccak256_sha3_x2) return "sha3_x2";
 	if (f == keccaktree_keccak256_scalar_x1) return "scalar_x1";
 	if (f == keccaktree_keccak256_neon_x2) return "neon_x2";
+#endif
+#if defined(__riscv) && __riscv_xlen == 64
+	if (f == keccaktree_keccak256_rvv_zvkb) return "rvv_zvkb";
+	if (f == keccaktree_keccak256_rvv) return "rvv";
+	if (f == keccaktree_keccak256_zbb_x1) return "zbb_x1";
+	if (f == keccaktree_keccak256_rv64_x1) return "rv64_x1";
 #endif
 	return "generic";
 }
