@@ -63,6 +63,7 @@ static const kernel kernels[] = {
     {"avx2_x4", keccaktree_keccak256_avx2_x4},
     {"avx2_x8", keccaktree_keccak256_avx2_x8},
     {"avx2_x5", keccaktree_keccak256_avx2_x5},
+    {"avx2_x6", keccaktree_keccak256_avx2_x6},
     {"avx2_x9", keccaktree_keccak256_avx2_x9},
     {"avx2_x10", keccaktree_keccak256_avx2_x10},
     {"avx2_x2", keccaktree_keccak256_avx2_x2},
@@ -74,6 +75,7 @@ static const kernel kernels[] = {
 #ifdef __aarch64__
     {"neon_x2", keccaktree_keccak256_neon_x2},
     {"scalar_x1", keccaktree_keccak256_scalar_x1},
+    {"neon_x3", keccaktree_keccak256_neon_x3},
     {"sha3_x2", keccaktree_keccak256_sha3_x2},
     {"sha3_x3", keccaktree_keccak256_sha3_x3},
     {"sha3_x3r", keccaktree_keccak256_sha3_x3r},
