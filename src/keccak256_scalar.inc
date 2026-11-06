@@ -64,8 +64,16 @@
  * updated with D4 = C3 ^ rotl(C0, 1), then D1, D3, D0, D2 over
  * c0, c2, c4, c1 in that order (each C's last use first); c3 is free.
  * In pieces (rows 0+1, 2, 3, 4 of the parities; column 4; D) so that
- * keccak256_sha3_x3.S can interleave them with the vector stream. */
+ * keccak256_sha3_x3.S can interleave them with the vector stream.
+ *
+ * D4 is formed in the register of lane 2, which spends theta on the
+ * stack ([sp + OUT_SLOT + 24]; the load and store pipes have nothing else
+ * to do and the kernel is bound by its ALU instructions): one EOR plus
+ * five instead of two EORs per lane of column 4. Lane 2 is the last lane
+ * chi reads (row 4), so its reload has the whole chi of rows 0..3 to
+ * arrive and its theta EOR (SRHO_LANE2) goes just before that row. */
 .macro STHETA_C01 SARGS
+	str		x\s2, [sp, #OUT_SLOT + 24]
 	SXOR		\c0, \s0, \s5, O0, O5
 	SXOR		\c1, \s1, \s6, O1, O6
 	SXOR		\c2, \s2, \s7, O2, O7
@@ -94,16 +102,13 @@
 	SXOR		\c4, \c4, \s24, O4, O24
 .endm
 .macro STHETA_COL4 SARGS
-	SXOR		\s4, \s4, \c3, O4, O3
-	SXOR		\s9, \s9, \c3, O9, O3
-	SXOR		\s14, \s14, \c3, O14, O3
-	SXOR		\s19, \s19, \c3, O19, O3
-	SXOR		\s24, \s24, \c3, O24, O3
-	SXOR		\s4, \s4, \c0, O4, O0 + 1
-	SXOR		\s9, \s9, \c0, O9, O0 + 1
-	SXOR		\s14, \s14, \c0, O14, O0 + 1
-	SXOR		\s19, \s19, \c0, O19, O0 + 1
-	SXOR		\s24, \s24, \c0, O24, O0 + 1
+	SXOR		\s2, \c3, \c0, O3, O0 + 1
+	SXOR		\s4, \s4, \s2, O4, O3
+	SXOR		\s9, \s9, \s2, O9, O3
+	SXOR		\s14, \s14, \s2, O14, O3
+	SXOR		\s19, \s19, \s2, O19, O3
+	SXOR		\s24, \s24, \s2, O24, O3
+	ldr		x\s2, [sp, #OUT_SLOT + 24]
 .endm
 .macro STHETA_D SARGS
 	SXOR		\c0, \c0, \c2, O0, O2 + 1
@@ -121,11 +126,12 @@
 .endm
 
 /* theta on columns 0..3: D0 in c4, D1 in c0, D2 in c1, D3 in c2; rows
- * 0..1 and 2..4 separately */
+ * 0..1 and 2..4 separately, lane 2 (reloaded) on its own: D2 in c1 stays
+ * until chi's row 4 reads the lane (chi's rows free s16..s20, s22..s24 and
+ * c3, c4 only) */
 .macro SRHO_ROWS01 SARGS
 	SXOR		\s0, \s0, \c4, O0, O4
 	SXOR		\s1, \s1, \c0, O1, O0
-	SXOR		\s2, \s2, \c1, O2, O1
 	SXOR		\s3, \s3, \c2, O3, O2
 	SXOR		\s5, \s5, \c4, O5, O4
 	SXOR		\s6, \s6, \c0, O6, O0
@@ -145,6 +151,9 @@
 	SXOR		\s21, \s21, \c0, O21, O0
 	SXOR		\s22, \s22, \c1, O22, O1
 	SXOR		\s23, \s23, \c2, O23, O2
+.endm
+.macro SRHO_LANE2 SARGS
+	SXOR		\s2, \s2, \c1, O2, O1
 .endm
 .macro SRHO SARGS
 	SRHO_ROWS01	SPASS
@@ -227,6 +236,7 @@
 	SCHI_ROW1	SPASS
 	SCHI_ROW2	SPASS
 	SCHI_ROW3	SPASS
+	SRHO_LANE2	SPASS
 	SCHI_ROW4	SPASS
 	SNEXT
 .endm
@@ -292,7 +302,13 @@
 /* round 23: row 0, x = 0..3 only, rotated back and stored at
  * [[sp + OUT_SLOT] + OUT_OFF] */
 .macro SLAST_ROUND SARGS
-	STHETA		SPASS
+	STHETA_C01	SPASS
+	STHETA_C2	SPASS
+	STHETA_C3	SPASS
+	STHETA_C4	SPASS
+	SXOR		\s24, \s24, \c3, O24, O3
+	SXOR		\s24, \s24, \c0, O24, O0 + 1
+	STHETA_D	SPASS
 	SXOR		\s0, \s0, \c4, O0, O4
 	SXOR		\s6, \s6, \c0, O6, O0
 	SXOR		\s12, \s12, \c1, O12, O1
