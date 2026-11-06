@@ -322,24 +322,51 @@
 	.set		s_rel, \rel
 	.set		sn, 0
 	.set		scredit, 0
+	.set		sq_pending, 0
 .endm
 
-/* the next chunk of the current scalar round, if any */
+/* queue a second scalar round (another node, the same arguments as
+ * SROUND_BEGIN) behind the current one: the hooks continue with its
+ * chunks once the current round is complete, so two scalar nodes share
+ * the registers within one vector round (keccak256_avx2_x6.S) */
+.macro SROUND_QUEUE r, in, out, rc, swap, par=0, rel=0
+	.set		sq_round, \r
+	.set		sq_in, \in
+	.set		sq_out, \out
+	.set		sq_rc, \rc
+	.set		sq_swap, \swap
+	.set		sq_par, \par
+	.set		sq_rel, \rel
+	.set		sq_pending, 1
+.endm
+
+/* the next chunk of the current scalar round, if any, else of the queued
+ * one */
 .macro SNEXT
+.if sn >= SCHUNKS && sq_pending
+	.set		scredit_keep, scredit
+	SROUND_BEGIN	sq_round, sq_in, sq_out, sq_rc, sq_swap, sq_par, sq_rel
+	.set		scredit, scredit_keep
+.endif
 .if sn < SCHUNKS
 	SCHUNK_CUR
 	.set		sn, sn + 1
 .endif
 .endm
 
-/* the rest of the current scalar round */
+/* the rest of the current scalar round, and of the queued one */
 .macro SFLUSH
 .rept SCHUNKS - sn
 	SNEXT
 .endr
+.if sq_pending
+.rept SCHUNKS
+	SNEXT
+.endr
+.endif
 .endm
 
-/* the vector lane hook: SNUM/SDEN chunks per call (at most two); with
+/* the vector lane hook: SNUM/SDEN chunks per call (at most three); with
  * SNUM_T / SNUM_R / SNUM_C defined, that many per theta, rho and chi hook */
 #define VHOOK_DEFINED
 .macro VHOOK kind
@@ -356,6 +383,10 @@
 #else
 	.set		scredit, scredit + SNUM
 #endif
+.if scredit >= SDEN
+	.set		scredit, scredit - SDEN
+	SNEXT
+.endif
 .if scredit >= SDEN
 	.set		scredit, scredit - SDEN
 	SNEXT

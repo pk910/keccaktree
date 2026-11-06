@@ -27,7 +27,9 @@
  * ENTRY_ALT / ENTRY_ALT2 with ENTRY_ALT_MASK / ENTRY_ALT2_MASK hand a whole
  * call to another kernel, before the prologue, when bit count of the mask
  * is set (count < 64): for the counts where that kernel, with its own
- * tail, is faster than a batch of this one plus a tail.
+ * tail, is faster than a batch of this one plus a tail. BATCH_ALT_MASK
+ * does the same for the remaining count before every batch, to
+ * SMALL_TAIL_MID (avx2_x6: 9, 10 or 15 nodes left go to avx2_x5).
  *
  * Why the thresholds depend on what ran before: the kernels are chosen by
  * the time of a batch, but a kernel that follows another one may run
@@ -159,6 +161,18 @@
 1:	cmp		rdx, NODES
 	jb		2f
 9:	/* full batches */
+#ifdef BATCH_ALT_MASK
+	/* counts (< 64) that SMALL_TAIL_MID hashes faster than a batch here
+	 * and the tail of the rest, checked before every batch */
+	cmp		rdx, 63
+	ja		10f
+	mov		rax, BATCH_ALT_MASK
+	bt		rax, rdx
+	jnc		10f
+	mov		eax, 3
+	jmp		5f
+10:
+#endif
 	call		.Lbatch
 	add		BIN, NODES*64
 	add		BOUT, NODES*32

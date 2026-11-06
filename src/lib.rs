@@ -37,6 +37,7 @@ pub mod ffi {
         pub fn keccaktree_keccak256_avx2_x4(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx2_x8(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx2_x5(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_avx2_x6(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx2_x9(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx2_x10(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx2_x2(output: *mut u8, input: *const u8, count: u64);
@@ -130,6 +131,7 @@ pub enum Backend {
     Avx2X8,
     /// x86-64 AVX2 x4 plus one node in the integer registers (BMI1, BMI2).
     Avx2X5,
+    Avx2X6,
     /// x86-64 AVX2 x8 plus one node in the integer registers (BMI1, BMI2).
     Avx2X9,
     /// x86-64 AVX2 x8 plus two nodes in the integer registers (BMI1, BMI2).
@@ -177,11 +179,12 @@ impl fmt::Display for Unsupported {
 
 impl Backend {
     /// Every backend, in no particular order.
-    pub const ALL: [Backend; 20] = [
+    pub const ALL: [Backend; 21] = [
         Backend::Generic,
         Backend::Avx2X4,
         Backend::Avx2X8,
         Backend::Avx2X5,
+        Backend::Avx2X6,
         Backend::Avx2X9,
         Backend::Avx2X10,
         Backend::Avx2X2,
@@ -207,6 +210,7 @@ impl Backend {
             Backend::Avx2X4 => "avx2_x4",
             Backend::Avx2X8 => "avx2_x8",
             Backend::Avx2X5 => "avx2_x5",
+            Backend::Avx2X6 => "avx2_x6",
             Backend::Avx2X9 => "avx2_x9",
             Backend::Avx2X10 => "avx2_x10",
             Backend::Avx2X2 => "avx2_x2",
@@ -237,6 +241,8 @@ impl Backend {
             Backend::Avx2X8 if x86::avx2() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx2_x8),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx2X5 if x86::avx2() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx2_x5),
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
+            Backend::Avx2X6 if x86::avx2() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx2_x6),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx2X9 if x86::avx2() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx2_x9),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
