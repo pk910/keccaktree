@@ -58,9 +58,9 @@ echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
 run amd64 qemu-x86_64  'Haswell'    "$AVX2_BMI"
 run amd64 qemu-x86_64  'Haswell,bmi1=off,bmi2=off' "$AVX2"
-run arm64 qemu-aarch64 'cortex-a57' 'neon_x2|scalar_x1'
+run arm64 qemu-aarch64 'cortex-a57' 'neon_x3|neon_x2|scalar_x1'
 run arm64 qemu-aarch64 'max'        "$SHA3"
-run arm64 qemu-aarch64 'neoverse-n1' 'neon_x2|scalar_x1'
+run arm64 qemu-aarch64 'neoverse-n1' 'neon_x3|neon_x2|scalar_x1'
 run arm64 qemu-aarch64 'neoverse-n2' "$SHA3"
 run riscv64 qemu-riscv64 'rv64,zbb=false'                 rv64_x1
 run riscv64 qemu-riscv64 'rv64'                           'rv64_x1|zbb_x1'
