@@ -397,7 +397,7 @@ def Ok (S : State (BitVec 64)) : Prop := S.err = false ∧ S.halted = false ∧ 
                     f.write(f'    · intro i hi\n      rw [hT]\n      simp only [ctl{nxt}, List.mem_cons, List.mem_nil_iff, or_false] at hi\n')
                     f.write('      rcases hi with ' + ' | '.join('rfl' for _ in ctln) + '\n')
                     for j, v in enumerate(ctln):
-                        f.write(f'      · rw [h1]\n        show E.eval (envOf (stateAt S0 {c})) (readVar result{c} {v}) = envOf sc{nxt} {v}\n        rw [ctlv{c}_{j}]; rfl\n')
+                        f.write(f'      · rw [h1]\n        show E.eval (envOf (stateAt S0 {c})) (readVar result{c} {v}) = envOf sc{nxt} {v}\n        rw [ctlv{c}_{j}]; (try simp only [E.eval]); all_goals decide +kernel\n')
             f.write('\n')
         f.write(f'''set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in

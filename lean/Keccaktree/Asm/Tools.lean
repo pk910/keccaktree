@@ -260,18 +260,20 @@ def Run.read (r : Run) : Loc → BitVec 64
 /-- Matches of every location in two runs (same control flow). -/
 def matchAll (t1 : Std.HashMap (BitVec 64) (List Match)) (spec2 : Array (Array (Array (BitVec 64))))
     (locs : List Loc) (r1 r2 : Run) : List (Loc × Match) :=
-  locs.filterMap fun loc =>
+  locs.flatMap fun loc =>
     let v1 := r1.read loc
     let v2 := r2.read loc
     -- a value equal on both inputs is a constant: only the round constants are recognised
     let cands0 := t1.getD v1 []
-    if cands0.length > 256 then none else
+    if cands0.length > 256 then [] else
     let cands := cands0.filter fun m =>
       (v1 != v2 || m.kind ≥ 75) &&
       (((spec2.getD m.node #[]).getD m.round #[]).getD m.kind 0).rotateLeft m.rot == v2
     match cands with
-    | [m] => some (loc, m)
-    | _ => none
+    | [m] => [(loc, m)]
+    -- some round constants coincide (RC 5 = RC 22, RC 6 = RC 20): report every candidate,
+    -- the generator keeps the one of the slice's round
+    | ms => if !ms.isEmpty && ms.all (·.kind ≥ 75) then ms.map ((loc, ·)) else []
 
 /-- Step both runs for `n` instructions from the entry, reporting after each
 instruction the executed index and, per node, the rounds whose 25 lanes are
