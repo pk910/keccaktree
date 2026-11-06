@@ -123,12 +123,17 @@
 	 * compiler's __chkstk does), or the first store below the guard page
 	 * faults on reserved memory. One probe per page, down to the page the
 	 * call to .Lbatch reaches (FRAME + 63 of alignment + 8); nothing on
-	 * frames within a page. Harmless on SysV, kept on both for one frame. */
+	 * frames within a page. Linux grows the stack on any access, and
+	 * valgrind reports an access below rsp, so SysV probes only when a
+	 * test asks for it (KECCAKTREE_STACK_PROBE: the guard-page emulation
+	 * test exercises the Windows rule on Linux). */
+#if defined(_WIN64) || defined(KECCAKTREE_STACK_PROBE)
 .set .Lprobe, 4096
 .rept (FRAME + 72) / 4096
 	or		qword ptr [rsp - .Lprobe], 0
 .set .Lprobe, .Lprobe + 4096
 .endr
+#endif
 	sub		rsp, FRAME
 	and		rsp, -64
 #ifdef _WIN64
