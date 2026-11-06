@@ -23,15 +23,19 @@ reduction).
 
 The bindings follow the hashtree-bindings layout: the `cgo` subpackage links a
 prebuilt static library from `lib/<platform>/`, and small Go assembly wrappers
-call the best kernel directly, chosen with `klauspost/cpuid` (on RISC-V with
-`riscv_hwprobe` from `golang.org/x/sys/unix`):
+call the kernel the C library's detection picks. Detection never looks at
+the CPU vendor, family or model. It probes the features each kernel needs,
+then, where several kernels qualify and which is fastest depends on the core
+rather than on a feature bit, times them once on a small batch at startup
+(well under a millisecond) and keeps the fastest:
 
-| Platform | Kernels |
-|---|---|
-| linux/amd64, windows/amd64 | AVX-512 x8 (ymm x4 on Intel client cores), AVX2 x8 (two interleaved x4 batches) |
-| linux/arm64 | SHA3+scalar hybrid x3 (Neoverse N2/V1/V2, Graviton 3/4; the ROR variant on Apple cores), SHA3 x2 (other FEAT_SHA3 cores), scalar x1 (Neoverse N1, Graviton 2), NEON x2 |
-| darwin/arm64 | SHA3+scalar hybrid x3 with explicit rotations (Apple M-series) |
-| linux/riscv64 | RVV x(VLEN/64) with Zvkb, RVV x(VLEN/64) (VLEN >= 256), Zbb scalar x1, RV64I scalar x1 (from `riscv_hwprobe`) |
+| Platform | Feature probed | Candidates (timed once) |
+|---|---|---|
+| linux/amd64, windows/amd64 | AVX-512F + AVX-512VL, OS zmm state | AVX-512 x8; ymm x4 (wins on cores with one 512-bit port) |
+| | AVX2, OS ymm state | AVX2 x8 (two interleaved x4 batches); AVX2 x4 |
+| linux/arm64, darwin/arm64 | FEAT_SHA3 (`AT_HWCAP` / `hw.optional` sysctl) | SHA3+scalar hybrid x3 with lazy rotations (Neoverse); x3 with explicit rotations (Apple); SHA3 x2 |
+| | Advanced SIMD | NEON x2; scalar x1 (cores whose integer side outruns NEON) |
+| linux/riscv64 | `riscv_hwprobe` IMA_EXT_0 + `vlenb` | RVV x(VLEN/64) with Zvkb; RVV x(VLEN/64) (VLEN >= 128); Zbb scalar x1; RV64I scalar x1 |
 | everything else, or `CGO_ENABLED=0` | pure Go (generated from the same core) |
 
 `lib/` is rebuilt and committed by the *Update Static Libraries* workflow
@@ -88,8 +92,8 @@ Performance notes:
   the rounds of two independent 4-node batches to fill that gap (10% faster
   on Zen) and keeps the idle batch's parities in memory. Interleaving a scalar BMI2 stream with either (as on ARM) was
   measured at 2x slower: with 16 general registers the scalar state spills.
-  Intel client cores with AVX-512 (Ice/Tiger/Rocket Lake) have only one
-  512-bit ALU port, so dispatch picks the 256-bit `avx512vl_x4` kernel there.
+  On cores with only one 512-bit ALU port the 256-bit `avx512vl_x4`
+  kernel is faster; detection finds that by timing both.
   A single-node AVX2 call goes to the scalar code (25% faster on Zen 3).
 - **AArch64.** `sha3_x2` is 67 instructions per round with no moves or
   spills (EOR3, RAX1, XAR, BCAX). `scalar_x1` keeps every lane in a lazily
@@ -109,8 +113,9 @@ Performance notes:
   `sha3_x3r`: the SHA3 x2 vector stream with a scalar stream that rotates
   in place with ROR (130 instructions per round, 9 of them shifted). On M1
   that runs at the 8-wide front end (~7.6 IPC): 66 ns/node vs 77 for
-  sha3_x2 (1.16x). The choice is made from the MIDR implementer (0x41 Arm,
-  0x61 Apple; macOS always takes the Apple path).
+  sha3_x2 (1.16x). No feature bit says whether a rotated operand is
+  cheap, so detection times `sha3_x3`, `sha3_x3r` and `sha3_x2` (and
+  `neon_x2` against `scalar_x1` without FEAT_SHA3) and keeps the fastest.
 - **RISC-V (RV64).** The scalar kernels keep the 25 lanes in fixed registers
   (25 of the 28 allocatable ones, so pointers and four column parities live
   on the stack) and do rho and pi as one chain along pi's 24-cycle, each lane
@@ -119,10 +124,9 @@ Performance notes:
   vector-length agnostic (SEW 64, LMUL 1): one register holds a lane of
   VLEN/64 nodes, a segment load transposes the input, and a round is
   131 vector instructions with Zvkb (`vror.vi`, `vandn`) and 214
-  without. Not yet measured on hardware (GitHub has no RISC-V runners, and
-  qemu timings say nothing), so dispatch goes by instruction counts: RVV
-  with Zvkb always, plain RVV from VLEN 256 (4 nodes per batch), otherwise
-  the Zbb scalar kernel. Misaligned buffers go through a bounce buffer with
+  without. Which wins depends on VLEN and the core (not yet measured on
+  hardware: GitHub has no RISC-V runners), so detection times every kernel
+  the extensions allow and keeps the fastest. Misaligned buffers go through a bounce buffer with
   byte accesses, as RVV may fault on misaligned elements.
 
 `.github/workflows/bench.yml` runs `bench` (all kernels next to hashtree's

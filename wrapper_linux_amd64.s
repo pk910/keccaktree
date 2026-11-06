@@ -13,7 +13,13 @@ TEXT ·KeccaktreeHash(SB), 0, $8192-24
 
 	CMPB ·hasAVX512(SB), $1
 	JE   avx512
+	CMPB ·avx2X4(SB), $1
+	JE   avx2x4
 	CALL keccaktree_keccak256_avx2_x8(SB)
+	JMP  epilog
+
+avx2x4:
+	CALL keccaktree_keccak256_avx2_x4(SB)
 	JMP  epilog
 
 avx512:

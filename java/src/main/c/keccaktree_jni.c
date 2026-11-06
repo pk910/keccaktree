@@ -16,6 +16,14 @@ static uint64_t riscv_ext(void) {
     return syscall(258, &p, 1, 0, NULL, 0) == 0 && p.key == 4 ? p.value : 0;
 }
 #endif
+#if defined(__aarch64__) && defined(__APPLE__)
+#include <sys/sysctl.h>
+static int sysctl_flag(const char* name) {
+    int v = 0;
+    size_t len = sizeof(v);
+    return sysctlbyname(name, &v, &len, NULL, 0) == 0 && v != 0;
+}
+#endif
 
 #define JNI_FN(name) Java_io_github_pk910_keccaktree_Keccaktree_##name
 
@@ -32,7 +40,8 @@ static int cpu_supports(const char* name) {
     if (!strcmp(name, "avx512vl_x4") || !strcmp(name, "avx512_x8"))
         return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl");
 #elif defined(__aarch64__) && defined(__APPLE__)
-    (void)name; /* every Apple M-series core has FEAT_SHA3 */
+    if (!strncmp(name, "sha3_", 5))
+        return sysctl_flag("hw.optional.arm.FEAT_SHA3") || sysctl_flag("hw.optional.armv8_2_sha3");
 #elif defined(__aarch64__) && defined(__linux__)
     if (!strncmp(name, "sha3_", 5)) return (getauxval(AT_HWCAP) & (1UL << 17)) != 0;
 #elif defined(__riscv) && __riscv_xlen == 64 && defined(__linux__)

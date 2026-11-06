@@ -3,7 +3,7 @@
 // The C kernels run on this frame's 2048 bytes of stack (deepest: the
 // vector kernels' 512-byte bounce buffer). SP is moved to the top of the
 // frame and 16-byte aligned as the C ABI wants; X9 (s1, callee-saved in C)
-// keeps the Go SP. Selection: rvKernel, see bindings_linux_riscv64.go.
+// keeps the Go SP. Selection: rvKernel, set from cgo.Detect in bindings_linux_riscv64.go.
 TEXT ·KeccaktreeHash(SB), 0, $2048-24
 	MOV   output+0(FP), X10
 	MOV   input+8(FP), X11
@@ -37,8 +37,3 @@ epilog:
 	MOV   X9, X2
 	RET
 
-// func readVLENB() uint64
-TEXT ·readVLENB(SB), 4, $0-8
-	WORD  $0xc2202573 // csrr a0, vlenb
-	MOV   X10, ret+0(FP)
-	RET
