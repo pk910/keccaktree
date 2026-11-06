@@ -7,6 +7,15 @@
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/auxv.h>
 #endif
+#if defined(__riscv) && __riscv_xlen == 64 && defined(__linux__)
+#include <sys/syscall.h>
+#include <unistd.h>
+/* riscv_hwprobe IMA_EXT_0 bits, as in src/keccaktree.c */
+static uint64_t riscv_ext(void) {
+    struct { int64_t key; uint64_t value; } p = {4, 0};
+    return syscall(258, &p, 1, 0, NULL, 0) == 0 && p.key == 4 ? p.value : 0;
+}
+#endif
 
 #define JNI_FN(name) Java_io_github_pk910_keccaktree_Keccaktree_##name
 
@@ -26,6 +35,11 @@ static int cpu_supports(const char* name) {
     (void)name; /* every Apple M-series core has FEAT_SHA3 */
 #elif defined(__aarch64__) && defined(__linux__)
     if (!strncmp(name, "sha3_", 5)) return (getauxval(AT_HWCAP) & (1UL << 17)) != 0;
+#elif defined(__riscv) && __riscv_xlen == 64 && defined(__linux__)
+    uint64_t ext = riscv_ext(), v = 1ULL << 2, zbb = 1ULL << 4, zvkb = 1ULL << 19;
+    if (!strcmp(name, "zbb_x1")) return (ext & zbb) != 0;
+    if (!strcmp(name, "rvv")) return (ext & v) != 0;
+    if (!strcmp(name, "rvv_zvkb")) return (ext & (v | zvkb)) == (v | zvkb);
 #endif
     return 1;
 }
@@ -44,6 +58,12 @@ static const kernel kernels[] = {
     {"sha3_x2", keccaktree_keccak256_sha3_x2},
     {"sha3_x3", keccaktree_keccak256_sha3_x3},
     {"sha3_x3r", keccaktree_keccak256_sha3_x3r},
+#endif
+#if defined(__riscv) && __riscv_xlen == 64
+    {"rv64_x1", keccaktree_keccak256_rv64_x1},
+    {"zbb_x1", keccaktree_keccak256_zbb_x1},
+    {"rvv", keccaktree_keccak256_rvv},
+    {"rvv_zvkb", keccaktree_keccak256_rvv_zvkb},
 #endif
 };
 #define NKERNELS ((int)(sizeof(kernels) / sizeof(kernels[0])))

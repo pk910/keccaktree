@@ -18,6 +18,20 @@ static int kt_cpu(int f) { return f == 3; }
 #elif defined(__aarch64__) && defined(__linux__)
 #include <sys/auxv.h>
 static int kt_cpu(int f) { return f == 3 && (getauxval(AT_HWCAP) & (1UL << 17)); }
+#elif defined(__riscv) && __riscv_xlen == 64 && defined(__linux__)
+#include <stdint.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+/* riscv_hwprobe IMA_EXT_0: V bit 2, Zbb bit 4, Zvkb bit 19 */
+static int kt_cpu(int f) {
+  struct { int64_t key; uint64_t value; } p = {4, 0};
+  if (syscall(258, &p, 1, 0, NULL, 0) != 0 || p.key != 4) return 0;
+  uint64_t v = 1ULL << 2, zbb = 1ULL << 4, zvkb = 1ULL << 19;
+  return f == 4 ? (p.value & zbb) != 0
+       : f == 5 ? (p.value & v) != 0
+       : f == 6 ? (p.value & (v | zvkb)) == (v | zvkb)
+       : 0;
+}
 #else
 static int kt_cpu(int f) { (void)f; return 0; }
 #endif
@@ -108,6 +122,11 @@ proc kernels(): seq[Kernel] =
     result.add (name: "sha3_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x2), feature: 3)
     result.add (name: "sha3_x3", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x3), feature: 3)
     result.add (name: "sha3_x3r", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x3r), feature: 3)
+  when keccaktreeAsm and defined(riscv64):
+    result.add (name: "rv64_x1", fn: KeccaktreeHashFcn(keccaktree_keccak256_rv64_x1), feature: 0)
+    result.add (name: "zbb_x1", fn: KeccaktreeHashFcn(keccaktree_keccak256_zbb_x1), feature: 4)
+    result.add (name: "rvv", fn: KeccaktreeHashFcn(keccaktree_keccak256_rvv), feature: 5)
+    result.add (name: "rvv_zvkb", fn: KeccaktreeHashFcn(keccaktree_keccak256_rvv_zvkb), feature: 6)
 
 proc testReference() =
   var zero: array[64, byte]

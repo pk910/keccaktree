@@ -1,6 +1,6 @@
 //! Links the keccaktree C library for the Rust bindings.
 //!
-//! On linux x86-64/aarch64, macOS aarch64 and Windows x86-64 (GNU and MSVC)
+//! On linux x86-64/aarch64/riscv64, macOS aarch64 and Windows x86-64 (GNU and MSVC)
 //! this links the CI-built, attested static library from lib/<platform>/,
 //! the same one the Go bindings use (the Windows library has no C runtime
 //! dependencies, so MSVC's linker takes it too).
@@ -36,6 +36,7 @@ fn main() {
         ("linux", "x86_64") => Some("linux_amd64"),
         ("linux", "aarch64") => Some("linux_arm64"),
         ("macos", "aarch64") => Some("darwin_arm64"),
+        ("linux", "riscv64") => Some("linux_riscv64"),
         ("windows", "x86_64") => Some("windows_amd64"),
         _ => None,
     };
