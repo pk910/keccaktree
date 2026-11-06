@@ -1,0 +1,46 @@
+[package]
+name = "keccaktree"
+version = "0.1.0"
+authors = ["pk910"]
+edition = "2021"
+description = "Batched keccak256 for Merkle trees, a drop-in for hashtree (hand-written AVX-512/AVX2/NEON/SHA3 kernels)"
+repository = "https://github.com/pk910/keccaktree"
+license = "MIT"
+keywords = ["keccak", "keccak256", "merkle", "hash", "ethereum"]
+categories = ["cryptography", "algorithms"]
+build = "build.rs"
+links = "keccaktree"
+include = [
+    "Cargo.toml",
+    "build.rs",
+    "rust/**",
+    "src/keccaktree.c",
+    "src/keccak256_generic.c",
+    "src/*.h",
+    "src/*.inc",
+    "src/asm/*",
+    "lib/*/libkeccaktree.a",
+    "LICENSE",
+]
+
+[lib]
+path = "rust/lib.rs"
+
+[[test]]
+name = "keccaktree"
+path = "rust/tests/keccaktree.rs"
+
+[[example]]
+name = "basic_usage"
+path = "rust/examples/basic_usage.rs"
+
+[features]
+# Link the CI-built, attested static library from lib/<platform>/ instead of
+# compiling src/ (linux x86_64/aarch64, macOS aarch64, Windows x86_64).
+prebuilt = []
+
+[dev-dependencies]
+sha3 = "0.10"
+
+[build-dependencies]
+cc = "1.0"
