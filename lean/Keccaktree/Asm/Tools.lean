@@ -103,6 +103,13 @@ def riscvTool (vlmax : Nat) : IsaTool :=
 def symRun (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : List Nat) (s : State E) : State E :=
   T.execTrace rodata (idx.map (prog.getD · T.nop)) s
 
+/-- The variables of an expression. -/
+partial def _root_.Keccaktree.Asm.E.vars : E → List Nat
+  | .var i => [i]
+  | .const _ => []
+  | .xor a b | .and a b | .or a b | .add a b => a.vars ++ b.vars
+  | .not a | .shl a _ | .shr a _ | .rol a _ => a.vars
+
 /-- The state before the first failing instruction of a symbolic slice run, and its position. -/
 def firstFail (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : List Nat) (s : State E) : Option (State E × Nat) := Id.run do
   let mut st := s
@@ -122,11 +129,23 @@ partial def findCtl (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : L
   match firstFail T rodata prog idx (cutOf ctl sc) with
   | none => return ctl
   | some (st, n) =>
-    let cands := (st.gd.toList.filterMap fun e => match e with | .var v => some v | _ => none).eraseDups.filter (!ctl.contains ·)
+    -- the general registers' variables, and the stack cells that are still variables (saved pointers, return addresses)
+    let stackCells := (List.range 1024).filterMap fun (i : Nat) =>
+      let q : Int := 131072 - 1024 + Int.ofNat i
+      match st.mem rStack q with | .var v => some v | _ => none
+    let cands := (st.gd.toList.flatMap E.vars ++ stackCells).eraseDups.filter (!ctl.contains ·)
+    let advances (extra : List Nat) : Bool :=
+      match firstFail T rodata prog idx (cutOf (extra ++ ctl) sc) with
+      | none => true
+      | some (_, n') => n' > n
     for c in cands do
-      match firstFail T rodata prog idx (cutOf (c :: ctl) sc) with
-      | none => return (c :: ctl).reverse
-      | some (_, n') => if n' > n then return ← findCtl rodata prog idx sc (c :: ctl)
+      if advances [c] then return ← findCtl rodata prog idx sc (c :: ctl)
+    -- an instruction needing several words at once (`bne t1, t2`): all bare-variable registers, minimised
+    if advances cands then
+      let mut keep := cands
+      for c in cands do
+        if advances (keep.erase c) then keep := keep.erase c
+      return ← findCtl rodata prog idx sc (keep ++ ctl)
     throw (IO.userError s!"symbolic slice fails at step {n} (instruction {idx.getD n 0}); no control variable fixes it")
 
 /-! ## Matching locations against the specification -/
@@ -141,7 +160,7 @@ structure Match where
   rot : Nat
   deriving Repr, BEq, Hashable, Inhabited
 
-def nKinds : Nat := 35
+def nKinds : Nat := 75
 
 /-- Node `n` of the message `fun i => input word` as the state after `r` rounds. -/
 def nodeState (input : Int → BitVec 64) (n r : Nat) : Spec.State :=

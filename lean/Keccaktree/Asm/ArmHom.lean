@@ -213,6 +213,7 @@ theorem err_exec (rodata : Array (BitVec 64)) (i : Instr) (st : State α) (h : s
 /-- The AArch64 instruction set. -/
 def isa : Isa where
   Instr := Instr
+  nop := .nop
   exec := exec
   exec_map := fun f hf rodata i st hne => exec_map hf rodata i st hne
   err_exec := fun rodata i st h => err_exec rodata i st h

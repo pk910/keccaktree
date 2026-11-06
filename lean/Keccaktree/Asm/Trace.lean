@@ -13,6 +13,7 @@ open X86
 
 structure Isa where
   Instr : Type
+  nop : Instr
   exec : {α : Type} → [LaneOps α] → Array (BitVec 64) → Instr → State α → State α
   exec_map : ∀ {α β : Type} [LaneOps α] [LaneOps β] (f : α → β), IsHom f →
     ∀ (rodata : Array (BitVec 64)) (i : Instr) (st : State α), (exec rodata i st).err = false →
@@ -48,9 +49,61 @@ theorem Isa.execTrace_map (isa : Isa) {f : α → β} (hf : IsHom f) (rodata : A
     rw [isa.exec_map f hf rodata i st h1]
     exact ih _ hne
 
+/-- The fetch-execute loop: `n` steps, stopping when halted. -/
+def Isa.run (isa : Isa) (rodata : Array (BitVec 64)) (prog : Array isa.Instr) : Nat → State α → State α
+  | 0, s => s
+  | n + 1, s => if s.halted then s else isa.run rodata prog n (isa.exec rodata (prog.getD s.pc isa.nop) s)
+
+theorem Isa.run_halted (isa : Isa) (rodata : Array (BitVec 64)) (prog : Array isa.Instr) (n : Nat) (s : State α)
+    (h : s.halted = true) : isa.run rodata prog n s = s := by
+  cases n with
+  | zero => rfl
+  | succ n => simp only [Isa.run, h, ↓reduceIte]
+
+theorem Isa.run_add (isa : Isa) (rodata : Array (BitVec 64)) (prog : Array isa.Instr) (n m : Nat) (s : State α) :
+    isa.run rodata prog (n + m) s = isa.run rodata prog m (isa.run rodata prog n s) := by
+  induction n generalizing s with
+  | zero => simp only [Nat.zero_add]; rfl
+  | succ n ih =>
+    rw [Nat.succ_add]
+    simp only [Isa.run]
+    split
+    · rw [isa.run_halted rodata prog m s ‹_›]
+    · exact ih _
+
+/-- The symbolic state follows the recorded instruction path `idx` without
+failing or halting (a kernel-checkable Boolean). -/
+def Isa.pathOk (isa : Isa) (rodata : Array (BitVec 64)) (prog : Array isa.Instr) : List Nat → State E → Bool
+  | [], s => !s.err
+  | i :: rest, s => !s.err && !s.halted && s.pc == i && isa.pathOk rodata prog rest (isa.exec rodata (prog.getD i isa.nop) s)
+
+theorem Isa.pathOk_err (isa : Isa) (rodata : Array (BitVec 64)) (prog : Array isa.Instr) (idx : List Nat) (s : State E)
+    (h : isa.pathOk rodata prog idx s = true) : s.err = false := by
+  cases idx <;> simp only [Isa.pathOk, Bool.and_eq_true, Bool.not_eq_true'] at h
+  · exact h
+  · exact h.1.1.1
+
+/-- A concrete state that evaluates a symbolic one follows the symbolic path:
+`idx.length` steps of the fetch-execute loop are the trace of the path's
+instructions. -/
+theorem Isa.run_of_pathOk (isa : Isa) (rodata : Array (BitVec 64)) (prog : Array isa.Instr) (idx : List Nat)
+    (env : Nat → BitVec 64) (t : State E) (h : isa.pathOk rodata prog idx t = true) :
+    isa.run rodata prog idx.length (mapState (E.eval env) t) =
+      isa.execTrace rodata (idx.map (prog.getD · isa.nop)) (mapState (E.eval env) t) := by
+  induction idx generalizing t with
+  | nil => rfl
+  | cons i rest ih =>
+    simp only [Isa.pathOk, Bool.and_eq_true, Bool.not_eq_true', beq_iff_eq] at h
+    obtain ⟨⟨⟨he, hh⟩, hpc⟩, hrest⟩ := h
+    simp only [List.length_cons, List.map_cons, Isa.run, Isa.execTrace, List.foldl_cons, halted_map, hh,
+      Bool.false_eq_true, ↓reduceIte, pc_map, hpc]
+    rw [isa.exec_map _ (E.eval_isHom env) rodata _ t (isa.pathOk_err rodata prog rest _ hrest)]
+    exact ih _ hrest
+
 /-- The x86-64 instruction set. -/
 def X86.isa : Isa where
   Instr := X86.Instr
+  nop := .nop
   exec := X86.exec
   exec_map := fun f hf rodata i st hne => X86.exec_map hf rodata i st hne
   err_exec := fun rodata i st h => X86.err_exec rodata i st h
