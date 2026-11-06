@@ -46,15 +46,15 @@ WEAKB(keccaktree_keccak256_avx2_x9)
 WEAKB(keccaktree_keccak256_avx2_x5)
 WEAKB(keccaktree_keccak256_avx2_x2)
 WEAKB(keccaktree_keccak256_x86_x1)
+#ifndef __APPLE__
 WEAKB(keccaktree_keccak256_neon_x3)
+#else
+#define base_keccaktree_keccak256_neon_x3 NULL
+#endif
 /* candidate kernels that may not exist in the header yet are resolved weakly
  * (per architecture, so the Mach-O link has no stray undefined references) */
-#ifdef __APPLE__
-#define WEAK(n) void n(unsigned char*, const unsigned char*, uint64_t) __attribute__((weak_import));
-#else
 #define WEAK(n) void n(unsigned char*, const unsigned char*, uint64_t) __attribute__((weak));
-#endif
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
 WEAK(keccaktree_keccak256_scalar_x1)
 WEAK(keccaktree_keccak256_neon_x2)
 WEAK(keccaktree_keccak256_neon_x3)
@@ -63,24 +63,25 @@ WEAK(keccaktree_keccak256_sha3_x3)
 WEAK(keccaktree_keccak256_sha3_x3r)
 WEAK(keccaktree_keccak256_sha3_x4)
 WEAK(keccaktree_keccak256_sha3_x3b)
-#ifndef __APPLE__
 WEAK(keccaktree_keccak256_scalar_x2)
 WEAK(keccaktree_keccak256_scalar_x1r)
 WEAK(keccaktree_keccak256_neon_x2b)
 WEAK(keccaktree_keccak256_neon_x4)
 WEAK(keccaktree_keccak256_neon_x1)
-#endif
 #else
+/* Mach-O: ld64 rejects undefined weak references in a static link, so the
+ * kernels the header does not declare are simply absent here (declare
+ * them above and link them to add one) */
+#ifndef __aarch64__
 #define keccaktree_keccak256_scalar_x1 NULL
 #define keccaktree_keccak256_neon_x2 NULL
 #define keccaktree_keccak256_neon_x3 NULL
 #define keccaktree_keccak256_sha3_x2 NULL
 #define keccaktree_keccak256_sha3_x3 NULL
 #define keccaktree_keccak256_sha3_x3r NULL
+#endif
 #define keccaktree_keccak256_sha3_x4 NULL
 #define keccaktree_keccak256_sha3_x3b NULL
-#endif
-#if !defined(__aarch64__) || defined(__APPLE__)
 #define keccaktree_keccak256_scalar_x2 NULL
 #define keccaktree_keccak256_scalar_x1r NULL
 #define keccaktree_keccak256_neon_x2b NULL
