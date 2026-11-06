@@ -26,7 +26,7 @@
  * the scalar and vector kernels trade places with VLEN and the core. For these,
  * detection runs every feature-qualified candidate once on a small warm
  * batch and keeps the fastest (keccaktree_calibrate): tens of microseconds
- * up to ~0.5 ms, once per process. keccaktree_init(fn) skips it. */
+ * up to ~0.25 ms, once per process. keccaktree_init(fn) skips it. */
 
 #if defined(__riscv) && __riscv_xlen == 64
 #ifdef __linux__
@@ -96,9 +96,13 @@ static inline uint64_t keccaktree_ticks(void) {
  * buffer in place twice (96 nodes, long enough for the 24 MHz counter of
  * Apple cores to resolve a few percent; keccak's timing does not depend on
  * the data); one 3 KB buffer keeps the frame below the 4 KB at which
- * Windows compilers emit a stack probe call. */
+ * Windows compilers emit a stack probe call. Three samples per kernel:
+ * the minimum of three already picks the same kernel as the minimum of
+ * seven in 300 of 300 process starts on Zen 3 and Neoverse N1, and
+ * halves the first-call cost (about 100 us on Zen 3, 230 us on N1, each
+ * with two candidates). */
 #define CALIB_NODES 48
-#define CALIB_REPS  7
+#define CALIB_REPS  3
 
 /* Times each candidate, interleaved so a frequency change hits all of them
  * alike, and returns the one with the lowest minimum. */
