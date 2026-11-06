@@ -8,20 +8,31 @@
  * This is the fallback for CPUs without a dedicated kernel (and for builds
  * that cannot assemble the kernels: MSVC, CGO-less Go). It is plain C with
  * no intrinsics, endianness-safe byte loads and stores, and the permutation
- * fully unrolled in the classic "compact unrolled" shape:
+ * in the classic "compact unrolled" shape:
  *
  *  - the 25 lanes are locals (two sets, A and E, the rounds alternate
  *    between them so no copy is needed), theta/rho/pi/chi/iota are one
- *    macro per round with the rho offsets, the pi destinations and the
- *    round constant as literals; the row-by-row chi keeps only five rho/pi
- *    results live at a time. No table lookups, no loop counters, no
- *    variable shifts: the compiler sees straight-line code with the real
- *    dependency graph and schedules across the steps.
- *  - the state is initialised with its literal zero lanes, so the compiler
- *    folds round 0 (only 8 data lanes and two padding constants: half the
- *    theta XORs and all the "zero lane ^= D" steps vanish), and the output
+ *    macro per round with the rho offsets and the pi destinations as
+ *    literals; the row-by-row chi keeps only five rho/pi results live at
+ *    a time. No table lookups for the state, no variable shifts: the
+ *    compiler sees the real dependency graph and schedules across the
+ *    steps.
+ *  - round 0 is written out on the literal initial state, so the compiler
+ *    folds it (only 8 data lanes and two padding constants: half the theta
+ *    XORs and all the "zero lane ^= D" steps vanish); rounds 1..22 are a
+ *    loop over a two-round body; round 23 is written out and its output
  *    uses only lanes 0..3, so dead-code elimination drops the other four
- *    rows of round 23's rho/pi/chi.
+ *    rows of its rho/pi/chi. The loop keeps the hot code at ~2.7 KB (gcc
+ *    14, x86-64), one or two pages. Fully unrolling all 24 rounds (~25 KB,
+ *    ~5400 instructions, seven pages) is no faster when the front end
+ *    streams it well and fragile when it does not: on Zen 3 the straight-
+ *    line version ran at 365 or at 830 ns/node from the same binary
+ *    depending on which physical pages the page cache happened to back
+ *    its code with (a fresh copy of the file, or dropping the page cache,
+ *    flipped it; link address, stack position and data addresses did
+ *    not), with the instruction-fetch stall cycles doubling in the slow
+ *    case. The loop version ran 336-343 ns in every layout and copy
+ *    tried, and shows no placement sensitivity on Neoverse N1 either.
  *  - lane complementing (the Keccak team's trick): lanes 1, 2, 8, 12, 17
  *    and 20 are kept inverted. That mask is a fixed point of the round
  *    (theta flips whole columns, pi permutes, chi maps it back onto
@@ -36,11 +47,20 @@
  *
  * The table-driven version this replaces spent most of its time on loop
  * control, indexed loads/stores of the state in memory and variable-count
- * rotates; this one is 2.7-2.9x faster on Zen 3 (gcc 14 / clang 19) and
- * 2.6-2.7x on Neoverse N1.
+ * rotates; this one is ~2.8x faster on Zen 3 (gcc 14 / clang 19) and
+ * ~2.7x on Neoverse N1.
  */
 #include <stdint.h>
 #include "keccaktree.h"
+
+static const uint64_t RC[24] = {
+    0x0000000000000001ULL, 0x0000000000008082ULL, 0x800000000000808aULL, 0x8000000080008000ULL,
+    0x000000000000808bULL, 0x0000000080000001ULL, 0x8000000080008081ULL, 0x8000000000008009ULL,
+    0x000000000000008aULL, 0x0000000000000088ULL, 0x0000000080008009ULL, 0x000000008000000aULL,
+    0x000000008000808bULL, 0x800000000000008bULL, 0x8000000000008089ULL, 0x8000000000008003ULL,
+    0x8000000000008002ULL, 0x8000000000000080ULL, 0x000000000000800aULL, 0x800000008000000aULL,
+    0x8000000080008081ULL, 0x8000000000008080ULL, 0x0000000080000001ULL, 0x8000000080008008ULL,
+};
 
 #define ROL(a, n) (((a) << (n)) | ((a) >> (64 - (n))))
 
@@ -179,29 +199,14 @@ static void keccak256_node(unsigned char *output, const unsigned char *input) {
         A17 = A20 = ~0ULL;
         A18 = A19 = A21 = A22 = A23 = A24 = 0;
 
+        /* round 0 on the sparse state: the compiler folds the constant lanes */
         KECCAK_ROUND(A, E, 0x0000000000000001ULL);
-        KECCAK_ROUND(E, A, 0x0000000000008082ULL);
-        KECCAK_ROUND(A, E, 0x800000000000808aULL);
-        KECCAK_ROUND(E, A, 0x8000000080008000ULL);
-        KECCAK_ROUND(A, E, 0x000000000000808bULL);
-        KECCAK_ROUND(E, A, 0x0000000080000001ULL);
-        KECCAK_ROUND(A, E, 0x8000000080008081ULL);
-        KECCAK_ROUND(E, A, 0x8000000000008009ULL);
-        KECCAK_ROUND(A, E, 0x000000000000008aULL);
-        KECCAK_ROUND(E, A, 0x0000000000000088ULL);
-        KECCAK_ROUND(A, E, 0x0000000080008009ULL);
-        KECCAK_ROUND(E, A, 0x000000008000000aULL);
-        KECCAK_ROUND(A, E, 0x000000008000808bULL);
-        KECCAK_ROUND(E, A, 0x800000000000008bULL);
-        KECCAK_ROUND(A, E, 0x8000000000008089ULL);
-        KECCAK_ROUND(E, A, 0x8000000000008003ULL);
-        KECCAK_ROUND(A, E, 0x8000000000008002ULL);
-        KECCAK_ROUND(E, A, 0x8000000000000080ULL);
-        KECCAK_ROUND(A, E, 0x000000000000800aULL);
-        KECCAK_ROUND(E, A, 0x800000008000000aULL);
-        KECCAK_ROUND(A, E, 0x8000000080008081ULL);
-        KECCAK_ROUND(E, A, 0x8000000000008080ULL);
-        KECCAK_ROUND(A, E, 0x0000000080000001ULL);
+        /* rounds 1..22: a loop over a two-round body (the complement mask is
+         * a fixed point of the round, so the body is the same each time) */
+        for (int r = 1; r < 23; r += 2) {
+            KECCAK_ROUND(E, A, RC[r]);
+            KECCAK_ROUND(A, E, RC[r + 1]);
+        }
         /* round 23: only lanes 0..3 are squeezed, the rest is dead code */
         KECCAK_ROUND(E, A, 0x8000000080008008ULL);
 
