@@ -96,7 +96,8 @@ def find_ctls(kernel, count, bounds):
                 if m and int(m.group(1)) not in need[c - 1]:
                     need[c - 1].add(int(m.group(1))); changed = True
                 elif not m:
-                    assert t.startswith('(.const '), f'control word {v} of cut {c} is computed by slice {c - 1}: {t[:100]}'
+                    # a closed expression (constant folding happens in `E.closed`): e.g. the stack pointer after `addi`
+                    assert '.var' not in t, f'control word {v} of cut {c} is computed by slice {c - 1}: {t[:100]}'
     return {c: sorted(need[c]) for c in range(24)}
 
 def mem_var(region, q):
@@ -187,7 +188,7 @@ theorem path{c} : {ISA_EXPR}.pathOk rodata prog idx{c} cut{c} = true := by decid
 ''')
     if ctl_next:
         for v in ctl_next:
-            assert trees[v].startswith('(.const '), f'control word {v} is not constant after slice {c}: {trees[v][:80]}'
+            assert '.var' not in trees[v], f'control word {v} is not constant after slice {c}: {trees[v][:80]}'
         out.write('set_option maxRecDepth 100000 in\nset_option synthInstance.maxHeartbeats 2000000 in\n')
         out.write('/-- The control words of the next cut are constants after the slice. -/\n')
         out.write(f'theorem ctlv{c} : ' + ' ∧\n    '.join(f'readVar result{c} {v} = {trees[v]}' for v in ctl_next) + ' := by decide +kernel\n\n')
