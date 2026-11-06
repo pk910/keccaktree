@@ -35,6 +35,25 @@ call the best kernel directly, chosen with `klauspost/cpuid`:
 `lib/` is rebuilt and committed by the *Update Static Libraries* workflow
 whenever `src/` changes on `main`.
 
+## Rust, Nim, Java
+
+Thin bindings over the same C library, each tested against an independent
+keccak256 on every platform (`.github/workflows/bindings.yml`). All three
+link the attested `lib/<platform>/libkeccaktree.a`; Rust and Nim compile
+`src/` only for targets without one, or when asked (`--features
+build-from-source`, `-d:keccaktreeFromSource`).
+
+- **Rust** (`Cargo.toml`, `rust/`): `keccaktree::hash(&mut out, &chunks, count)`
+  with the `hashtree-rs` signature, plus `hash_in_place`, `hash_chunks` and
+  `Backend` to call one kernel.
+- **Nim** (`keccaktree_abi.nimble`): `import keccaktree_abi`, like
+  hashtree's `hashtree_abi`; `keccaktree_hash` plus `keccaktreeHash`
+  overloads for `openArray`s.
+- **Java** (`java/`, JNI, Java 11+): `Keccaktree.hash(out, in)`, offsets,
+  in-place and direct `ByteBuffer`s. `java/build-native.sh` links
+  `lib/<platform>/libkeccaktree.a` into the JNI library; CI packages all four
+  platforms into one jar (`keccaktree-java` artifact).
+
 ## C
 
 ```c
