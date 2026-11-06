@@ -19,11 +19,11 @@ metadata), so a rebuild with the same compiler is byte-identical.
 ## Pull requests
 
 PR CI tests the Go bindings against the libraries committed here, so a PR
-that changes `src/` has to bring rebuilt libraries along. Run *Build & Test*
-on your branch (`gh workflow run build.yml --ref <branch>`), then
-`.github/scripts/fetch-ci-libs.sh` copies its artifacts into `lib/`; commit
-them with the change. A local build for your own platform is fine for a
-draft, but the PR needs all four.
+that changes `src/` has to bring rebuilt libraries along. Either build all
+four on one host with zig (`.github/scripts/build-libs.sh`), or run *Build &
+Test* on your branch (`gh workflow run build.yml --ref <branch>`) and copy
+its artifacts with `.github/scripts/fetch-ci-libs.sh`. Commit them with the
+change.
 
 After the merge, *Update Static Libraries* rebuilds every library on main,
 replaces the PR's copies, and records a build provenance attestation:
