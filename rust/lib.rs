@@ -48,6 +48,14 @@ pub mod ffi {
         pub fn keccaktree_keccak256_sha3_x3(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_sha3_x3r(output: *mut u8, input: *const u8, count: u64);
     }
+
+    #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
+    extern "C" {
+        pub fn keccaktree_keccak256_rv64_x1(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_zbb_x1(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_rvv(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_rvv_zvkb(output: *mut u8, input: *const u8, count: u64);
+    }
 }
 
 /// Selects the kernel for this CPU now instead of on the first hash call.
@@ -122,6 +130,14 @@ pub enum Backend {
     Sha3X3,
     /// AArch64 SHA3 x2 interleaved with a ROR scalar node (Apple cores).
     Sha3X3r,
+    /// RISC-V RV64 base scalar, 1 node.
+    Rv64X1,
+    /// RISC-V scalar with Zbb rotates, 1 node.
+    ZbbX1,
+    /// RISC-V Vector (RVV 1.0).
+    Rvv,
+    /// RISC-V Vector with Zvkb vector rotates.
+    RvvZvkb,
 }
 
 /// Returned by [`Backend::hash`] when the kernel is not built for this
@@ -137,7 +153,7 @@ impl fmt::Display for Unsupported {
 
 impl Backend {
     /// Every backend, in no particular order.
-    pub const ALL: [Backend; 10] = [
+    pub const ALL: [Backend; 14] = [
         Backend::Generic,
         Backend::Avx2X4,
         Backend::Avx2X8,
@@ -148,6 +164,10 @@ impl Backend {
         Backend::ScalarX1,
         Backend::Sha3X3,
         Backend::Sha3X3r,
+        Backend::Rv64X1,
+        Backend::ZbbX1,
+        Backend::Rvv,
+        Backend::RvvZvkb,
     ];
 
     /// The kernel's name in the C library (`keccaktree_keccak256_<name>`).
@@ -163,6 +183,10 @@ impl Backend {
             Backend::ScalarX1 => "scalar_x1",
             Backend::Sha3X3 => "sha3_x3",
             Backend::Sha3X3r => "sha3_x3r",
+            Backend::Rv64X1 => "rv64_x1",
+            Backend::ZbbX1 => "zbb_x1",
+            Backend::Rvv => "rvv",
+            Backend::RvvZvkb => "rvv_zvkb",
         }
     }
 
@@ -189,6 +213,16 @@ impl Backend {
             Backend::Sha3X3 if arm::sha3() => Some(ffi::keccaktree_keccak256_sha3_x3),
             #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::Sha3X3r if arm::sha3() => Some(ffi::keccaktree_keccak256_sha3_x3r),
+            #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
+            Backend::Rv64X1 => Some(ffi::keccaktree_keccak256_rv64_x1),
+            #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
+            Backend::ZbbX1 if riscv::ext() & riscv::ZBB != 0 => Some(ffi::keccaktree_keccak256_zbb_x1),
+            #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
+            Backend::Rvv if riscv::ext() & riscv::V != 0 => Some(ffi::keccaktree_keccak256_rvv),
+            #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
+            Backend::RvvZvkb if riscv::ext() & (riscv::V | riscv::ZVKB) == riscv::V | riscv::ZVKB => {
+                Some(ffi::keccaktree_keccak256_rvv_zvkb)
+            }
             _ => None,
         }
     }
@@ -241,5 +275,44 @@ mod x86 {
 mod arm {
     pub fn sha3() -> bool {
         std::arch::is_aarch64_feature_detected!("sha3")
+    }
+}
+
+// riscv_hwprobe(RISCV_HWPROBE_KEY_IMA_EXT_0), as in src/keccaktree.c; std's
+// is_riscv_feature_detected! is not stable for V and Zvkb yet.
+#[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
+mod riscv {
+    pub const V: u64 = 1 << 2;
+    pub const ZBB: u64 = 1 << 4;
+    pub const ZVKB: u64 = 1 << 19;
+
+    #[cfg(target_os = "linux")]
+    pub fn ext() -> u64 {
+        const KEY_IMA_EXT_0: u64 = 4;
+        let mut probe: [u64; 2] = [KEY_IMA_EXT_0, 0];
+        let ret: isize;
+        // riscv_hwprobe(pairs, pair_count, cpusetsize, cpus, flags), Linux 6.4+
+        unsafe {
+            core::arch::asm!(
+                "ecall",
+                inlateout("a0") probe.as_mut_ptr() as isize => ret,
+                in("a1") 1usize,
+                in("a2") 0usize,
+                in("a3") 0usize,
+                in("a4") 0usize,
+                in("a7") 258usize,
+                options(nostack),
+            );
+        }
+        if ret == 0 && probe[0] == KEY_IMA_EXT_0 {
+            probe[1]
+        } else {
+            0
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    pub fn ext() -> u64 {
+        0
     }
 }

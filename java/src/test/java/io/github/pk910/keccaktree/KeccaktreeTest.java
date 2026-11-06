@@ -53,7 +53,7 @@ class KeccaktreeTest {
     void everyKernelMatchesReference() {
         System.out.println("platform " + NativeLoader.platform() + ", kernels " + Keccaktree.kernels());
         assertEquals("generic", Keccaktree.kernels().get(0));
-        assertTrue(Keccaktree.kernels().size() > 1 || !NativeLoader.platform().matches(".*-(amd64|arm64)"),
+        assertTrue(Keccaktree.kernels().size() > 1 || !NativeLoader.platform().matches(".*-(amd64|arm64|riscv64)"),
                 "no SIMD kernel available");
         for (String k : Keccaktree.kernels()) {
             for (int nodes = 0; nodes <= 300; nodes++) {

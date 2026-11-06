@@ -17,7 +17,7 @@ import java.util.List;
  * <pre>digest[i] = keccak256(input[64*i .. 64*i+64])</pre>
  *
  * <p>The native library is loaded from the jar (linux and windows x86-64,
- * linux and macOS aarch64), or from the file named by the system property
+ * linux and macOS aarch64, linux riscv64), or from the file named by the system property
  * {@code keccaktree.native.path}, or as {@code keccaktree_jni} from
  * {@code java.library.path}.
  */

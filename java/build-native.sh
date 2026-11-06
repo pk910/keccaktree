@@ -4,9 +4,10 @@
 # the jar by pom.xml).
 #
 #   java/build-native.sh [platform]     platform: linux_amd64 (default: host),
-#                                       linux_arm64, darwin_arm64, windows_amd64
+#                                       linux_arm64, linux_riscv64, darwin_arm64,
+#                                       windows_amd64
 #
-# CC overrides the compiler (e.g. CC=aarch64-linux-gnu-gcc for linux_arm64).
+# CC overrides the compiler (e.g. CC=riscv64-linux-gnu-gcc for linux_riscv64).
 # JAVA_HOME must point at a JDK (for jni.h).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -23,6 +24,7 @@ host_platform() {
     case "$(uname -m)" in
         x86_64 | amd64) arch=amd64 ;;
         aarch64 | arm64) arch=arm64 ;;
+        riscv64) arch=riscv64 ;;
         *) echo "unsupported CPU $(uname -m)" >&2; exit 1 ;;
     esac
     echo "${os}_${arch}"

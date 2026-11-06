@@ -6,7 +6,7 @@ name: Bindings
 #   Rust and Nim are also tested building src/ themselves (their fallback for
 #   targets without a library).
 # - Java links the library into a JNI library per platform; the last job
-#   packages all four into one jar.
+#   packages all five into one jar.
 
 on:
   push:
@@ -126,10 +126,97 @@ jobs:
           path: java/native/
           retention-days: 7
 
+  rust-riscv64:
+    # debian:trixie for qemu 10, whose riscv_hwprobe reports Zvkb
+    name: Rust - linux riscv64 (qemu)
+    runs-on: ubuntu-24.04
+    container: debian:trixie
+    timeout-minutes: 30
+    env:
+      CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER: riscv64-linux-gnu-gcc
+      CC_riscv64gc_unknown_linux_gnu: riscv64-linux-gnu-gcc
+      AR_riscv64gc_unknown_linux_gnu: riscv64-linux-gnu-ar
+    steps:
+      - name: Install cross toolchain, qemu and Rust
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq ca-certificates curl gcc libc6-dev gcc-riscv64-linux-gnu qemu-user >/dev/null
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --target riscv64gc-unknown-linux-gnu
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@v4
+      - name: Test (prebuilt lib and from source, several CPUs)
+        run: |
+          for cpu in rv64,zbb=false rv64,v=true,vlen=128 rv64,v=true,vlen=256,zvkb=true; do
+            for features in "" "--features build-from-source"; do
+              echo "::group::$cpu $features"
+              CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER="qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu $cpu" \
+                cargo test --release --target riscv64gc-unknown-linux-gnu $features -- --nocapture
+              echo "::endgroup::"
+            done
+          done
+
+  nim-riscv64:
+    name: Nim 2.2.x - linux riscv64 (qemu)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: 2.2.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install cross toolchain and qemu
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-riscv64-linux-gnu qemu-user >/dev/null
+      - name: Test (prebuilt lib and from source)
+        run: |
+          nimcross="--cpu:riscv64 --os:linux --gcc.exe:riscv64-linux-gnu-gcc --gcc.linkerexe:riscv64-linux-gnu-gcc"
+          nim c -d:release $nimcross -o:test-prebuilt nim/tests/test_keccaktree_abi.nim
+          nim c -d:release -d:keccaktreeFromSource $nimcross -o:test-source nim/tests/test_keccaktree_abi.nim
+          for cpu in rv64,zbb=false rv64,v=true,vlen=128; do
+            for t in prebuilt source; do
+              echo "== $cpu $t"
+              qemu-riscv64 -L /usr/riscv64-linux-gnu -cpu $cpu ./test-$t
+            done
+          done
+
+  java-riscv64:
+    name: Java - linux_riscv64 (qemu)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Build JNI library (cross)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-riscv64-linux-gnu >/dev/null
+          CC=riscv64-linux-gnu-gcc java/build-native.sh linux_riscv64
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: riscv64
+      - name: Test on a riscv64 JDK
+        run: |
+          docker run --rm --platform linux/riscv64 -v "$PWD:/w" -w /w/java debian:trixie bash -euo pipefail -c '
+            apt-get update -qq
+            apt-get install -y -qq openjdk-21-jdk-headless maven >/dev/null
+            mvn -B -q test
+            cat target/surefire-reports/*.txt
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: keccaktree-jni-linux_riscv64
+          path: java/native/
+          retention-days: 7
+
   java-jar:
     name: Java - jar with all platforms
     runs-on: ubuntu-24.04
-    needs: java-native
+    needs: [java-native, java-riscv64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

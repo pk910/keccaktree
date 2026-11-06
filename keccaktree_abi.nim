@@ -7,7 +7,7 @@
 #
 #   digest[i] = keccak256(input[64*i ..< 64*i+64])
 #
-# On linux amd64/arm64, macOS arm64 and Windows amd64 this links the CI-built,
+# On linux amd64/arm64/riscv64, macOS arm64 and Windows amd64 this links the CI-built,
 # attested static library from lib/<platform>/ (the one the Go bindings use).
 # Elsewhere, or with -d:keccaktreeFromSource, it compiles src/ into the
 # program instead.
@@ -22,6 +22,7 @@ const
   keccaktreePlatform =
     when defined(linux) and defined(amd64): "linux_amd64"
     elif defined(linux) and defined(arm64): "linux_arm64"
+    elif defined(linux) and defined(riscv64): "linux_riscv64"
     elif defined(macosx) and defined(arm64): "darwin_arm64"
     elif defined(windows) and defined(amd64): "windows_amd64"
     else: ""
@@ -105,6 +106,17 @@ when keccaktreeAsm and defined(arm64):
   func keccaktree_keccak256_sha3_x3*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_sha3_x3r*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+
+when keccaktreeAsm and defined(riscv64):
+  func keccaktree_keccak256_rv64_x1*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  # Zbb, V, V + Zvkb only
+  func keccaktree_keccak256_zbb_x1*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  func keccaktree_keccak256_rvv*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  func keccaktree_keccak256_rvv_zvkb*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
 
 func keccaktreeHash*(output: var openArray[byte], input: openArray[byte]) =

@@ -57,7 +57,7 @@ build-from-source`, `-d:keccaktreeFromSource`).
   overloads for `openArray`s.
 - **Java** (`java/`, JNI, Java 11+): `Keccaktree.hash(out, in)`, offsets,
   in-place and direct `ByteBuffer`s. `java/build-native.sh` links
-  `lib/<platform>/libkeccaktree.a` into the JNI library; CI packages all four
+  `lib/<platform>/libkeccaktree.a` into the JNI library; CI packages all five
   platforms into one jar (`keccaktree-java` artifact).
 
 ## C
