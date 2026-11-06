@@ -10,9 +10,11 @@
  *
  * Neoverse N1 (and Cortex-A76/A77/A78) run the vector shifts on one of
  * their two vector pipes only, so the shifts are what bounds these kernels
- * and every one that can be a plain ALU instruction is: theta's rotl(C, 1)
- * starts with ADD instead of SHL (+1.8% on N1) and the two lanes whose rho
- * rotation is a multiple of 8 (lanes 19 and 23) rotate with one TBL.
+ * and every one that can be a plain ALU instruction is: the left shift by
+ * one of theta's rotl(C, 1) and of lane 1's rho is an ADD (+1.8% on N1) and
+ * the two lanes whose rho rotation is a multiple of 8 (lanes 19 and 23)
+ * rotate with one TBL (+4%). Spending an extra instruction to avoid a shift
+ * (ADD, ADD, SRI for lane 21) does not pay.
  *
  * The round is in pieces (THETA_C01, THETA_C234, THETA_DD, RHO_ROW,
  * CHI_ROW, ROUND_ROW4, the halves of FIRST_ROUND) so that
@@ -38,7 +40,8 @@
 .endm
 
 /* b = rotl(a ^ d, n), a is left with a ^ d; for n = 8 and 56 a byte
- * permutation (TBL, index vector loaded into the free register t) */
+ * permutation (TBL, index vector loaded into the free register t), for
+ * n = 1 an ADD for the left shift */
 #ifndef ASIMD_TBL
 #define ASIMD_TBL 1
 #endif
@@ -50,6 +53,10 @@
 	eor		v\a\().16b, v\a\().16b, v\d\().16b
 	ldr		q\t, .LTBL\n
 	tbl		v\b\().16b, {v\a\().16b}, v\t\().16b
+.elseif \n == 1
+	eor		v\a\().16b, v\a\().16b, v\d\().16b
+	add		v\b\().2d, v\a\().2d, v\a\().2d
+	sri		v\b\().2d, v\a\().2d, #63
 .elseif \n
 	eor		v\a\().16b, v\a\().16b, v\d\().16b
 	shl		v\b\().2d, v\a\().2d, #\n
