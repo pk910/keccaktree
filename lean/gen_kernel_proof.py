@@ -23,12 +23,11 @@ import os, re, subprocess, sys
 KT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.lake/build/bin/kttool')
 
 ISA = os.environ.get('ISA', 'X86')
-CTL_UNION = []     # the control memory cells (stack save slots), kept constant through every cut
-CTLS = {}          # slice -> its control words (its own registers, plus CTL_UNION)
+CTLS = {}          # slice -> its control words
 
-def run(*args):
+def run(*args, ctl=()):
     env = dict(os.environ)
-    env['KT_CTL'] = ','.join(str(v) for v in CTL_UNION)
+    env['KT_CTL'] = ','.join(str(v) for v in ctl)
     return subprocess.run([KT] + [str(a) for a in args], capture_output=True, text=True, check=True, env=env).stdout
 
 def matches(kernel, count, steps, lanes, rnd, region_filter=None):
@@ -61,8 +60,8 @@ def control_at(kernel, count, steps, lanes):
     g = re.sub(r'⟨(\d+), \((-?\d+)\)⟩', r'(Addr.mk \1 (\2))', m.group(1))
     return g, m.group(2), m.group(3), m.group(4), m.group(5), m.group(6), int(m.group(7)), int(m.group(8)), int(m.group(9))
 
-def slice_lits(kernel, count, a, b):
-    out = run('slice', kernel, count, a, b)
+def slice_lits(kernel, count, a, b, ctl=()):
+    out = run('slice', kernel, count, a, b, ctl=ctl)
     ctl = [int(x) for x in re.findall(r'\d+', re.search(r'^CTL (.*)$', out, re.M).group(1))]
     sc = re.search(r'^SC (.*)$', out, re.M).group(1)
     idx = re.search(r'^IDX (.*)$', out, re.M).group(1)
@@ -73,9 +72,29 @@ def slice_lits(kernel, count, a, b):
     assert err == 'false', 'symbolic slice failed'
     return ctl, sc, idx, trees
 
-def slice_ctl(kernel, count, a, b):
-    out = run('slice', kernel, count, a, b)
-    return [int(x) for x in re.findall(r'\d+', re.search(r'^CTL (.*)$', out, re.M).group(1))]
+def find_ctls(kernel, count, bounds):
+    """The control words of every slice: what its own address arithmetic needs (kttool's
+    fixpoint), the stack cells any slice needs (constant through the batch), and, backwards,
+    whatever a later cut's control word is a bare variable of after the slice before it."""
+    need = {}
+    for c in range(24):
+        need[c] = set(slice_lits(kernel, count, bounds[c], bounds[c + 1])[0])
+    cells = set(v for c in need for v in need[c] if v >= 288)
+    for c in range(24):
+        need[c] |= cells
+    changed = True
+    while changed:
+        changed = False
+        for c in range(23, 0, -1):
+            trees = slice_lits(kernel, count, bounds[c - 1], bounds[c], ctl=sorted(need[c - 1]))[3]
+            for v in sorted(need[c]):
+                t = trees[v]
+                m = re.fullmatch(r'\(\.var (\d+)\)', t)
+                if m and int(m.group(1)) not in need[c - 1]:
+                    need[c - 1].add(int(m.group(1))); changed = True
+                elif not m:
+                    assert t.startswith('(.const '), f'control word {v} of cut {c} is computed by slice {c - 1}: {t[:100]}'
+    return {c: sorted(need[c]) for c in range(24)}
 
 def var_id(v):
     """numeric id of a variable expression (regVar r l) / (memVar region q)"""
@@ -109,7 +128,7 @@ def gen_slice(kernel, ns, count, lanes, c, a, b, alloc_in, alloc_out, out, only_
     chyps = const_hyps(count, only_node) if c == 0 else []
     """alloc_in: hypotheses at the cut (node, kind, var, rot, comment); round_in: the spec round applied
     by the slice (so the output quantities are of `Spec.round round_in (A n)`)."""
-    ctl, sc, idx, trees = slice_lits(kernel, count, a, b)
+    ctl, sc, idx, trees = slice_lits(kernel, count, a, b, ctl=CTLS[c])
     assert sorted(ctl) == CTLS[c], (c, sorted(ctl), CTLS[c])
     ctl = CTLS[c]
     ctl_next = CTLS.get(c + 1, [])
@@ -314,12 +333,8 @@ def main():
     # step boundaries: state after n steps
     bounds = [entry_t] + [t + 1 for t in cuts] + [end_t]   # bounds[c] = start of slice c; bounds[c+1] = its end (the batch ret excluded)
     # pass 1: the control words of every slice, united
-    global CTL_UNION
-    auto = {c: slice_ctl(kernel, count, bounds[c], bounds[c + 1]) for c in range(24)}
-    CTL_UNION = sorted(set(v for c in auto for v in auto[c] if v >= 288))
-    for c in range(24):
-        CTLS[c] = sorted(set(auto[c]) | set(CTL_UNION))
-    print(f'control cells: {CTL_UNION}; control registers per slice: {[sorted(set(auto[c]) - set(CTL_UNION)) for c in range(24)]}', file=sys.stderr)
+    CTLS.update(find_ctls(kernel, count, bounds))
+    print(f'control words per slice: {[CTLS[c] for c in range(24)]}', file=sys.stderr)
     for c in slices:
         a, b = bounds[c], bounds[c + 1]
         if c == 0:

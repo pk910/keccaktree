@@ -28,6 +28,84 @@ theorem E.eval_subst (env : Nat → BitVec 64) (σ : Nat → E) (e : E) :
     (e.subst σ).eval env = e.eval (fun i => (σ i).eval env) := by
   induction e <;> simp_all [E.subst, E.eval]
 
+/-- A closed expression evaluates to its value under any environment. -/
+theorem E.closed_eval (env : Nat → BitVec 64) (e : E) (v : BitVec 64) (h : e.closed = some v) :
+    e.eval env = v := by
+  induction e generalizing v with
+  | var i => simp [E.closed] at h
+  | const c => simp [E.closed] at h; simp [E.eval, h]
+  | xor a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | and a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | or a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | add a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | not a iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›]
+    · exact absurd h (by simp)
+  | shl a n iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›]
+    · exact absurd h (by simp)
+  | shr a n iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›]
+    · exact absurd h (by simp)
+  | rol a n iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›]
+    · exact absurd h (by simp)
+
+/-- Substitution keeps closed expressions closed, with their value. -/
+theorem E.closed_subst (σ : Nat → E) (e : E) (v : BitVec 64) (h : e.closed = some v) :
+    (e.subst σ).closed = some v := by
+  induction e generalizing v with
+  | var i => simp [E.closed] at h
+  | const c => simpa [E.closed, E.subst] using h
+  | xor a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | and a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | or a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | add a b iha ihb =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›, ihb _ ‹_›]
+    · exact absurd h (by simp)
+  | not a iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›]
+    · exact absurd h (by simp)
+  | shl a n iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›]
+    · exact absurd h (by simp)
+  | shr a n iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›]
+    · exact absurd h (by simp)
+  | rol a n iha =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›]
+    · exact absurd h (by simp)
+
 namespace X86
 
 /-- Apply a lane-value map to every lane of a state (registers and memory). -/

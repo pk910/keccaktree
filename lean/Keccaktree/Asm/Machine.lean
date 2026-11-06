@@ -60,6 +60,21 @@ inductive E where
   | add (a b : E)
   deriving Repr, DecidableEq, Inhabited
 
+/-- The value of a closed expression (no variables): the symbolic executor's
+`asConst`.  Pointers and counts computed from constants (`or a0, a1` for an
+alignment check, `addi` on a saved pointer) stay decodable. -/
+def E.closed : E → Option (BitVec 64)
+  | .var _ => none
+  | .const v => some v
+  | .xor a b => match a.closed, b.closed with | some x, some y => some (x ^^^ y) | _, _ => none
+  | .and a b => match a.closed, b.closed with | some x, some y => some (x &&& y) | _, _ => none
+  | .or a b => match a.closed, b.closed with | some x, some y => some (x ||| y) | _, _ => none
+  | .not a => match a.closed with | some x => some (~~~x) | none => none
+  | .shl a n => match a.closed with | some x => some (x <<< n) | none => none
+  | .shr a n => match a.closed with | some x => some (x >>> n) | none => none
+  | .rol a n => match a.closed with | some x => some (x.rotateLeft n) | none => none
+  | .add a b => match a.closed, b.closed with | some x, some y => some (x + y) | _, _ => none
+
 instance : LaneOps E where
   const := .const
   xor := .xor
@@ -70,7 +85,7 @@ instance : LaneOps E where
   shr := .shr
   rol := .rol
   add := .add
-  asConst := fun e => match e with | .const v => some v | _ => none
+  asConst := E.closed
 
 def E.eval (env : Nat → BitVec 64) : E → BitVec 64
   | .var i => env i

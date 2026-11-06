@@ -30,7 +30,8 @@ theorem E.eval_isHom (env : Nat → BitVec 64) : IsHom (E.eval env) where
   rol _ _ := rfl
   add _ _ := rfl
   asConst a v h := by
-    cases a <;> simp_all [LaneOps.asConst, E.eval]
+    show some (E.eval env a) = some v
+    rw [E.closed_eval env a v h]
 
 theorem E.subst_isHom (σ : Nat → E) : IsHom (E.subst σ) where
   const _ := rfl
@@ -42,8 +43,7 @@ theorem E.subst_isHom (σ : Nat → E) : IsHom (E.subst σ) where
   shr _ _ := rfl
   rol _ _ := rfl
   add _ _ := rfl
-  asConst a v h := by
-    cases a <;> simp_all [LaneOps.asConst, E.subst]
+  asConst a v h := E.closed_subst σ a v h
 
 namespace X86
 variable {α β : Type} [LaneOps α] [LaneOps β] {f : α → β} (hf : IsHom f)

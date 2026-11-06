@@ -8,6 +8,10 @@ import Keccaktree.Kernels.Sha3X2.Program
 import Keccaktree.Kernels.Sha3X3.Program
 import Keccaktree.Kernels.Sha3X3r.Program
 import Keccaktree.Kernels.ScalarX1.Program
+import Keccaktree.Kernels.Rv64X1.Program
+import Keccaktree.Kernels.ZbbX1.Program
+import Keccaktree.Kernels.Rvv.Program
+import Keccaktree.Kernels.RvvZvkb.Program
 /-! `kttool`: the proof-generation tools as a native executable.
 
     kttool scan    <kernel> <count> <fuel> <lanes>
@@ -31,7 +35,15 @@ def kernels : List (String × Kernel) :=
    ("sha3_x2", ⟨armTool, Keccaktree.Kernels.Sha3X2.prog, Keccaktree.Kernels.Sha3X2.rodata, Keccaktree.Kernels.Sha3X2.entry⟩),
    ("sha3_x3", ⟨armTool, Keccaktree.Kernels.Sha3X3.prog, Keccaktree.Kernels.Sha3X3.rodata, Keccaktree.Kernels.Sha3X3.entry⟩),
    ("sha3_x3r", ⟨armTool, Keccaktree.Kernels.Sha3X3r.prog, Keccaktree.Kernels.Sha3X3r.rodata, Keccaktree.Kernels.Sha3X3r.entry⟩),
-   ("scalar_x1", ⟨armTool, Keccaktree.Kernels.ScalarX1.prog, Keccaktree.Kernels.ScalarX1.rodata, Keccaktree.Kernels.ScalarX1.entry⟩)]
+   ("scalar_x1", ⟨armTool, Keccaktree.Kernels.ScalarX1.prog, Keccaktree.Kernels.ScalarX1.rodata, Keccaktree.Kernels.ScalarX1.entry⟩),
+   ("rv64_x1", ⟨riscvTool 2, Keccaktree.Kernels.Rv64X1.prog, Keccaktree.Kernels.Rv64X1.rodata, Keccaktree.Kernels.Rv64X1.entry⟩),
+   ("zbb_x1", ⟨riscvTool 2, Keccaktree.Kernels.ZbbX1.prog, Keccaktree.Kernels.ZbbX1.rodata, Keccaktree.Kernels.ZbbX1.entry⟩),
+   ("rvv_v2", ⟨riscvTool 2, Keccaktree.Kernels.Rvv.prog, Keccaktree.Kernels.Rvv.rodata, Keccaktree.Kernels.Rvv.entry⟩),
+   ("rvv_v4", ⟨riscvTool 4, Keccaktree.Kernels.Rvv.prog, Keccaktree.Kernels.Rvv.rodata, Keccaktree.Kernels.Rvv.entry⟩),
+   ("rvv_v8", ⟨riscvTool 8, Keccaktree.Kernels.Rvv.prog, Keccaktree.Kernels.Rvv.rodata, Keccaktree.Kernels.Rvv.entry⟩),
+   ("rvv_zvkb_v2", ⟨riscvTool 2, Keccaktree.Kernels.RvvZvkb.prog, Keccaktree.Kernels.RvvZvkb.rodata, Keccaktree.Kernels.RvvZvkb.entry⟩),
+   ("rvv_zvkb_v4", ⟨riscvTool 4, Keccaktree.Kernels.RvvZvkb.prog, Keccaktree.Kernels.RvvZvkb.rodata, Keccaktree.Kernels.RvvZvkb.entry⟩),
+   ("rvv_zvkb_v8", ⟨riscvTool 8, Keccaktree.Kernels.RvvZvkb.prog, Keccaktree.Kernels.RvvZvkb.rodata, Keccaktree.Kernels.RvvZvkb.entry⟩)]
 
 def windows (count : Nat) : List (Keccaktree.Asm.Region × Int × Int) :=
   [(rStack, 131072 - 1024, 131072), (rInput, 0, 8 * count), (rOutput, 0, 4 * count)]

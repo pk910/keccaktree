@@ -1,5 +1,6 @@
 import Keccaktree.Asm.Exec
 import Keccaktree.Asm.Arm
+import Keccaktree.Asm.Riscv
 import Keccaktree.Asm.Compose
 import Std.Data.HashMap
 /-!
@@ -83,6 +84,20 @@ def armStoreCells [LaneOps α] (s : State α) : Arm.Instr → List (Region × In
 def armTool : IsaTool :=
   { name := "Arm.isa", Instr := Arm.Instr, exec := Arm.exec, nop := .nop, storeCells := armStoreCells,
     initState := Arm.initState, countOf := fun s => ((Arm.gx s 2).getD ⟨0, 0⟩).off.toNat }
+
+/-- The stores a RISC-V instruction performs. -/
+def riscvStoreCells [LaneOps α] (s : State α) : Riscv.Instr → List (Region × Int)
+  | .sd _ base off => match Arm.addr s base off with
+    | some a => [(a.region, a.off / 8)]
+    | none => []
+  | .vsseg _ base nf => match Arm.addr s base 0 with
+    | some a => (List.range (nf * s.vl)).map fun (i : Nat) => (a.region, a.off / 8 + Int.ofNat i)
+    | none => []
+  | _ => []
+
+def riscvTool (vlmax : Nat) : IsaTool :=
+  { name := s!"(Riscv.isa {vlmax})", Instr := Riscv.Instr, exec := Riscv.exec vlmax, nop := .nop, storeCells := riscvStoreCells,
+    initState := Riscv.initState, countOf := fun s => ((Arm.gx s 12).getD ⟨0, 0⟩).off.toNat }
 
 /-- Run a slice symbolically from a cut state. -/
 def symRun (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : List Nat) (s : State E) : State E :=

@@ -368,11 +368,141 @@ class Arm:
         out.write('def entry : Nat := %d\n\nend %s\n' % (self.entry, ns))
 
 
+class Riscv:
+    """RISC-V (objdump default syntax) → Keccaktree.Asm.Riscv.Instr"""
+    REGS = {'zero': 0, 'ra': 1, 'sp': 2, 'gp': 3, 'tp': 4, 't0': 5, 't1': 6, 't2': 7, 's0': 8, 'fp': 8, 's1': 9,
+            'a0': 10, 'a1': 11, 'a2': 12, 'a3': 13, 'a4': 14, 'a5': 15, 'a6': 16, 'a7': 17,
+            's2': 18, 's3': 19, 's4': 20, 's5': 21, 's6': 22, 's7': 23, 's8': 24, 's9': 25, 's10': 26, 's11': 27,
+            't3': 28, 't4': 29, 't5': 30, 't6': 31}
+
+    def __init__(self, obj, func):
+        self.obj, self.func = obj, func
+        dis = subprocess.run(['riscv64-linux-gnu-objdump', '-d', '-r', '--no-show-raw-insn', obj],
+                             capture_output=True, text=True, check=True).stdout
+        raw, symaddr = [], {}
+        self.reloc = {}
+        for ln in dis.splitlines():
+            m = re.match(r'^([0-9a-f]+) <([^>]+)>:$', ln)
+            if m: symaddr[m.group(2)] = int(m.group(1), 16); continue
+            m = re.match(r'^\s+([0-9a-f]+): (R_RISCV_\w+)\t(\S+)', ln)
+            if m: self.reloc.setdefault(int(m.group(1), 16), []).append((m.group(2), m.group(3))); continue
+            m = re.match(r'^\s+([0-9a-f]+):\t(.*)$', ln)
+            if m:
+                addr, text = int(m.group(1), 16), m.group(2).strip()
+                raw.append((addr, text))
+        self.addr2idx = {a: i for i, (a, _) in enumerate(raw)}
+        self.entry = self.addr2idx[symaddr[self.func]]
+        # the constants (.rodata: the 24 round constants)
+        sec = subprocess.run(['riscv64-linux-gnu-objdump', '-s', '-j', '.rodata', obj],
+                             capture_output=True, text=True, check=True).stdout
+        data = b''
+        for ln in sec.splitlines():
+            m = re.match(r'^ ([0-9a-f]{4}) ((?:[0-9a-f]{8} ?){1,4})', ln)
+            if m: data += bytes.fromhex(m.group(2).replace(' ', ''))
+        self.rodata = [int.from_bytes(data[i:i + 8], 'little') for i in range(0, len(data) - len(data) % 8, 8)]
+        self.instrs = [self.translate(a, t) for a, t in raw]
+
+    def reg(self, s):
+        return self.REGS[s.strip()]
+
+    @staticmethod
+    def vreg(s):
+        m = re.match(r'^v(\d+)$', s.strip()); return int(m.group(1))
+
+    @staticmethod
+    def imm(s):
+        return int(s.strip(), 0)
+
+    @staticmethod
+    def bv(v):
+        v = int(v)
+        return '(0x%x#64)' % (v % (1 << 64))
+
+    def target(self, s):
+        m = re.match(r'^([0-9a-f]+) <', s.strip()); return self.addr2idx[int(m.group(1), 16)]
+
+    @staticmethod
+    def memop(s):
+        m = re.match(r'^(-?\d+)?\((\w+)\)$', s.strip())
+        return m.group(2), int(m.group(1) or 0)
+
+    def translate(self, addr, text):
+        parts = text.split(None, 1)
+        op = parts[0]
+        args = [a for a in re.split(r',(?![^(]*\))', parts[1].split('#')[0] if len(parts) > 1 else '')] if len(parts) > 1 else []
+        args = [a.strip() for a in args if a.strip()]
+        R, V = self.reg, self.vreg
+        OPS2 = {'xor': 'xor', 'or': 'or', 'and': 'and', 'add': 'add', 'sub': 'sub', 'andn': 'andn'}
+        OPSI = {'xori': 'xori', 'ori': 'ori', 'andi': 'andi', 'addi': 'addi', 'slli': 'slli', 'srli': 'srli', 'rori': 'rori'}
+        if op in OPS2: return '.op %d %d %d .%s' % (R(args[0]), R(args[1]), R(args[2]), OPS2[op])
+        if op in OPSI: return '.opi %d %d .%s %s' % (R(args[0]), R(args[1]), OPSI[op], self.bv(self.imm(args[2])))
+        if op == 'li': return '.li %d %s' % (R(args[0]), self.bv(self.imm(args[1])))
+        if op == 'mv': return '.mv %d %d' % (R(args[0]), R(args[1]))
+        if op == 'not': return '.not %d %d' % (R(args[0]), R(args[1]))
+        if op == 'nop': return '.nop'
+        if op == 'ret': return '.ret'
+        if op == 'auipc':
+            rel = [r for r in self.reloc.get(addr, []) if r[0] == 'R_RISCV_PCREL_HI20']
+            assert rel, 'auipc without relocation at %x' % addr
+            sym = rel[0][1]
+            m = re.match(r'^\.LRC(?:\+0x([0-9a-f]+))?$', sym)
+            assert m, sym
+            return '.lea %d ⟨4, %d⟩' % (R(args[0]), int(m.group(1) or '0', 16))
+        if op == 'ld':
+            base, off = self.memop(args[1]); return '.ld %d %d (%d)' % (R(args[0]), R(base), off)
+        if op == 'sd':
+            base, off = self.memop(args[1]); return '.sd %d %d (%d)' % (R(args[0]), R(base), off)
+        if op in ('lbu', 'sb', 'vle8.v', 'vse8.v'): return '.unsupported "%s"' % op
+        if op == 'beqz': return '.br .eq %d 0 %d' % (R(args[0]), self.target(args[1]))
+        if op == 'bnez': return '.br .ne %d 0 %d' % (R(args[0]), self.target(args[1]))
+        if op == 'beq': return '.br .eq %d %d %d' % (R(args[0]), R(args[1]), self.target(args[2]))
+        if op == 'bne': return '.br .ne %d %d %d' % (R(args[0]), R(args[1]), self.target(args[2]))
+        if op == 'bgeu': return '.br .geu %d %d %d' % (R(args[0]), R(args[1]), self.target(args[2]))
+        if op == 'j': return '.j %d' % self.target(args[0])
+        if op == 'vsetvli':
+            if args[2:4] != ['e64', 'm1']: return '.unsupported "vsetvli %s"' % ' '.join(args[2:4])
+            return '.vsetvli %d %d' % (R(args[0]), R(args[1]))
+        VOPS = {'vxor.vv': 'xor', 'vand.vv': 'and', 'vor.vv': 'or', 'vandn.vv': 'andn'}
+        if op in VOPS: return '.vop %d %d %d .%s' % (V(args[0]), V(args[1]), V(args[2]), VOPS[op])
+        if op == 'vnot.v': return '.vnot %d %d' % (V(args[0]), V(args[1]))
+        VSH = {'vsll': 'sll', 'vsrl': 'srl', 'vror': 'ror'}
+        m = re.match(r'^(vsll|vsrl|vror)\.(vi|vx)$', op)
+        if m:
+            if m.group(2) == 'vi': return '.vshifti %d %d .%s %d' % (V(args[0]), V(args[1]), VSH[m.group(1)], self.imm(args[2]))
+            return '.vshiftx %d %d .%s %d' % (V(args[0]), V(args[1]), VSH[m.group(1)], R(args[2]))
+        if op == 'vxor.vx': return '.vxorx %d %d %d' % (V(args[0]), V(args[1]), R(args[2]))
+        if op == 'vmv.v.i': return '.vmvi %d %s' % (V(args[0]), self.bv(self.imm(args[1])))
+        if op == 'vmv.v.x': return '.vmvx %d %d' % (V(args[0]), R(args[1]))
+        if op == 'vmv.v.v': return '.vmvv %d %d' % (V(args[0]), V(args[1]))
+        m = re.match(r'^vlseg(\d)e64\.v$', op)
+        if m:
+            base, off = self.memop(args[1]); assert off == 0
+            return '.vlseg %d %d %s' % (V(args[0]), R(base), m.group(1))
+        m = re.match(r'^vsseg(\d)e64\.v$', op)
+        if m:
+            base, off = self.memop(args[1]); assert off == 0
+            return '.vsseg %d %d %s' % (V(args[0]), R(base), m.group(1))
+        raise ValueError('unhandled: %x %s' % (addr, text))
+
+    def emit(self, ns, out):
+        out.write('import Keccaktree.Asm.Riscv\n')
+        out.write('/-! GENERATED by lean/asm2lean.py from %s (riscv64 objdump -d -r); do not edit. -/\n' % self.obj.split('/')[-1])
+        out.write('namespace %s\nopen Keccaktree.Asm.Riscv\n\n' % ns)
+        out.write('set_option maxRecDepth 100000 in\ndef prog : Array Instr := #[\n')
+        for i, ins in enumerate(self.instrs):
+            out.write('  %s%s  -- %d\n' % (ins, ',' if i + 1 < len(self.instrs) else '', i))
+        out.write(']\n\n/-- The `.rodata` section (`.LRC`: the round constants), as 64-bit words. -/\ndef rodata : Array (BitVec 64) := #[\n')
+        out.write(',\n'.join('  (0x%016x#64)' % w for w in self.rodata) + '\n]\n\n')
+        out.write('def entry : Nat := %d\n\nend %s\n' % (self.entry, ns))
+
+
 if __name__ == '__main__':
     isa, obj, func, ns = sys.argv[1:5]
     if isa == 'x86':
         X86(obj, func).emit(ns, sys.stdout)
     elif isa == 'arm':
         Arm(obj, func).emit(ns, sys.stdout)
+    elif isa == 'riscv':
+        Riscv(obj, func).emit(ns, sys.stdout)
     else:
         raise SystemExit('isa?')
