@@ -48,9 +48,9 @@ void keccaktree_avx2_small_tail(uint64_t max);
 void keccaktree_keccak256_avx2_x9(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x10(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x5(unsigned char* output, const unsigned char* input, uint64_t count);
-/* after an avx2_x10 batch, 5..max remaining nodes go to avx2_x5 (max = 9)
- * or to a padded x10 batch (max = 4, the default; keccaktree_detect times
- * both) */
+/* after an avx2_x10 batch, 5..max remaining nodes go to avx2_x5 (max = 9,
+ * or 5: just five; the default is 4, a padded x10 batch for all;
+ * keccaktree_detect times 5 and 9) */
 void keccaktree_avx2_x10_mid_tail(uint64_t max);
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);

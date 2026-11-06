@@ -30,20 +30,22 @@
 #define VBYTES		32
 #define SLOTS		(2*2112 + 464)
 /* Tail policy (keccak256_x86_frame.inc), from the Zen 3 costs of a call
- * right after an x10 batch, when only x10 and the small scalar kernel are
- * in the op cache (ns): x1 220/node, x2 566, x4 602 (3..4 nodes), x5 638,
- * x8 1000, x9 1070, a padded x10 batch 683. So after a batch: 1..2 nodes
- * to x86_x1, 3..4 to avx2_x4 (3 padded there), 5..9 a padded batch here,
- * unless the calibration (keccaktree_avx2_x10_mid_tail) found that avx2_x5
- * and its tail are faster for 5..9 (Gracemont: x5 + x1 for 6 nodes 1210
- * vs a padded x10 1900; on Zen 3, 858 vs 683).
+ * right after an x10 batch (ns; the one-round loop body leaves the other
+ * kernels in the op cache, so only x8 and x9 still run partly from the
+ * decoder): x1 220/node, x2 348, x4 358 (3..4 nodes), x5 455, x8 820,
+ * x9 730, a padded x10 batch 660. So after a batch: 1..2 nodes to
+ * x86_x1, 3..4 to avx2_x4 (3 padded there), 5 to avx2_x5, 6..9 a padded
+ * batch here (x5 and the scalar kernel for 6: 1443 vs 1301 for 16
+ * nodes), unless the calibration (keccaktree_avx2_x10_mid_tail) found
+ * that avx2_x5 and its tail are faster for 6..9 as well (Gracemont: x5 +
+ * x1 for 6 nodes 1210 vs a padded x10 1900).
  * At entry everything is hot and the counts below go whole to the kernel
- * that wins there: 5..6 to avx2_x5 (378, 598 with its x1 tail; the x4
- * chain costs 592, 728), 8 to avx2_x8 (650 vs 683), 12 to x8 + x4 (1022
- * vs x10 + 2 x1 1108) and 16 to two x8 batches (1300 vs x10 + a padded
- * x10 1351). Everything else: 1 and 2 at entry go through avx2_x4 (so 2
+ * that wins there: 5..6 to avx2_x5 (375, 593 with its x1 tail; the x4
+ * chain costs 592, 728), 8 to avx2_x8 (650 vs 660), 12 to x8 + x4 (1022
+ * vs x10 + 2 x1 1110) and 16 to two x8 batches (1300 vs x10 + a padded
+ * x10 1330). Everything else: 1 and 2 at entry go through avx2_x4 (so 2
  * nodes reach the lane-pair kernel, 356), 7 and 9 are padded batches
- * (683 vs 744 and 870 through x8). */
+ * (660 vs 744 and 870 through x8). */
 #define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1
 #define SMALL_TAIL_X1_MAX_AFTER	2
 #define SMALL_TAIL	keccaktree_keccak256_avx2_x4
@@ -219,7 +221,8 @@
 
 /* void keccaktree_avx2_x10_mid_tail(uint64_t max): after an x10 batch,
  * 5..max remaining nodes go to keccaktree_keccak256_avx2_x5 (and its
- * tail), more to a padded x10 batch; max = 4 pads 5..9 */
+ * tail), more to a padded x10 batch; max = 4 pads 5..9 (the default;
+ * keccaktree_detect sets 5 or 9) */
 .data
 .p2align 3
 .Lmid_tail_max:

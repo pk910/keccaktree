@@ -158,15 +158,15 @@ static void keccaktree_avx2_tail_calibrate(void) {
     keccaktree_avx2_small_tail(best[0] < best[1] ? 2 : 1);
 }
 
-/* 5..9 nodes left after the avx2_x10 batches: a padded x10 batch, or
- * avx2_x5 with its tail. The x10 loop body fills most of a 4K-op cache,
- * so on Zen 3 the x5 code (like x4 and x8) decodes again after an x10
- * batch and the padded batch wins (26 nodes: 2019 vs 2194 ns); where both
- * kernels stay cached (Gracemont) x5 wins (5000 vs 5685). Timed like
+/* 6..9 nodes left after the avx2_x10 batches: a padded x10 batch, or
+ * avx2_x5 with its tail (5 always go to x5: 1126 vs 1330 ns on Zen 3 for
+ * 15 nodes). On Zen 3 the padded batch wins for 6 (x5 and then the
+ * scalar kernel: 1443 vs 1301 ns for 16 nodes), where the x5 chain stays
+ * ahead (Gracemont, 5000 vs 5685 for 26 nodes) x5 wins. Timed like
  * keccaktree_calibrate on 26 nodes (two batches, 6 left). */
 static void keccaktree_avx2_x10_tail_calibrate(void) {
     static unsigned char buf[26 * 64] __attribute__((aligned(64)));
-    static const uint64_t mid[2] = {4, 9};
+    static const uint64_t mid[2] = {5, 9};
     uint64_t best[2] = {UINT64_MAX, UINT64_MAX};
     for (int i = 0; i < 26 * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
     for (int i = 0; i < 2; i++) {
@@ -182,7 +182,7 @@ static void keccaktree_avx2_x10_tail_calibrate(void) {
             if (t < best[i]) best[i] = t;
         }
     }
-    keccaktree_avx2_x10_mid_tail(best[1] < best[0] ? 9 : 4);
+    keccaktree_avx2_x10_mid_tail(best[1] < best[0] ? 9 : 5);
 }
 #endif
 
