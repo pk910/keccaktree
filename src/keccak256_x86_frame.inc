@@ -9,7 +9,9 @@
  * Calling convention: SysV (rdi, rsi, rdx) or Windows x64 (rcx, rdx, r8),
  * where xmm6..15, rsi and rdi are callee-saved. Inside, rdi = output,
  * rsi = input, rdx = count on both, and r9 points at the 64-byte aligned
- * frame: VMEM slots first, then the tail buffers.
+ * frame: VMEM slots first, then the tail buffers. A kernel that uses the
+ * callee-saved rbx and r12..r15 defines SAVE_GPRS: the frame pushes them
+ * after rbp and restores them on exit.
  */
 #ifdef _WIN64
 #define ARG_OUT		rcx
@@ -41,6 +43,13 @@
 \name:
 	push		rbp
 	mov		rbp, rsp
+#ifdef SAVE_GPRS
+	push		rbx
+	push		r12
+	push		r13
+	push		r14
+	push		r15
+#endif
 	sub		rsp, FRAME
 	and		rsp, -64
 #ifdef _WIN64
@@ -115,7 +124,16 @@
 	mov		rsi, qword ptr [rsp + SAVE + 10*16]
 	mov		rdi, qword ptr [rsp + SAVE + 10*16 + 8]
 #endif
+#ifdef SAVE_GPRS
+	lea		rsp, [rbp - 40]
+	pop		r15
+	pop		r14
+	pop		r13
+	pop		r12
+	pop		rbx
+#else
 	mov		rsp, rbp
+#endif
 	pop		rbp
 #ifdef SMALL_TAIL
 	test		eax, eax
