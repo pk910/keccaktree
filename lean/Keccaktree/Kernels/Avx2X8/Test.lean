@@ -11,4 +11,13 @@ open Keccaktree.Asm.X86
 #eval check prog rodata entry 11
 #eval check prog rodata entry 1
 #eval check prog rodata entry 5
+-- the model must compute the expected digests (CI fails otherwise)
+#guard (check prog rodata entry 0).1
+#guard (check prog rodata entry 4).1
+#guard (check prog rodata entry 2).1
+#guard (check prog rodata entry 3).1
+#guard (check prog rodata entry 8).1
+#guard (check prog rodata entry 11).1
+#guard (check prog rodata entry 1).1
+#guard (check prog rodata entry 5).1
 end Keccaktree.Kernels.Avx2X8
