@@ -54,6 +54,17 @@
 	push		r14
 	push		r15
 #endif
+	/* Windows commits stack pages through a single guard page, so a frame
+	 * of more than a page must touch every page on the way down (what the
+	 * compiler's __chkstk does), or the first store below the guard page
+	 * faults on reserved memory. One probe per page, down to the page the
+	 * call to .Lbatch reaches (FRAME + 63 of alignment + 8); nothing on
+	 * frames within a page. Harmless on SysV, kept on both for one frame. */
+.set .Lprobe, 4096
+.rept (FRAME + 72) / 4096
+	or		qword ptr [rsp - .Lprobe], 0
+.set .Lprobe, .Lprobe + 4096
+.endr
 	sub		rsp, FRAME
 	and		rsp, -64
 #ifdef _WIN64
