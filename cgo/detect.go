@@ -20,6 +20,7 @@ static const char* keccaktree_go_detect(void) {
 	if (f == keccaktree_keccak256_sha3_x3) return "sha3_x3";
 	if (f == keccaktree_keccak256_sha3_x3r) return "sha3_x3r";
 	if (f == keccaktree_keccak256_sha3_x2) return "sha3_x2";
+	if (f == keccaktree_keccak256_neon_x3) return "neon_x3";
 	if (f == keccaktree_keccak256_scalar_x1) return "scalar_x1";
 	if (f == keccaktree_keccak256_neon_x2) return "neon_x2";
 #endif

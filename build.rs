@@ -14,7 +14,7 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 const X86_64_KERNELS: &[&str] = &["avx512_x8", "avx512vl_x4", "avx2_x8", "avx2_x4"];
-const AARCH64_KERNELS: &[&str] = &["neon_x2", "sha3_x2", "scalar_x1", "sha3_x3", "sha3_x3r"];
+const AARCH64_KERNELS: &[&str] = &["neon_x2", "sha3_x2", "scalar_x1", "sha3_x3", "sha3_x3r", "neon_x3"];
 // keccaktree.c dispatches to these on riscv64, so they are always needed there
 const RISCV64_KERNELS: &[&str] = &["rv64_x1", "zbb_x1", "rvv", "rvv_zvkb"];
 

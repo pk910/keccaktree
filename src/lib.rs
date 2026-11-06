@@ -47,6 +47,7 @@ pub mod ffi {
         pub fn keccaktree_keccak256_scalar_x1(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_sha3_x3(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_sha3_x3r(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_neon_x3(output: *mut u8, input: *const u8, count: u64);
     }
 
     #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
@@ -130,6 +131,8 @@ pub enum Backend {
     Sha3X3,
     /// AArch64 SHA3 x2 interleaved with a ROR scalar node (Apple cores).
     Sha3X3r,
+    /// AArch64 Advanced SIMD x2 interleaved with a lazy-rotation scalar node.
+    NeonX3,
     /// RISC-V RV64 base scalar, 1 node.
     Rv64X1,
     /// RISC-V scalar with Zbb rotates, 1 node.
@@ -164,6 +167,7 @@ impl Backend {
         Backend::ScalarX1,
         Backend::Sha3X3,
         Backend::Sha3X3r,
+        Backend::NeonX3,
         Backend::Rv64X1,
         Backend::ZbbX1,
         Backend::Rvv,
@@ -183,6 +187,7 @@ impl Backend {
             Backend::ScalarX1 => "scalar_x1",
             Backend::Sha3X3 => "sha3_x3",
             Backend::Sha3X3r => "sha3_x3r",
+            Backend::NeonX3 => "neon_x3",
             Backend::Rv64X1 => "rv64_x1",
             Backend::ZbbX1 => "zbb_x1",
             Backend::Rvv => "rvv",
@@ -213,6 +218,8 @@ impl Backend {
             Backend::Sha3X3 if arm::sha3() => Some(ffi::keccaktree_keccak256_sha3_x3),
             #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::Sha3X3r if arm::sha3() => Some(ffi::keccaktree_keccak256_sha3_x3r),
+            #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
+            Backend::NeonX3 => Some(ffi::keccaktree_keccak256_neon_x3),
             #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]
             Backend::Rv64X1 => Some(ffi::keccaktree_keccak256_rv64_x1),
             #[cfg(all(keccaktree_asm, target_arch = "riscv64"))]

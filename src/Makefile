@@ -19,7 +19,7 @@ endif
 ifneq ($(findstring x86_64,$(ARCH)),)
 OBJ_LIST = $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o $(OBJ_DIR)/keccak256_avx2_x8.o
 else ifneq ($(findstring aarch64,$(ARCH))$(findstring arm64,$(ARCH)),)
-ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r
+ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r neon_x3
 OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS))
 else ifneq ($(findstring riscv64,$(ARCH)),)
 # the kernels enable their extensions with .option arch, the C code stays rv64gc

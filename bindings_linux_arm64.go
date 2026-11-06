@@ -16,11 +16,11 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 var hasSHA3 = cpuid.CPU.Supports(cpuid.SHA3)
 
 // armLazy picks sha3_x3, armROR sha3_x3r (else sha3_x2) when hasSHA3,
-// armScalar scalar_x1 over neon_x2 without it. Which supported kernel is
+// armScalar scalar_x1 and armHybrid neon_x3 over neon_x2 without it. Which supported kernel is
 // fastest depends on the core, not on a feature bit, so init takes the
 // choice of the C library's detection, which times them once
 // (keccaktree_detect in src/keccaktree.c).
-var armLazy, armROR, armScalar bool
+var armLazy, armROR, armScalar, armHybrid bool
 
 func init() {
 	// NEON / Advanced SIMD is mandatory on every ARMv8-A (AArch64) CPU, so the
@@ -34,5 +34,7 @@ func init() {
 		armROR = true
 	case "scalar_x1":
 		armScalar = true
+	case "neon_x3":
+		armHybrid = true
 	}
 }

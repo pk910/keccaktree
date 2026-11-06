@@ -233,8 +233,9 @@
 
 /* round 0 on lane i in x(i) (x19.. for lanes 18..24): input words in
  * x0..x7, 0x01 in x8, 0x80..0 in x16, the rest zero (not initialised: a
- * zero lane after theta is just D, so they get a copy). Every offset is 0. */
-.macro SFIRST_ROUND
+ * zero lane after theta is just D, so they get a copy). Every offset is 0.
+ * In two halves (theta, chi) for keccak256_neon_x3.S. */
+.macro SFIRST_ROUND_THETA
 	.irp i, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
 	.set O\i, 0
 	.endr
@@ -274,12 +275,18 @@
 	mov		x22, x26
 	mov		x23, x27
 	mov		x24, x28
+.endm
+.macro SFIRST_ROUND_CHI
 	SCHI_ROW0	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
 	SCHI_ROW1	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
 	SCHI_ROW2	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
 	SCHI_ROW3	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
 	SCHI_ROW4	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
 	SNEXT
+.endm
+.macro SFIRST_ROUND
+	SFIRST_ROUND_THETA
+	SFIRST_ROUND_CHI
 .endm
 
 /* round 23: row 0, x = 0..3 only, rotated back and stored at
