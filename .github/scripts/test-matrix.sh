@@ -51,10 +51,13 @@ build riscv64 riscv64-linux-gnu-gcc
 # Where several kernels run, detection times them and keeps the fastest, so
 # under TCG any of them may win: the matrix checks the feature tier.
 SHA3='sha3_x3|sha3_x3r|sha3_x2'
+AVX2='avx2_x8|avx2_x4'
+AVX2_BMI="avx2_x10|avx2_x9|avx2_x5|$AVX2"
 
 echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
-run amd64 qemu-x86_64  'Haswell'    'avx2_x8|avx2_x4'
+run amd64 qemu-x86_64  'Haswell'    "$AVX2_BMI"
+run amd64 qemu-x86_64  'Haswell,bmi1=off,bmi2=off' "$AVX2"
 run arm64 qemu-aarch64 'cortex-a57' 'neon_x2|scalar_x1'
 run arm64 qemu-aarch64 'max'        "$SHA3"
 run arm64 qemu-aarch64 'neoverse-n1' 'neon_x2|scalar_x1'
