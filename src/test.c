@@ -165,6 +165,9 @@ int main(void) {
         keccaktree_avx2_small_tail(2);
         test_backend("avx2_x4 (avx2_x2 pair)", keccaktree_keccak256_avx2_x4);
         test_backend("avx2_x8 (avx2_x2 pair)", keccaktree_keccak256_avx2_x8);
+        test_backend("avx2_x9", keccaktree_keccak256_avx2_x9);
+        test_backend("avx2_x10", keccaktree_keccak256_avx2_x10);
+        test_backend("avx2_x5", keccaktree_keccak256_avx2_x5);
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx2");
     }

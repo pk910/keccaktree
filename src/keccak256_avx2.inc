@@ -27,7 +27,15 @@
  * one's chi still runs, so the ports never wait for the parity chain.
  *
  * Registers: ymm0..15 and RCP (round constants, broadcast to 4 lanes).
+ *
+ * The lane macros end with VHOOK (argument: t for a theta D, r for a rho
+ * lane, c for a chi lane), empty here; a kernel that interleaves other
+ * work into the rounds (keccak256_avx2_x9.S) defines it first.
  */
+#ifndef VHOOK_DEFINED
+.macro VHOOK kind
+.endm
+#endif
 #define LANE(base, i)	ymmword ptr [base + 32*(i)]
 
 #define D0 ymm0
@@ -96,6 +104,7 @@
 	vpsrlq		\t, \c2, 63
 	vpor		\d, \d, \t
 	vpxor		\d, \d, \c1
+	VHOOK		t
 .endm
 
 /* the same with the parities in lanes i1 and i2 at c in memory (the base
@@ -107,6 +116,7 @@
 	vpaddq		\d, \d, \d
 	vpor		\d, \d, \t
 	vpxor		\d, \d, LANE(\c, \i1)
+	VHOOK		t
 .endm
 
 /* theta: D0..D4 from the column parities C0..C4 in registers, or from the
@@ -140,6 +150,7 @@
 .macro THETA_RHO b, d, base, i, rot
 	vpxor		\b, \d, LANE(\base, \i)
 	ROL		\b, \rot, T
+	VHOOK		r
 .endm
 
 /* out[x] = B[x] ^ (~B[x+1] & B[x+2]), stored to lane i of the state at
@@ -158,6 +169,7 @@
 	vmovdqa		LANE(\base, \i), T
 	vpxor		\c, \c, T
 .endif
+	VHOOK		c
 .endm
 
 /* chi over B0..B4 into row y of the state at out; iota on lane 0 with
@@ -221,10 +233,12 @@
 .macro RHO_ZERO b, d, rot
 	vmovdqa		\b, \d
 	ROL		\b, \rot, T
+	VHOOK		r
 .endm
 .macro RHO_PAD b, d, k, rot
 	vpxor		\b, \d, ymmword ptr [rip + \k]
 	ROL		\b, \rot, T
+	VHOOK		r
 .endm
 
 /* two 4x4 qword transposes: ymm0..7 = word 0..7 of the 4 nodes at in */

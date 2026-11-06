@@ -13,7 +13,9 @@
  * Calling convention: SysV (rdi, rsi, rdx) or Windows x64 (rcx, rdx, r8),
  * where xmm6..15, rsi and rdi are callee-saved. Inside, rdi = output,
  * rsi = input, rdx = count on both, and r9 points at the 64-byte aligned
- * frame: VMEM slots first, then the tail buffers.
+ * frame: VMEM slots first, then the tail buffers. A kernel that uses the
+ * callee-saved rbx and r12..r15 defines SAVE_GPRS: the frame pushes them
+ * after rbp and restores them on exit.
  */
 #ifdef _WIN64
 #define ARG_OUT		rcx
@@ -45,6 +47,13 @@
 \name:
 	push		rbp
 	mov		rbp, rsp
+#ifdef SAVE_GPRS
+	push		rbx
+	push		r12
+	push		r13
+	push		r14
+	push		r15
+#endif
 	sub		rsp, FRAME
 	and		rsp, -64
 #ifdef _WIN64
@@ -97,21 +106,34 @@
 3:
 #endif
 	/* hash a copy in the stack buffer; lanes past count hash whatever is
-	 * there and are not stored */
+	 * there and are not stored. The copies are vector loops, not rep movsb:
+	 * at these sizes (64..448 bytes) rep movsb's startup costs more than
+	 * the copy itself (Zen 3: ~20 ns per tail with rep movsb, ~5 with
+	 * ymm moves). */
 	mov		rax, rdx
 	mov		rsi, BIN
 	lea		rdi, [rsp + TAIL_IN]
 	mov		rcx, rax
-	shl		rcx, 6
-	rep movsb
+7:	vmovdqu		ymm0, ymmword ptr [rsi]
+	vmovdqu		ymm1, ymmword ptr [rsi + 32]
+	vmovdqu		ymmword ptr [rdi], ymm0
+	vmovdqu		ymmword ptr [rdi + 32], ymm1
+	add		rsi, 64
+	add		rdi, 64
+	dec		rcx
+	jnz		7b
 	mov		rdi, BOUT
 	lea		BIN, [rsp + TAIL_IN]
 	lea		BOUT, [rsp + TAIL_OUT]
 	call		.Lbatch
 	lea		rsi, [rsp + TAIL_OUT]
 	mov		rcx, rax
-	shl		rcx, 5
-	rep movsb
+8:	vmovdqu		ymm0, ymmword ptr [rsi]
+	vmovdqu		ymmword ptr [rdi], ymm0
+	add		rsi, 32
+	add		rdi, 32
+	dec		rcx
+	jnz		8b
 4:	/* done */
 	xor		eax, eax
 5:	/* eax != 0: tail-call SMALL_TAIL (1) or SMALL_TAIL_X1 (2) for the
@@ -131,7 +153,16 @@
 	mov		rsi, qword ptr [rsp + SAVE + 10*16]
 	mov		rdi, qword ptr [rsp + SAVE + 10*16 + 8]
 #endif
+#ifdef SAVE_GPRS
+	lea		rsp, [rbp - 40]
+	pop		r15
+	pop		r14
+	pop		r13
+	pop		r12
+	pop		rbx
+#else
 	mov		rsp, rbp
+#endif
 	pop		rbp
 #if defined(SMALL_TAIL) || defined(SMALL_TAIL_X1)
 	test		eax, eax

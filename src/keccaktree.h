@@ -43,6 +43,11 @@ void keccaktree_keccak256_avx2_x8(unsigned char* output, const unsigned char* in
  * where it beats a padded batch; 1 restores the padded batch) */
 void keccaktree_keccak256_avx2_x2(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_avx2_small_tail(uint64_t max);
+/* avx2_x8 interleaved with one or two nodes in the general registers, and
+ * avx2_x4 with one (AVX2 + BMI1 + BMI2) */
+void keccaktree_keccak256_avx2_x9(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_avx2_x10(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_avx2_x5(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);
 /* one node at a time in the general registers (BMI1 + BMI2); the AVX2
