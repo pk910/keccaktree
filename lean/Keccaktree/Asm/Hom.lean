@@ -1,4 +1,7 @@
 import Keccaktree.Asm.Lemmas
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 `exec` commutes with mapping a lane-operation homomorphism over the state.
 Instantiated with `E.eval env` (symbolic ↦ concrete) and `E.subst σ`

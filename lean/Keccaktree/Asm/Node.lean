@@ -1,5 +1,8 @@
 import Keccaktree.Asm.Cut
 import Keccaktree.Proof
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 The specification state of one 64-byte node given as 8 little-endian words
 (as the kernels load it), and what its lanes are: the words in lanes 0..7,

@@ -1,4 +1,7 @@
 import Keccaktree.Asm.Hom
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 An instruction set, abstractly: the instruction type, its semantics on the
 shared machine state (polymorphic in the lane type, so the same `exec` is the

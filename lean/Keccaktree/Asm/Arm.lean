@@ -1,5 +1,8 @@
 import Keccaktree.Asm.X86
 import Keccaktree.Asm.Exec
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 # AArch64 kernel semantics
 

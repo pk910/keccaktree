@@ -1,5 +1,8 @@
 import Keccaktree.Asm.X86
 import Keccaktree.Spec
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 Cut states: between two slices of a kernel's instruction stream, every
 register lane and memory word is a fresh variable (`regVar`, `memVar`), so
@@ -20,11 +23,11 @@ def decInt (n : Nat) : Int := if n % 2 = 0 then Int.ofNat (n / 2) else -Int.ofNa
 theorem decInt_encInt (q : Int) : decInt (encInt q) = q := by
   unfold encInt decInt
   split
-  · simp only [Nat.mul_mod_right, ↓reduceIte, Nat.mul_div_cancel_left _ (by decide : 0 < 2), Int.ofNat_eq_coe]
+  · simp only [Nat.mul_mod_right, ↓reduceIte, Nat.mul_div_cancel_left _ (by decide : 0 < 2), Int.ofNat_eq_natCast]
     omega
   · have h1 : 1 ≤ q.natAbs := by omega
     have h2 : (2 * q.natAbs - 1) % 2 = 1 := by omega
-    simp only [h2, Nat.one_ne_zero, ↓reduceIte, Int.ofNat_eq_coe]
+    simp only [h2, Nat.one_ne_zero, ↓reduceIte, Int.ofNat_eq_natCast]
     omega
 
 def memVar (region : Region) (q : Int) : Nat := 288 + 8 * encInt q + region.val

@@ -1,4 +1,7 @@
 import Keccaktree.Asm.Compose
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 Generic chaining of concrete slices: if a concrete state has the control part
 of a cut and the slice's symbolic run does not fail, the state after the

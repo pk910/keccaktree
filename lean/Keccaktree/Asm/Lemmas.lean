@@ -1,4 +1,7 @@
 import Keccaktree.Asm.X86
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 Generic lemmas about the machine model:
 

@@ -1,5 +1,8 @@
 import Keccaktree.Asm.Arm
 import Keccaktree.Asm.Trace
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 The AArch64 semantics commute with lane homomorphisms (`exec_map`), and a
 failed state stays failed (`err_exec`): `Arm.isa`.

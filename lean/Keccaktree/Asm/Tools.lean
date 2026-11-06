@@ -3,6 +3,9 @@ import Keccaktree.Asm.Arm
 import Keccaktree.Asm.Riscv
 import Keccaktree.Asm.Compose
 import Std.Data.HashMap
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 Proof-generation tools (run with `#eval`; nothing here is trusted):
 

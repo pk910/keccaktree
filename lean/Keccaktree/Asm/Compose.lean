@@ -1,5 +1,8 @@
 import Keccaktree.Asm.Trace
 import Keccaktree.Asm.Cut
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 Chaining slices.  Between slices the concrete state is viewed through fresh
 variables: `cutOf s` is the symbolic cut state with `s`'s control part and a

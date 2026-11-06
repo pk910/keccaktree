@@ -1,5 +1,8 @@
 import Keccaktree.Asm.Riscv
 import Keccaktree.Asm.ArmHom
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 The RISC-V semantics commute with lane homomorphisms (`exec_map`), and a
 failed state stays failed (`err_exec`): `Riscv.isa vlmax`.

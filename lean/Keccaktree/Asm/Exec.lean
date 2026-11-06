@@ -1,5 +1,8 @@
 import Keccaktree.Asm.X86
 import Keccaktree.Spec
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 Executable harness: run a kernel model on concrete input and compare the
 output region with the specification.

@@ -1,4 +1,7 @@
 import Keccaktree.Asm.Cut
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 The lanes of one spec round, as explicit expressions in the lanes of the
 input state (`L A j` atoms): `L (Spec.round r A) k = …`.  These are

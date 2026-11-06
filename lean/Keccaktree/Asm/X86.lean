@@ -1,4 +1,7 @@
 import Keccaktree.Asm.Machine
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 /-!
 # x86-64 (AVX2 / AVX-512) kernel semantics
 

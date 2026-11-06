@@ -18,6 +18,9 @@ kernels only load and store whole, 8-byte aligned words (checked, `err`
 otherwise).  Distinct regions are assumed not to overlap.
 -/
 
+set_option linter.unusedSectionVars false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 namespace Keccaktree.Asm
 
 /-- `vpternlogq imm`: bit-wise `imm[a b c]`, the sum of the minterms the
