@@ -1,6 +1,6 @@
 # Static libraries
 
-Built from `src/` by the *Update Static Libraries* workflow
+Built from `src/` and attested by the *Update Static Libraries* workflow
 (`.github/workflows/build-static-libs.yml`). Each platform directory has
 `libkeccaktree.a`, its `.sha256`, and, for CI builds, a `.buildinfo` with the
 exact compiler. `SOURCE_COMMIT` names the commit the libraries were built from.
@@ -15,3 +15,17 @@ exact compiler. `SOURCE_COMMIT` names the commit the libraries were built from.
 Builds use `SOURCE_DATE_EPOCH` and `-ffile-prefix-map`, then
 `strip --strip-debug` and `ranlib` (macOS additionally zeroes `ar` member
 metadata), so a rebuild with the same compiler is byte-identical.
+
+## Pull requests
+
+PR CI tests the Go bindings against the libraries committed here, so a PR
+that changes `src/` has to bring rebuilt libraries along. Run *Build & Test*
+on your branch (`gh workflow run build.yml --ref <branch>`), then
+`.github/scripts/fetch-ci-libs.sh` copies its artifacts into `lib/`; commit
+them with the change. A local build for your own platform is fine for a
+draft, but the PR needs all four.
+
+After the merge, *Update Static Libraries* rebuilds every library on main,
+replaces the PR's copies, and records a build provenance attestation:
+
+    gh attestation verify lib/linux_amd64/libkeccaktree.a -R pk910/keccaktree
