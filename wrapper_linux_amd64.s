@@ -1,11 +1,12 @@
 //go:build cgo && linux && amd64
 
 // The C kernels run on this frame's 8192 bytes of stack. SP is moved to the
-// top of the frame and 32-byte aligned. Deepest kernel: avx2_x10, 5744
-// bytes of frame plus the pushed rbp/rbx/r12..r15, the return address, up
-// to 63 bytes of 64-byte alignment and the batch call, under 5.9 KB; the
-// tails (x10 -> x8 -> x4 -> avx2_x2 / x86_x1) are jumps after the frame is
-// torn down, so they do not add up.
+// top of the frame and 32-byte aligned. Deepest kernel: avx2_x10, 5824
+// bytes of frame (sub rsp, 0x16c0) plus the pushed rbp/rbx/r12..r15 (48),
+// the return address (8), up to 63 bytes of 64-byte alignment and the
+// batch call (8): 5951 bytes at most; the tails (x10 -> x8 -> x4 ->
+// avx2_x2 / x86_x1) are jumps after the frame is torn down, so they do
+// not add up.
 //
 // Kernel ids, as in bindings_linux_amd64.go (kernelAVX2X8 is the default).
 #define KERNEL_AVX2_X4     1

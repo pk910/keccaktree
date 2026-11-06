@@ -2,9 +2,10 @@
 
 // Windows x64 ABI: arguments in CX, DX, R8. R8 is saved in R12, which the
 // callee preserves. The C kernels run on this frame's 8192 bytes of stack
-// (deepest: avx2_x10, under 5.9 KB including its pushed registers, see
-// wrapper_linux_amd64.s). The top 32 bytes are the shadow space the
-// Windows ABI gives every callee, which compiled C code may write to.
+// (deepest: avx2_x10, 5824 bytes of frame, 5951 with its pushed registers,
+// alignment and batch call, see wrapper_linux_amd64.s; 5983 with the
+// shadow space). The top 32 bytes are the shadow space the Windows ABI
+// gives every callee, which compiled C code may write to.
 //
 // Kernel ids, as in bindings_windows_amd64.go (kernelAVX2X8 is the default).
 #define KERNEL_AVX2_X4     1

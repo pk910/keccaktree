@@ -7,11 +7,11 @@ exact compiler. `SOURCE_COMMIT` names the commit the libraries were built from.
 
 | Platform | Toolchain (CI) | Kernels |
 |---|---|---|
-| linux_amd64 | ubuntu-22.04 gcc | avx512_x9, avx512_x8, avx512vl_x4, avx2_x10, avx2_x9, avx2_x5, avx2_x8, avx2_x4, avx2_x2, x86_x1, generic |
+| linux_amd64 | ubuntu-22.04 gcc | avx512_x9, avx512_x8, avx512vl_x4, avx2_x10, avx2_x9, avx2_x6, avx2_x5, avx2_x8, avx2_x4, avx2_x2, x86_x1, generic |
 | linux_arm64 | ubuntu-22.04-arm gcc | sha3_x3, sha3_x3r, sha3_x2, neon_x3, scalar_x1, neon_x2, generic |
 | linux_riscv64 | ubuntu-24.04 gcc-riscv64-linux-gnu | rvv_zvkb, rvv, zbb_x1, rv64_x1, generic |
 | darwin_arm64 | macos-15 Apple clang | sha3_x3, sha3_x3r, sha3_x2, neon_x3, scalar_x1, neon_x2, generic |
-| windows_amd64 | MSYS2 MINGW64 gcc | avx512_x9, avx512_x8, avx512vl_x4, avx2_x10, avx2_x9, avx2_x5, avx2_x8, avx2_x4, avx2_x2, x86_x1, generic |
+| windows_amd64 | MSYS2 MINGW64 gcc | avx512_x9, avx512_x8, avx512vl_x4, avx2_x10, avx2_x9, avx2_x6, avx2_x5, avx2_x8, avx2_x4, avx2_x2, x86_x1, generic |
 
 Builds use `SOURCE_DATE_EPOCH` and `-ffile-prefix-map`, then
 `strip --strip-debug` and `ranlib` (macOS additionally zeroes `ar` member
