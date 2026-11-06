@@ -89,6 +89,9 @@ int main(void) {
     (void)sha;
     if (avx2) row("keccak256 avx2_x4", keccaktree_keccak256_avx2_x4);
     if (avx2) row("keccak256 avx2_x8", keccaktree_keccak256_avx2_x8);
+    if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x9", keccaktree_keccak256_avx2_x9);
+    if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x10", keccaktree_keccak256_avx2_x10);
+    if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x5", keccaktree_keccak256_avx2_x5);
     if (avx512) row("keccak256 avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
     if (avx512) row("keccak256 avx512_x8", keccaktree_keccak256_avx512_x8);
 #ifdef HAVE_HASHTREE

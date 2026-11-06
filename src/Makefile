@@ -17,7 +17,8 @@ ifneq ($(findstring mingw,$(ARCH)),)
 override CFLAGS += -Wa,-muse-unaligned-vector-move
 endif
 ifneq ($(findstring x86_64,$(ARCH)),)
-OBJ_LIST = $(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o $(OBJ_DIR)/keccak256_avx2_x8.o
+X86_KERNELS = avx512_x8 avx512vl_x4 avx2_x4 avx2_x8 avx2_x9 avx2_x10 avx2_x5
+OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(X86_KERNELS))
 else ifneq ($(findstring aarch64,$(ARCH))$(findstring arm64,$(ARCH)),)
 ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r
 OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS))
@@ -33,10 +34,11 @@ all: $(libname) test bench
 lib: $(libname)
 
 # one .S per kernel, built on the shared round and frame macros (.inc)
-X86_INC = keccak256_x86_frame.inc keccak256_avx512.inc keccak256_avx2.inc
+X86_INC = keccak256_x86_frame.inc keccak256_avx512.inc keccak256_avx2.inc keccak256_x86_scalar.inc
 ARM_INC = keccak256_arm_frame.inc keccak256_neon.inc keccak256_sha3.inc keccak256_scalar.inc keccak256_scalar_ror.inc
-$(OBJ_DIR)/keccak256_avx512_x8.o $(OBJ_DIR)/keccak256_avx512vl_x4.o $(OBJ_DIR)/keccak256_avx2_x4.o $(OBJ_DIR)/keccak256_avx2_x8.o: $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(X86_INC)
+$(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(X86_KERNELS)): $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(X86_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
+$(OBJ_DIR)/keccak256_avx2_x10.o: keccak256_avx2_x9.S
 $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(ARM_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
 RISCV_INC = keccak256_riscv_frame.inc keccak256_rv64.inc keccak256_rvv.inc

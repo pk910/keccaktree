@@ -153,6 +153,11 @@ int main(void) {
     if (b & bit_AVX2) {
         test_backend("avx2_x4", keccaktree_keccak256_avx2_x4);
         test_backend("avx2_x8", keccaktree_keccak256_avx2_x8);
+        if ((b & bit_BMI) && (b & bit_BMI2)) {
+            test_backend("avx2_x9", keccaktree_keccak256_avx2_x9);
+            test_backend("avx2_x10", keccaktree_keccak256_avx2_x10);
+            test_backend("avx2_x5", keccaktree_keccak256_avx2_x5);
+        }
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx2");
     }
