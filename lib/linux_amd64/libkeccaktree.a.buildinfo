@@ -1,1 +1,1 @@
-zig cc 0.17.1 -target x86_64-linux-gnu (contributor build)
+gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
