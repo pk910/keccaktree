@@ -3,8 +3,8 @@
  *                                  const unsigned char *input, uint64_t count)
  *
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, one at a time in
- * the general registers with the rounds of keccak256_x86_scalar.inc, all
- * 24 unrolled. Needs BMI1 (andn) and BMI2 (rorx). This is the single-node
+ * the general registers with the rounds of keccak256_x86_scalar.inc
+ * (rounds 1..22 as a two-round loop). Needs BMI1 (andn) and BMI2 (rorx). This is the single-node
  * path of the AVX2 kernels: a padded 4-node vector batch costs four
  * nodes' worth of vector work, and the portable C code it replaces spends
  * a third of its instructions on loop control and lane shuffling, where
@@ -44,17 +44,19 @@
 #define OUTP	408
 #define INP	416
 #define CNT	424
-#define FRAME_X1	432
+#define RCP	432
+#define FRAME_X1	440
 
 #include "keccak256_x86_scalar.inc"
 
+.macro X1_FUNCTION name, body
 .text
 .p2align 6
-.globl keccaktree_keccak256_x86_x1
+.globl \name
 #ifndef _WIN64
-.type keccaktree_keccak256_x86_x1,%function
+.type \name,%function
 #endif
-keccaktree_keccak256_x86_x1:
+\name:
 	push		rbp
 	push		rbx
 	push		r12
@@ -81,7 +83,7 @@ keccaktree_keccak256_x86_x1:
 	mov		C0, qword ptr [T + 40]
 	mov		C1, qword ptr [T + 48]
 	mov		C2, qword ptr [T + 56]
-	KECCAK_X1
+	\body
 	add		qword ptr [rsp + OUTP], 32
 	mov		T, qword ptr [rsp + INP]
 	add		T, 64
@@ -102,8 +104,11 @@ keccaktree_keccak256_x86_x1:
 	pop		rbp
 	ret
 #ifndef _WIN64
-.size keccaktree_keccak256_x86_x1, .-keccaktree_keccak256_x86_x1
+.size \name, .-\name
 #endif
+.endm
+
+	X1_FUNCTION keccaktree_keccak256_x86_x1, KECCAK_X1
 
 	KECCAK_RODATA
 

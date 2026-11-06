@@ -94,13 +94,24 @@
 /* out[x] = B[x] ^ (~B[x+1] & B[x+2]), stored to lane i of the state at buf
  * and folded into the next round's parity c (row 0 starts it: its outputs
  * go straight into the C registers, which theta has consumed). Lane 0 takes
- * the iota constant RC[rc]. */
+ * the iota constant: RC[rc], or for the looped rounds the constant at the
+ * pointer in [rsp + RCP] (rc = P0) or the one after it (rc = P8). */
 .macro CHI c, b0, b1, b2, buf, i, rc
 .if \i < 5
 	andn		\c, \b1, \b2
 	xor		\c, \b0
 .if \i == 0
+.ifc \rc, P0
+	mov		T, qword ptr [rsp + RCP]
+	xor		\c, qword ptr [T]
+.else
+.ifc \rc, P8
+	mov		T, qword ptr [rsp + RCP]
+	xor		\c, qword ptr [T + 8]
+.else
 	xor		\c, qword ptr [rip + .LKECCAK_RC + 8*\rc]
+.endif
+.endif
 .endif
 	mov		LANE(\buf, \i), \c
 .else
@@ -256,30 +267,23 @@
 .endm
 
 /* rounds 0..23 of one node: the 8 input words in B0..B4, C0..C2, the
- * digest to [[rsp + OUTP]] */
+ * digest to [[rsp + OUTP]]. Rounds 1..22 run as 11 iterations of a
+ * two-round loop with the round constant pointer in [rsp + RCP]: the body
+ * is ~700 instructions and stays in the op cache next to the AVX2 batch
+ * code that calls this for its last node, where 24 unrolled rounds
+ * (~4300 instructions, the size of the op cache) were evicted by any other
+ * code and decoded at a fraction of the speed: as fast alone, 1.27x after
+ * an AVX2 batch (avx2_x4 at count 5). */
 .macro KECCAK_X1
 	ROUND0		S0, S1
-	ROUND		S1, S0, 1
-	ROUND		S0, S1, 2
-	ROUND		S1, S0, 3
-	ROUND		S0, S1, 4
-	ROUND		S1, S0, 5
-	ROUND		S0, S1, 6
-	ROUND		S1, S0, 7
-	ROUND		S0, S1, 8
-	ROUND		S1, S0, 9
-	ROUND		S0, S1, 10
-	ROUND		S1, S0, 11
-	ROUND		S0, S1, 12
-	ROUND		S1, S0, 13
-	ROUND		S0, S1, 14
-	ROUND		S1, S0, 15
-	ROUND		S0, S1, 16
-	ROUND		S1, S0, 17
-	ROUND		S0, S1, 18
-	ROUND		S1, S0, 19
-	ROUND		S0, S1, 20
-	ROUND		S1, S0, 21
-	ROUND		S0, S1, 22
+	lea		T, [rip + .LKECCAK_RC + 8]
+	mov		qword ptr [rsp + RCP], T
+3:
+	ROUND		S1, S0, P0
+	ROUND		S0, S1, P8
+	lea		T, [rip + .LKECCAK_RC + 8*23]
+	add		qword ptr [rsp + RCP], 16
+	cmp		qword ptr [rsp + RCP], T
+	jb		3b
 	ROUND23		S1
 .endm
