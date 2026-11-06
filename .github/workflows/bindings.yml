@@ -2,10 +2,11 @@ name: Bindings
 
 # Rust, Nim and Java bindings on every native platform.
 #
-# - Rust and Nim compile src/ themselves (Rust on MSVC links the committed
-#   lib/windows_amd64 library, since MSVC cannot assemble the kernels).
-# - Java links the committed lib/<platform>/libkeccaktree.a into a JNI
-#   library per platform; the last job packages all four into one jar.
+# - All three link the committed, attested lib/<platform>/libkeccaktree.a.
+#   Rust and Nim are also tested building src/ themselves (their fallback for
+#   targets without a library).
+# - Java links the library into a JNI library per platform; the last job
+#   packages all four into one jar.
 
 on:
   push:
@@ -23,8 +24,9 @@ jobs:
       matrix:
         include:
           - { name: linux x86-64, runner: ubuntu-24.04 }
-          - { name: linux x86-64 prebuilt, runner: ubuntu-24.04, features: --features prebuilt }
+          - { name: linux x86-64 from source, runner: ubuntu-24.04, features: --features build-from-source }
           - { name: linux arm64, runner: ubuntu-24.04-arm }
+          - { name: linux arm64 from source, runner: ubuntu-24.04-arm, features: --features build-from-source }
           - { name: macOS arm64, runner: macos-15 }
           - { name: windows x86-64 msvc, runner: windows-latest }
     steps:
@@ -62,8 +64,10 @@ jobs:
         include:
           - { name: linux x86-64, runner: ubuntu-24.04, nim: 2.2.x }
           - { name: linux x86-64, runner: ubuntu-24.04, nim: 1.6.x }
-          - { name: linux x86-64 clang, runner: ubuntu-24.04, nim: 2.2.x, flags: --cc:clang }
+          - { name: linux x86-64 from source, runner: ubuntu-24.04, nim: 2.2.x, flags: -d:keccaktreeFromSource }
+          - { name: linux x86-64 clang from source, runner: ubuntu-24.04, nim: 2.2.x, flags: --cc:clang -d:keccaktreeFromSource }
           - { name: linux arm64, runner: ubuntu-24.04-arm, nim: 2.2.x }
+          - { name: linux arm64 from source, runner: ubuntu-24.04-arm, nim: 2.2.x, flags: -d:keccaktreeFromSource }
           - { name: macOS arm64, runner: macos-15, nim: 2.2.x }
           - { name: windows x86-64, runner: windows-latest, nim: 2.2.x }
     steps:

@@ -1,12 +1,14 @@
-//! Builds the keccaktree C library for the Rust bindings.
+//! Links the keccaktree C library for the Rust bindings.
 //!
-//! By default the sources in src/ are compiled with the `cc` crate: the
-//! generic C core and dispatcher everywhere, plus the hand-written assembly
-//! kernels on x86-64 and AArch64. The kernels are GNU-assembler syntax, which
-//! MSVC cannot assemble, so MSVC x86-64 targets link the CI-built library from
-//! lib/windows_amd64/ instead (it has no C runtime dependencies). The
-//! `prebuilt` feature does the same on every platform that has a library in
-//! lib/.
+//! On linux x86-64/aarch64, macOS aarch64 and Windows x86-64 (GNU and MSVC)
+//! this links the CI-built, attested static library from lib/<platform>/,
+//! the same one the Go bindings use (the Windows library has no C runtime
+//! dependencies, so MSVC's linker takes it too).
+//!
+//! Other targets, or any target with the `build-from-source` feature, compile
+//! src/ with the `cc` crate instead: the generic C core and dispatcher
+//! everywhere, plus the assembly kernels on x86-64 and AArch64 with a
+//! GNU-compatible compiler (MSVC cannot assemble them).
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -25,6 +27,8 @@ fn main() {
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=lib");
     println!("cargo:include={}", src.display());
+    // keccaktree_asm: the x86-64 / AArch64 kernels are linked
+    println!("cargo:rustc-check-cfg=cfg(keccaktree_asm)");
 
     let platform = match (os.as_str(), arch.as_str()) {
         ("linux", "x86_64") => Some("linux_amd64"),
@@ -34,16 +38,11 @@ fn main() {
         _ => None,
     };
     let msvc = target_env == "msvc";
-    let want_prebuilt = env::var_os("CARGO_FEATURE_PREBUILT").is_some() || (msvc && arch == "x86_64");
+    let from_source = env::var_os("CARGO_FEATURE_BUILD_FROM_SOURCE").is_some();
 
-    if want_prebuilt {
-        match platform {
-            Some(p) => return link_prebuilt(&manifest_dir.join("lib").join(p), msvc),
-            None => println!(
-                "cargo:warning=keccaktree: no prebuilt library for {}-{}, building from source",
-                os, arch
-            ),
-        }
+    if let (Some(p), false) = (platform, from_source) {
+        println!("cargo:rustc-cfg=keccaktree_asm");
+        return link_prebuilt(&manifest_dir.join("lib").join(p), msvc);
     }
 
     let mut build = cc::Build::new();
@@ -61,6 +60,9 @@ fn main() {
         "aarch64" => AARCH64_KERNELS,
         _ => &[],
     };
+    if !kernels.is_empty() {
+        println!("cargo:rustc-cfg=keccaktree_asm");
+    }
     for k in kernels {
         build.file(src.join("asm").join(format!("keccak256_{}.S", k)));
     }

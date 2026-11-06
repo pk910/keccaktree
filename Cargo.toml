@@ -35,9 +35,9 @@ name = "basic_usage"
 path = "rust/examples/basic_usage.rs"
 
 [features]
-# Link the CI-built, attested static library from lib/<platform>/ instead of
-# compiling src/ (linux x86_64/aarch64, macOS aarch64, Windows x86_64).
-prebuilt = []
+# Compile src/ with the cc crate instead of linking the attested static
+# library from lib/<platform>/ (targets without a library always do).
+build-from-source = []
 
 [dev-dependencies]
 sha3 = "0.10"

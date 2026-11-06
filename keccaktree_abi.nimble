@@ -6,7 +6,7 @@ version       = "0.1.0"
 author        = "pk910"
 description   = "Low-level ABI package for keccaktree, batched keccak256 for merkle trees with a hashtree-compatible API"
 license       = "MIT"
-installDirs   = @["src"]
+installDirs   = @["src", "lib"]
 installFiles  = @["keccaktree_abi.nim"]
 
 requires "nim >= 1.6.0"

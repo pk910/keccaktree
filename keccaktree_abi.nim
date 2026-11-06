@@ -1,48 +1,65 @@
 # keccaktree nim bindings
 # Licensed under the MIT license (see LICENSE in the repository root).
 #
-# Low-level ABI for keccaktree, laid out like hashtree's `hashtree_abi`:
-# importing this module compiles the C sources and assembly kernels from
-# src/ into the program. `keccaktree_hash` has the same signature and chunk
-# layout as `hashtree_hash`, with Ethereum keccak256 (pad 0x01) in place of
-# SHA-256:
+# Low-level ABI for keccaktree, laid out like hashtree's `hashtree_abi`.
+# `keccaktree_hash` has the same signature and chunk layout as
+# `hashtree_hash`, with Ethereum keccak256 (pad 0x01) in place of SHA-256:
 #
 #   digest[i] = keccak256(input[64*i ..< 64*i+64])
+#
+# On linux amd64/arm64, macOS arm64 and Windows amd64 this links the CI-built,
+# attested static library from lib/<platform>/ (the one the Go bindings use).
+# Elsewhere, or with -d:keccaktreeFromSource, it compiles src/ into the
+# program instead.
 
 {.pragma: keccaktreedecl, importc, cdecl, gcsafe, raises: [].}
 
 import std/[os, strutils]
 
-const srcDir = currentSourcePath.parentDir.replace('\\', '/') & "/src/"
+const
+  rootDir = currentSourcePath.parentDir.replace('\\', '/')
+  srcDir = rootDir & "/src/"
+  keccaktreePlatform =
+    when defined(linux) and defined(amd64): "linux_amd64"
+    elif defined(linux) and defined(arm64): "linux_arm64"
+    elif defined(macosx) and defined(arm64): "darwin_arm64"
+    elif defined(windows) and defined(amd64): "windows_amd64"
+    else: ""
+  keccaktreePrebuilt = keccaktreePlatform.len > 0 and not defined(keccaktreeFromSource)
 
-{.compile: srcDir & "keccaktree.c".}
-{.compile: srcDir & "keccak256_generic.c".}
+when keccaktreePrebuilt:
+  const keccaktreeAsm* = true
+    ## The x86-64 / AArch64 kernels below are linked.
+  {.passl: quoteShell(rootDir & "/lib/" & keccaktreePlatform & "/libkeccaktree.a").}
+else:
+  {.compile: srcDir & "keccaktree.c".}
+  {.compile: srcDir & "keccak256_generic.c".}
 
-# The kernels are GNU assembler syntax, which gcc and clang (also its
-# integrated assembler, on ELF and Mach-O) accept and MSVC does not.
-const keccaktreeAsm* = (defined(gcc) or defined(clang)) and
-  (defined(amd64) or defined(arm64))
+  # The kernels are GNU assembler syntax, which gcc and clang (also its
+  # integrated assembler, on ELF and Mach-O) accept and MSVC does not.
+  const keccaktreeAsm* = (defined(gcc) or defined(clang)) and
+    (defined(amd64) or defined(arm64))
 
-when keccaktreeAsm:
-  const asmDir = srcDir & "asm/"
-  const asmFlags =
-    when defined(windows) and defined(gcc):
-      # as in src/Makefile: gcc on Windows does not realign the stack for
-      # 32/64-byte vector spills
-      "-Wa,-muse-unaligned-vector-move"
-    else:
-      ""
+  when keccaktreeAsm:
+    const asmDir = srcDir & "asm/"
+    const asmFlags =
+      when defined(windows) and defined(gcc):
+        # as in src/Makefile: gcc on Windows does not realign the stack for
+        # 32/64-byte vector spills
+        "-Wa,-muse-unaligned-vector-move"
+      else:
+        ""
 
-  when defined(amd64):
-    {.compile(asmDir & "keccak256_avx512_x8.S", asmFlags).}
-    {.compile(asmDir & "keccak256_avx512vl_x4.S", asmFlags).}
-    {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
-  elif defined(arm64):
-    {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
-    {.compile(asmDir & "keccak256_sha3_x2.S", asmFlags).}
-    {.compile(asmDir & "keccak256_scalar_x1.S", asmFlags).}
-    {.compile(asmDir & "keccak256_sha3_x3.S", asmFlags).}
-    {.compile(asmDir & "keccak256_sha3_x3r.S", asmFlags).}
+    when defined(amd64):
+      {.compile(asmDir & "keccak256_avx512_x8.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx512vl_x4.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
+    elif defined(arm64):
+      {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
+      {.compile(asmDir & "keccak256_sha3_x2.S", asmFlags).}
+      {.compile(asmDir & "keccak256_scalar_x1.S", asmFlags).}
+      {.compile(asmDir & "keccak256_sha3_x3.S", asmFlags).}
+      {.compile(asmDir & "keccak256_sha3_x3r.S", asmFlags).}
 
 type KeccaktreeHashFcn* = proc(output: pointer, input: pointer, count: uint64) {.
   cdecl, noSideEffect, gcsafe, raises: [].}

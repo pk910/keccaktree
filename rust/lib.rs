@@ -32,16 +32,14 @@ pub mod ffi {
         pub fn keccaktree_keccak256_generic(output: *mut u8, input: *const u8, count: u64);
     }
 
-    // MSVC x86-64 links the prebuilt library from lib/windows_amd64, which
-    // has the same kernels
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
     extern "C" {
         pub fn keccaktree_keccak256_avx2_x4(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512vl_x4(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512_x8(output: *mut u8, input: *const u8, count: u64);
     }
 
-    #[cfg(all(target_arch = "aarch64", not(target_env = "msvc")))]
+    #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
     extern "C" {
         pub fn keccaktree_keccak256_neon_x2(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_sha3_x2(output: *mut u8, input: *const u8, count: u64);
@@ -168,21 +166,21 @@ impl Backend {
     pub fn function(self) -> Option<ffi::HashFn> {
         match self {
             Backend::Generic => Some(ffi::keccaktree_keccak256_generic),
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx2X4 if x86::avx2() => Some(ffi::keccaktree_keccak256_avx2_x4),
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx512VlX4 if x86::avx512() => Some(ffi::keccaktree_keccak256_avx512vl_x4),
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx512X8 if x86::avx512() => Some(ffi::keccaktree_keccak256_avx512_x8),
-            #[cfg(all(target_arch = "aarch64", not(target_env = "msvc")))]
+            #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::NeonX2 => Some(ffi::keccaktree_keccak256_neon_x2),
-            #[cfg(all(target_arch = "aarch64", not(target_env = "msvc")))]
+            #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::ScalarX1 => Some(ffi::keccaktree_keccak256_scalar_x1),
-            #[cfg(all(target_arch = "aarch64", not(target_env = "msvc")))]
+            #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::Sha3X2 if arm::sha3() => Some(ffi::keccaktree_keccak256_sha3_x2),
-            #[cfg(all(target_arch = "aarch64", not(target_env = "msvc")))]
+            #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::Sha3X3 if arm::sha3() => Some(ffi::keccaktree_keccak256_sha3_x3),
-            #[cfg(all(target_arch = "aarch64", not(target_env = "msvc")))]
+            #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::Sha3X3r if arm::sha3() => Some(ffi::keccaktree_keccak256_sha3_x3r),
             _ => None,
         }
@@ -221,7 +219,7 @@ impl fmt::Display for Backend {
 
 // Same conditions as the C dispatcher (src/keccaktree.c); the std macros
 // also check that the OS saves the ymm/zmm state.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
 mod x86 {
     pub fn avx2() -> bool {
         is_x86_feature_detected!("avx2")
@@ -232,7 +230,7 @@ mod x86 {
     }
 }
 
-#[cfg(all(target_arch = "aarch64", not(target_env = "msvc")))]
+#[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
 mod arm {
     pub fn sha3() -> bool {
         std::arch::is_aarch64_feature_detected!("sha3")
