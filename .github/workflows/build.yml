@@ -72,7 +72,7 @@ jobs:
           retention-days: 7
 
   build-darwin-arm64:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Build, run the C tests (Apple Silicon has FEAT_SHA3), package
