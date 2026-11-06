@@ -46,7 +46,7 @@ jobs:
           pattern: libkeccaktree-*
       - name: Move libraries into lib/
         run: |
-          for platform in linux_amd64 linux_arm64 darwin_arm64 windows_amd64; do
+          for platform in linux_amd64 linux_arm64 linux_riscv64 darwin_arm64 windows_amd64; do
             art="libkeccaktree-${platform//_/-}"
             mkdir -p "lib/$platform"
             cp "$art/libkeccaktree.a" "$art/libkeccaktree.a.sha256" "$art/libkeccaktree.a.buildinfo" "lib/$platform/"

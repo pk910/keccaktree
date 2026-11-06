@@ -1,6 +1,7 @@
 /* Throughput benchmark: keccaktree backends vs hashtree sha256 backends.
  * Build with `make bench HASHTREE=1` to include the sha256 comparison. */
 #define _POSIX_C_SOURCE 199309L
+#define _DEFAULT_SOURCE /* syscall() for riscv_hwprobe */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,10 @@
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
+#endif
+#if defined(__riscv) && defined(__linux__)
+#include <sys/syscall.h>
+#include <unistd.h>
 #endif
 #include "keccaktree.h"
 #ifdef HAVE_HASHTREE
@@ -104,6 +109,26 @@ int main(void) {
     row("sha256 hashtree neon_x1", hashtree_sha256_neon_x1);
     row("sha256 hashtree neon_x4", hashtree_sha256_neon_x4);
     if (sha2) row("sha256 hashtree sha_x1", hashtree_sha256_sha_x1);
+#endif
+#endif
+#if defined(__riscv) && __riscv_xlen == 64
+    /* riscv_hwprobe IMA_EXT_0: bit 2 V, bit 4 Zbb, bit 19 Zvkb */
+    struct { int64_t key; uint64_t value; } probe = {4, 0};
+#ifdef __linux__
+    if (syscall(258, &probe, 1, 0, NULL, 0) != 0) probe.value = 0;
+#endif
+    int zbb = (probe.value >> 4) & 1, rvv = (probe.value >> 2) & 1, zvkb = rvv && ((probe.value >> 19) & 1);
+    row("keccak256 rv64_x1", keccaktree_keccak256_rv64_x1);
+    if (zbb) row("keccak256 zbb_x1", keccaktree_keccak256_zbb_x1);
+    if (rvv) row("keccak256 rvv", keccaktree_keccak256_rvv);
+    if (zvkb) row("keccak256 rvv_zvkb", keccaktree_keccak256_rvv_zvkb);
+#ifdef HAVE_HASHTREE
+    /* hashtree's RISC-V objects are built for rv64gc_zbb_zk */
+    if (zbb) {
+        row("sha256 hashtree generic", hashtree_sha256_generic);
+        row("sha256 hashtree riscv_x1", hashtree_sha256_riscv_x1);
+        row("sha256 hashtree zbb_x1", hashtree_sha256_riscv_zbb_x1);
+    }
 #endif
 #endif
     row("keccaktree_hash (auto)", keccaktree_hash);

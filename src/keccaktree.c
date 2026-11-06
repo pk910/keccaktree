@@ -9,6 +9,22 @@
 #include <sys/auxv.h>
 #endif
 
+#if defined(__riscv) && __riscv_xlen == 64
+#ifdef __linux__
+#include <sys/syscall.h>
+#include <unistd.h>
+#ifndef __NR_riscv_hwprobe
+#define __NR_riscv_hwprobe 258 /* Linux 6.4+ */
+#endif
+#endif
+/* riscv_hwprobe key and bits (asm/hwprobe.h, defined here for older headers) */
+struct keccaktree_hwprobe { int64_t key; uint64_t value; };
+#define KT_HWPROBE_KEY_IMA_EXT_0 4
+#define KT_HWPROBE_IMA_V         (1ULL << 2)
+#define KT_HWPROBE_EXT_ZBB       (1ULL << 4)
+#define KT_HWPROBE_EXT_ZVKB      (1ULL << 19)
+#endif
+
 static void init_and_hash(unsigned char* output, const unsigned char* input, uint64_t count);
 static keccaktree_hash_fcn hash_ptr = init_and_hash;
 
@@ -58,6 +74,29 @@ static void keccaktree_arm_select(unsigned implementer, unsigned part, int* arm_
 }
 #endif
 
+#if defined(__riscv) && __riscv_xlen == 64
+/* Not measured on hardware yet, chosen by instruction counts: per batch and
+ * round rvv_zvkb issues 131 vector instructions, rvv 214, while one node
+ * costs zbb_x1 145 and rv64_x1 228 scalar ones. With Zvkb the vector
+ * kernel wins at any VLEN; without, only from VLEN = 256 (4 nodes) on, as
+ * at VLEN = 128 its 107 instructions per node are no better than the dual-
+ * issue scalar pipes running zbb_x1. */
+keccaktree_hash_fcn keccaktree_riscv_select(uint64_t ext, uint64_t vlenb) {
+    int v = (ext & KT_HWPROBE_IMA_V) && vlenb >= 16;
+    if (v && (ext & KT_HWPROBE_EXT_ZVKB)) return &keccaktree_keccak256_rvv_zvkb;
+    if (v && vlenb >= 32) return &keccaktree_keccak256_rvv;
+    if (ext & KT_HWPROBE_EXT_ZBB) return &keccaktree_keccak256_zbb_x1;
+    if (v) return &keccaktree_keccak256_rvv;
+    return &keccaktree_keccak256_rv64_x1;
+}
+
+static uint64_t keccaktree_riscv_vlenb(void) {
+    uint64_t vlenb;
+    __asm__ volatile(".option push\n.option arch, +v\ncsrr %0, vlenb\n.option pop" : "=r"(vlenb));
+    return vlenb;
+}
+#endif
+
 static keccaktree_hash_fcn keccaktree_detect(void) {
 #ifdef __x86_64__
     uint32_t a = 0, b = 0, c = 0, d = 0;
@@ -97,6 +136,16 @@ static keccaktree_hash_fcn keccaktree_detect(void) {
     if (n1) return &keccaktree_keccak256_scalar_x1;
     if (hwcaps & HWCAP_ASIMD) return &keccaktree_keccak256_neon_x2;
 #endif
+#endif
+#if defined(__riscv) && __riscv_xlen == 64
+    uint64_t ext = 0;
+#ifdef __linux__
+    struct keccaktree_hwprobe probe = {KT_HWPROBE_KEY_IMA_EXT_0, 0};
+    if (syscall(__NR_riscv_hwprobe, &probe, 1, 0, NULL, 0) == 0 && probe.key == KT_HWPROBE_KEY_IMA_EXT_0)
+        ext = probe.value;
+#endif
+    /* V in IMA_EXT_0 means the kernel has enabled it, so vlenb is readable */
+    return keccaktree_riscv_select(ext, (ext & KT_HWPROBE_IMA_V) ? keccaktree_riscv_vlenb() : 0);
 #endif
     return &keccaktree_keccak256_generic;
 }

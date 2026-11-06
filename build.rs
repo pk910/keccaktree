@@ -7,7 +7,7 @@
 //!
 //! Other targets, or any target with the `build-from-source` feature, compile
 //! src/ with the `cc` crate instead: the generic C core and dispatcher
-//! everywhere, plus the assembly kernels on x86-64 and AArch64 with a
+//! everywhere, plus the assembly kernels on x86-64, AArch64 and RISC-V with a
 //! GNU-compatible compiler (MSVC cannot assemble them).
 
 use std::env;
@@ -15,6 +15,8 @@ use std::path::{Path, PathBuf};
 
 const X86_64_KERNELS: &[&str] = &["avx512_x8", "avx512vl_x4", "avx2_x8", "avx2_x4"];
 const AARCH64_KERNELS: &[&str] = &["neon_x2", "sha3_x2", "scalar_x1", "sha3_x3", "sha3_x3r"];
+// keccaktree.c dispatches to these on riscv64, so they are always needed there
+const RISCV64_KERNELS: &[&str] = &["rv64_x1", "zbb_x1", "rvv", "rvv_zvkb"];
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -58,6 +60,7 @@ fn main() {
         _ if msvc => &[],
         "x86_64" => X86_64_KERNELS,
         "aarch64" => AARCH64_KERNELS,
+        "riscv64" => RISCV64_KERNELS,
         _ => &[],
     };
     if !kernels.is_empty() {

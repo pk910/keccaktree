@@ -1,4 +1,4 @@
-//go:build !cgo || !((linux && amd64) || (windows && amd64) || (linux && arm64) || (darwin && arm64))
+//go:build !cgo || !((linux && amd64) || (windows && amd64) || (linux && arm64) || (darwin && arm64) || (linux && riscv64))
 
 package keccaktree
 

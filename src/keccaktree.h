@@ -49,6 +49,18 @@ void keccaktree_keccak256_sha3_x3r(unsigned char* output, const unsigned char* i
 
 #endif
 
+#if defined(__riscv) && __riscv_xlen == 64
+/* one node at a time in the general registers: base RV64I, and with Zbb */
+void keccaktree_keccak256_rv64_x1(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_zbb_x1(unsigned char* output, const unsigned char* input, uint64_t count);
+/* VLEN/64 nodes at a time with RVV 1.0, and with RVV 1.0 + Zvkb */
+void keccaktree_keccak256_rvv(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_rvv_zvkb(unsigned char* output, const unsigned char* input, uint64_t count);
+/* the kernel keccaktree_init picks for riscv_hwprobe's IMA_EXT_0 bits and
+ * the vector register size in bytes (0 without V) */
+keccaktree_hash_fcn keccaktree_riscv_select(uint64_t ima_ext_0, uint64_t vlenb);
+#endif
+
 #ifdef KECCAKTREE_HASHTREE_COMPAT
 /* Source-level drop-in: code written against hashtree.h compiles unchanged. */
 #define hashtree_hash_fcn keccaktree_hash_fcn
