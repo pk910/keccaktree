@@ -170,7 +170,12 @@ structure Match where
   rot : Nat
   deriving Repr, BEq, Hashable, Inhabited
 
-def nKinds : Nat := 75
+/-- Kinds 0..74 are `specQuantity`; 75..98 are the round constants `Spec.RC (k - 75)` (held in
+registers across round boundaries by the AArch64 kernels, which load them early). -/
+def nKinds : Nat := 99
+
+def kindValue (A : Spec.State) (kind : Nat) : BitVec 64 :=
+  if kind < 75 then specQuantity A kind else Spec.RC (kind - 75)
 
 /-- Node `n` of the message `fun i => input word` as the state after `r` rounds. -/
 def nodeState (input : Int → BitVec 64) (n r : Nat) : Spec.State :=
@@ -182,7 +187,7 @@ own states are lazy closures; reading them repeatedly is slow). -/
 def specTable (input : Int → BitVec 64) (nodes : Nat) : Array (Array (Array (BitVec 64))) :=
   Array.ofFn fun n : Fin nodes => Array.ofFn fun r : Fin 25 =>
     let A := nodeState input n r
-    Array.ofFn fun kind : Fin nKinds => specQuantity A kind
+    Array.ofFn fun kind : Fin nKinds => kindValue A kind
 
 /-- All (value ↦ match) pairs for `nodes` nodes. -/
 def table (spec : Array (Array (Array (BitVec 64)))) : Std.HashMap (BitVec 64) (List Match) := Id.run do
@@ -190,6 +195,8 @@ def table (spec : Array (Array (Array (BitVec 64)))) : Std.HashMap (BitVec 64) (
   for n in [0:spec.size] do
     for r in [0:25] do
       for kind in [0:nKinds] do
+        -- a round constant is entered once: node 0, at the round it belongs to
+        if kind ≥ 75 && (n ≠ 0 || r ≠ kind - 75) then continue
         let q := ((spec.getD n #[]).getD r #[]).getD kind 0
         for rot in [0:64] do
           let v := q.rotateLeft rot
@@ -253,11 +260,11 @@ def matchAll (t1 : Std.HashMap (BitVec 64) (List Match)) (spec2 : Array (Array (
   locs.filterMap fun loc =>
     let v1 := r1.read loc
     let v2 := r2.read loc
-    -- constants (zero lanes, untouched memory) carry no information
-    if v1 == v2 then none else
+    -- a value equal on both inputs is a constant: only the round constants are recognised
     let cands0 := t1.getD v1 []
     if cands0.length > 256 then none else
     let cands := cands0.filter fun m =>
+      (v1 != v2 || m.kind ≥ 75) &&
       (((spec2.getD m.node #[]).getD m.round #[]).getD m.kind 0).rotateLeft m.rot == v2
     match cands with
     | [m] => some (loc, m)

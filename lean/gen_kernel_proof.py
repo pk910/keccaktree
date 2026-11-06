@@ -54,6 +54,9 @@ def matches(kernel, count, steps, lanes, rnd, region_filter=None):
             if region_filter is not None and int(a) != region_filter: continue
             var = mem_var(int(a), int(b))
         alloc.append((int(node), int(kind), var, int(rot), ln))
+    # a round constant (kinds 75..98) is reported for node 0 only but is a hypothesis every node may use
+    alloc += [(n, kind, var, rot, ln) for (node, kind, var, rot, ln) in list(alloc) if kind >= 75
+              for n in range(count) if n != node]
     return alloc
 
 def control_at(kernel, count, steps, lanes):
@@ -231,6 +234,9 @@ theorem path{c} : {ISA_EXPR}.pathOk rodata prog idx{c} cut{c} = true := by decid
             else:
                 hk.append(None); hidx.append(None)
         ck = tuple(sorted(k for (n_, k) in chyp_by if n_ == node))
+        if any(x is None for x in hidx):
+            print(f'slice {c}: WARNING output {var} (node {node}, kind {kind}) depends on unlabelled inputs '
+                  f'{[v for v, x in zip(used, hidx) if x is None]}', file=sys.stderr)
         key = (sig, tuple(hk), ck, kind, rot)
         if key not in groups:
             groups[key] = (len(groups), used, hidx)
@@ -239,7 +245,7 @@ theorem path{c} : {ISA_EXPR}.pathOk rodata prog idx{c} cut{c} = true := by decid
     for key, (g, used0, hidx0) in groups.items():
         sig, hk, ck, kind, rot = key
         params = ' '.join(f'v{i}' for i in range(len(used0)))
-        hyps = ' '.join(f'(h{i} : env v{i} = (specQuantity (A n) {k_}).rotateLeft {r_})' for i, kr in enumerate(hk) if kr for (k_, r_) in [kr])
+        hyps = ' '.join(f'(h{i} : env v{i} = {quantity("n", k_)}.rotateLeft {r_})' for i, kr in enumerate(hk) if kr for (k_, r_) in [kr])
         hyps += ''.join(f' (c{k} : L (A n) {k} = {"1#64" if k == 8 else ("0x8000000000000000#64" if k == 16 else "0#64")})' for k in ck)
         hnames = ' '.join(f'h{i}' for i, kr in enumerate(hk) if kr)
         at_h = f' at {hnames}' if hnames else ''
@@ -249,14 +255,14 @@ set_option maxRecDepth 100000 in
 theorem lane{c}_g{g} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (n : Fin {count}) ({params} : Nat) {hyps} :
     E.eval env ({sig}) = (specQuantity (Spec.round {round_in} (A n)) {kind}).rotateLeft {rot} := by
   simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
-  {"simp only [specQuantity]" + at_h if hnames else "skip"}
+  {"simp only [specQuantity, Spec.RC]" + at_h if hnames else "skip"}
   simp only [{SIMP_SPEC}]
-  bv_decide
+  bv_decide (config := {{ timeout := 1800 }})
 
 ''')
     for j, (node, kind, var, rot, ln) in enumerate(outs):
         g, node, used, hidx, cidx = inst[j]
-        hyps = ' '.join(f'(h{i} : env {var_} = (specQuantity (A {node_}) {kind_}).rotateLeft {rot_})'
+        hyps = ' '.join(f'(h{i} : env {var_} = {quantity(node_, kind_)}.rotateLeft {rot_})'
                         for i in hidx if i is not None for (node_, kind_, var_, rot_, _) in [alloc_in[i]])
         hyps += ''.join(f' (c{i} : {chyps[i][2]})' for i in cidx)
         args = ' '.join(f'({alloc_in[hyp_by[(node, v)][0]][2]})' if (node, v) in hyp_by else str(v) for v in used)
@@ -287,8 +293,12 @@ theorem lane{c}_{j} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) {
     out.write('  exact ⟨' + ', '.join(parts) + '⟩\n\n')
     out.write(f'end Keccaktree.Kernels.{ns}\n')
 
+def quantity(node, kind):
+    """the spec quantity of a match: `specQuantity (A node) kind`, or a round constant (kinds 75..98)"""
+    return f'(specQuantity (A {node}) {kind})' if kind < 75 else f'(Spec.RC {kind - 75})'
+
 def inv_conj(alloc):
-    return ' ∧\n  '.join(f'env {var} = (specQuantity (A {node}) {kind}).rotateLeft {rot}' for node, kind, var, rot, _ in alloc) or 'True'
+    return ' ∧\n  '.join(f'env {var} = {quantity(node, kind)}.rotateLeft {rot}' for node, kind, var, rot, _ in alloc) or 'True'
 
 def gen_invs(ns, count, allocs, chyps, outdir):
     """Invs.lean: `Inv{c}` = what the locations hold at cut c (c = 0..23), `Inv24` = the output locations after the batch."""
@@ -325,6 +335,7 @@ def gen_final(ns, count, outdir):
         f.write(f'''import Keccaktree.Kernels.{ns}.Gen.Batch
 import Keccaktree.Asm.Final
 import Keccaktree.Asm.Node
+import Keccaktree.Asm.Exec
 /-! GENERATED: the batch on the concrete machine. -/
 namespace Keccaktree.Kernels.{ns}
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak
