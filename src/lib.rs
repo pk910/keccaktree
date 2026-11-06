@@ -156,7 +156,7 @@ impl fmt::Display for Unsupported {
 
 impl Backend {
     /// Every backend, in no particular order.
-    pub const ALL: [Backend; 14] = [
+    pub const ALL: [Backend; 15] = [
         Backend::Generic,
         Backend::Avx2X4,
         Backend::Avx2X8,
