@@ -198,6 +198,33 @@
 	CHI		\out, \rc
 .endm
 
+/* round 23 from the state at in: theta, then only row 0, x = 0..3 (the
+ * digest), which needs lanes (0,0), (1,1), (2,2), (3,3), (4,4): slots 0,
+ * 2, 5, 7, 14 */
+.macro ROUND23 in, rc
+	THETA
+	vpxor		R0_01, D01, SLOT(\in, 0)
+	vpxor		R1_01, D01, SLOT(\in, 2)
+	vpxor		R2_23, D23, SLOT(\in, 5)
+	vpxor		R3_23, D23, SLOT(\in, 7)
+	vpxor		Q4, D4, SLOT(\in, 14)
+	RHO		R0_01, 0, T0
+	RHO		R1_01, 2, T1
+	RHO		R2_23, 5, T2
+	RHO		R3_23, 7, T0
+	RHO		Q4, 12, T1
+	PAIR		T0, R1_01, 1, R2_23, 0		/* P12 */
+	PAIR		T1, R2_23, 0, R3_23, 1		/* P23 */
+	vpandn		T2, T0, T1
+	PAIR		T0, R0_01, 0, R1_01, 1		/* P01 */
+	vpxor		T2, T2, T0
+	PAIR		T0, R3_23, 1, Q4, 0		/* P34 */
+	PAIR		R1_01, Q4, 0, R0_01, 0		/* P40 (R1_01 is free) */
+	vpandn		T0, T0, R1_01
+	vpxor		C23, T0, T1			/* (d2, d3); C01 is R0_01 */
+	vpxor		C01, T2, ymmword ptr [RCP + \rc]	/* (d0, d1) */
+.endm
+
 /* the two nodes at in into the state slots at s: lanes 0..7 data, 8 = 0x01,
  * 16 = 0x80..00, rest zero */
 .macro LOAD in, s
@@ -235,14 +262,12 @@
 	vmovdqa		C4, ymm2
 .endm
 
-/* digests from the state at s to out */
-.macro OUTPUT s, out
-	vmovdqa		ymm0, SLOT(\s, 0)
-	vmovdqa		ymm1, SLOT(\s, 1)
+/* digests (d0, d1) in C01, (d2, d3) in C23 to out */
+.macro OUTPUT out
 	vmovdqu		xmmword ptr [\out + 0], xmm0
-	vmovdqu		xmmword ptr [\out + 16], xmm1
-	vextracti128	xmmword ptr [\out + 32], ymm0, 1
-	vextracti128	xmmword ptr [\out + 48], ymm1, 1
+	vmovdqu		xmmword ptr [\out + 16], xmm5
+	vextracti128	xmmword ptr [\out + 32], C01, 1
+	vextracti128	xmmword ptr [\out + 48], C23, 1
 .endm
 
 /* constants: round constants in lane 0 of each half, padding words, and

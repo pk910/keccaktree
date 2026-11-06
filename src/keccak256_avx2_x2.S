@@ -33,14 +33,17 @@
 .Lbatch:
 	LOAD		BIN, SA
 	lea		RCP, [rip + .LRC2]
-	mov		ecx, 12
+	/* rounds 0..22, then only the digest lanes of round 23 */
+	mov		ecx, 11
 1:
 	ROUND		SA, SB, 0
 	ROUND		SB, SA, 32
 	add		RCP, 64
 	dec		ecx
 	jnz		1b
-	OUTPUT		SA, BOUT
+	ROUND		SA, SB, 0
+	ROUND23		SB, 32
+	OUTPUT		BOUT
 	ret
 
 	FUNCTION keccaktree_keccak256_avx2_x2
