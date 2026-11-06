@@ -4,3 +4,10 @@ defaultTargets = ["Keccaktree"]
 
 [[lean_lib]]
 name = "Keccaktree"
+
+[[lean_lib]]
+name = "Tools"
+
+[[lean_exe]]
+name = "kttool"
+root = "Tools.Main"

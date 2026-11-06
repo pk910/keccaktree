@@ -1,0 +1,61 @@
+import Keccaktree.Asm.Hom
+/-!
+An instruction set, abstractly: the instruction type, its semantics on the
+shared machine state (polymorphic in the lane type, so the same `exec` is the
+concrete interpreter and the symbolic executor), and the two facts the
+composition needs — `exec` commutes with lane homomorphisms on non-failing
+steps, and a failed state stays failed.  `X86.isa`, `Arm.isa` and
+`Riscv.isa` instantiate it; everything in `Compose`/`Final` is stated once,
+for any `Isa`.
+-/
+namespace Keccaktree.Asm
+open X86
+
+structure Isa where
+  Instr : Type
+  exec : {α : Type} → [LaneOps α] → Array (BitVec 64) → Instr → State α → State α
+  exec_map : ∀ {α β : Type} [LaneOps α] [LaneOps β] (f : α → β), IsHom f →
+    ∀ (rodata : Array (BitVec 64)) (i : Instr) (st : State α), (exec rodata i st).err = false →
+      exec rodata i (mapState f st) = mapState f (exec rodata i st)
+  err_exec : ∀ {α : Type} [LaneOps α] (rodata : Array (BitVec 64)) (i : Instr) (st : State α),
+    st.err = true → (exec rodata i st).err = true
+
+variable {α β : Type} [LaneOps α] [LaneOps β]
+
+/-- Run a list of instructions (a slice). -/
+def Isa.execTrace (isa : Isa) (rodata : Array (BitVec 64)) (l : List isa.Instr) (s : State α) : State α :=
+  l.foldl (fun s i => isa.exec rodata i s) s
+
+theorem Isa.err_execTrace (isa : Isa) (rodata : Array (BitVec 64)) (l : List isa.Instr) (st : State α)
+    (h : st.err = true) : (isa.execTrace rodata l st).err = true := by
+  induction l generalizing st with
+  | nil => exact h
+  | cons i l ih => simp only [Isa.execTrace, List.foldl_cons]; exact ih _ (isa.err_exec rodata i st h)
+
+theorem Isa.execTrace_map (isa : Isa) {f : α → β} (hf : IsHom f) (rodata : Array (BitVec 64))
+    (l : List isa.Instr) (st : State α) (hne : (isa.execTrace rodata l st).err = false) :
+    isa.execTrace rodata l (mapState f st) = mapState f (isa.execTrace rodata l st) := by
+  induction l generalizing st with
+  | nil => rfl
+  | cons i l ih =>
+    simp only [Isa.execTrace, List.foldl_cons] at hne ⊢
+    have h1 : (isa.exec rodata i st).err = false := by
+      cases hc : (isa.exec rodata i st).err
+      · rfl
+      · have := isa.err_execTrace rodata l _ hc
+        simp only [Isa.execTrace] at this
+        rw [this] at hne; exact absurd hne (by decide)
+    rw [isa.exec_map f hf rodata i st h1]
+    exact ih _ hne
+
+/-- The x86-64 instruction set. -/
+def X86.isa : Isa where
+  Instr := X86.Instr
+  exec := X86.exec
+  exec_map := fun f hf rodata i st hne => X86.exec_map hf rodata i st hne
+  err_exec := fun rodata i st h => X86.err_exec rodata i st h
+
+theorem X86.isa_execTrace (rodata : Array (BitVec 64)) (l : List X86.Instr) (s : State α) :
+    X86.isa.execTrace rodata l s = X86.execTrace rodata l s := rfl
+
+end Keccaktree.Asm
