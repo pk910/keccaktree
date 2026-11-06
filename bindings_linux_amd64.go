@@ -16,9 +16,10 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 var hasAVX512 = cpuid.CPU.Supports(cpuid.AVX512F, cpuid.AVX512VL)
 var hasAVX2 = cpuid.CPU.Supports(cpuid.AVX2)
 
-// BMI1 andn and BMI2 rorx: the scalar kernel x86_x1, which every AVX2
-// kernel hands its last node to and which runs alone without AVX2, and the
-// extra nodes of the hybrid kernels (avx2_x10, avx2_x9, avx2_x5, avx2_x6).
+// BMI1 andn and BMI2 rorx: the scalar kernel x86_x1, which every AVX-512
+// and AVX2 kernel hands its last node to and which runs alone without
+// them, and the extra nodes of the hybrid kernels (avx512_x9, avx2_x10,
+// avx2_x9, avx2_x6, avx2_x5).
 var hasBMI = cpuid.CPU.Supports(cpuid.BMI1, cpuid.BMI2)
 
 // The kernels KeccaktreeHash can call: the values are the ones
@@ -36,6 +37,7 @@ const (
 	kernelAVX512VLX4
 	kernelAVX512X8
 	kernelAVX2X6
+	kernelAVX512X9
 )
 
 var kernelNames = [...]string{
@@ -48,6 +50,7 @@ var kernelNames = [...]string{
 	kernelAVX512VLX4: "avx512vl_x4",
 	kernelAVX512X8:   "avx512_x8",
 	kernelAVX2X6:     "avx2_x6",
+	kernelAVX512X9:   "avx512_x9",
 }
 
 // kernel is the one KeccaktreeHash calls, read by the wrapper.
@@ -73,9 +76,10 @@ func kernelByName(name string) uint8 {
 }
 
 func init() {
-	// as keccaktree_detect: AVX-512, else the AVX2 kernels (BMI1/BMI2 for
-	// their x86_x1 tail), else x86_x1 alone, else the pure-Go code
-	supportedCPU = hasAVX512 || hasBMI
+	// as keccaktree_detect: every tier needs BMI1/BMI2 (the AVX-512 and
+	// AVX2 kernels for their x86_x1 tail, x86_x1 alone without them), else
+	// the pure-Go code
+	supportedCPU = hasBMI
 	keccaktreeHash = KeccaktreeHash
 	if supportedCPU {
 		kernel = kernelByName(ktcgo.Detect())

@@ -40,8 +40,9 @@ static int cpu_supports(const char* name) {
     if (!strcmp(name, "x86_x1")) return __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
     if (!strncmp(name, "avx2_", 5))
         return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
-    if (!strcmp(name, "avx512vl_x4") || !strcmp(name, "avx512_x8"))
-        return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl");
+    if (!strncmp(name, "avx512", 6))
+        return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl") &&
+               __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
 #elif defined(__aarch64__) && defined(__APPLE__)
     if (!strncmp(name, "sha3_", 5))
         return sysctl_flag("hw.optional.arm.FEAT_SHA3") || sysctl_flag("hw.optional.armv8_2_sha3");
@@ -68,6 +69,7 @@ static const kernel kernels[] = {
     {"x86_x1", keccaktree_keccak256_x86_x1},
     {"avx512vl_x4", keccaktree_keccak256_avx512vl_x4},
     {"avx512_x8", keccaktree_keccak256_avx512_x8},
+    {"avx512_x9", keccaktree_keccak256_avx512_x9},
 #endif
 #ifdef __aarch64__
     {"neon_x2", keccaktree_keccak256_neon_x2},

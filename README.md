@@ -27,7 +27,7 @@ round and frame macros (`.inc`). The header of each file explains its design.
 
 | Platform | Kernels | ns per 64-byte chunk |
 |---|---|---|
-| x86-64 AVX-512 | `avx512_x8`, `avx512vl_x4` (cores with one 512-bit port) | 25 (Xeon; hashtree avx512_x16: 18) |
+| x86-64 AVX-512 + BMI2 | `avx512_x9` (avx512_x8 plus one node in the integer registers; Zen 4: +5.5%), `avx512_x8`, `avx512vl_x4` (cores with one 512-bit port); four-round loop bodies (Ice Lake avx512vl_x4 1.3x) | 25 (Xeon; hashtree avx512_x16: 18) |
 | x86-64 AVX2 + BMI2 | `avx2_x10`, `avx2_x9`, `avx2_x6`, `avx2_x5`: the AVX2 batches plus one or two nodes hashed in the integer registers (rorx, andn) in the gaps of the vector rounds; picked where the integer ALUs are separate from the vector pipes (Zen 3: x10, Gracemont: x6) | 67 (Zen 3; hashtree avx2_x8: 78, shani: 42) |
 | x86-64 AVX2 | `avx2_x8`, `avx2_x4`, `avx2_x2` (2 remaining nodes) | 81 (Zen 3, avx2_x8) |
 | x86-64 BMI2 | `x86_x1` (a single node; the single-node tail of the AVX2 kernels) | 219 (Zen 3; hashtree shani: 44) |

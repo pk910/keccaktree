@@ -50,6 +50,7 @@ pub mod ffi {
         pub fn keccaktree_avx2_x10_mid_tail(max: u64);
         pub fn keccaktree_keccak256_avx512vl_x4(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512_x8(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_avx512_x9(output: *mut u8, input: *const u8, count: u64);
     }
 
     #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
@@ -144,6 +145,8 @@ pub enum Backend {
     Avx512VlX4,
     /// x86-64 AVX-512 on zmm registers, 8 nodes per batch.
     Avx512X8,
+    /// x86-64 AVX-512 x8 plus one node in the integer registers (BMI1, BMI2).
+    Avx512X9,
     /// AArch64 Advanced SIMD, 2 nodes per batch.
     NeonX2,
     /// AArch64 FEAT_SHA3, 2 nodes per batch.
@@ -179,7 +182,7 @@ impl fmt::Display for Unsupported {
 
 impl Backend {
     /// Every backend, in no particular order.
-    pub const ALL: [Backend; 21] = [
+    pub const ALL: [Backend; 22] = [
         Backend::Generic,
         Backend::Avx2X4,
         Backend::Avx2X8,
@@ -191,6 +194,7 @@ impl Backend {
         Backend::X86X1,
         Backend::Avx512VlX4,
         Backend::Avx512X8,
+        Backend::Avx512X9,
         Backend::NeonX2,
         Backend::Sha3X2,
         Backend::ScalarX1,
@@ -217,6 +221,7 @@ impl Backend {
             Backend::X86X1 => "x86_x1",
             Backend::Avx512VlX4 => "avx512vl_x4",
             Backend::Avx512X8 => "avx512_x8",
+            Backend::Avx512X9 => "avx512_x9",
             Backend::NeonX2 => "neon_x2",
             Backend::Sha3X2 => "sha3_x2",
             Backend::ScalarX1 => "scalar_x1",
@@ -252,9 +257,11 @@ impl Backend {
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::X86X1 if x86::bmi() => Some(ffi::keccaktree_keccak256_x86_x1),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
-            Backend::Avx512VlX4 if x86::avx512() => Some(ffi::keccaktree_keccak256_avx512vl_x4),
+            Backend::Avx512VlX4 if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512vl_x4),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
-            Backend::Avx512X8 if x86::avx512() => Some(ffi::keccaktree_keccak256_avx512_x8),
+            Backend::Avx512X8 if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512_x8),
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
+            Backend::Avx512X9 if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512_x9),
             #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::NeonX2 => Some(ffi::keccaktree_keccak256_neon_x2),
             #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
@@ -324,8 +331,8 @@ mod x86 {
         is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vl")
     }
 
-    /// andn and rorx: x86_x1, the single-node tail of every AVX2 kernel,
-    /// and the scalar nodes of the hybrid kernels
+    /// andn and rorx: x86_x1, the single-node tail of every AVX-512 and
+    /// AVX2 kernel, and the scalar nodes of the hybrid kernels
     pub fn bmi() -> bool {
         is_x86_feature_detected!("bmi1") && is_x86_feature_detected!("bmi2")
     }
