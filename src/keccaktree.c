@@ -126,6 +126,32 @@ static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, 
 }
 #endif
 
+#ifdef __x86_64__
+/* Two nodes left after the 4-node batches: the lane-pair kernel or a
+ * padded batch, whichever is faster here (the pairs win on Zen 3 and
+ * Gracemont, a padded batch on Golden Cove, where the pair round's
+ * dependency chain costs more than the extra lanes). Timed like
+ * keccaktree_calibrate, on 2 nodes. */
+static void keccaktree_avx2_tail_calibrate(void) {
+    unsigned char buf[2 * 64] __attribute__((aligned(64)));
+    static const keccaktree_hash_fcn fns[2] = {&keccaktree_keccak256_avx2_x2,
+                                               &keccaktree_keccak256_avx2_x4};
+    uint64_t best[2] = {UINT64_MAX, UINT64_MAX};
+    for (int i = 0; i < 2 * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
+    keccaktree_avx2_small_tail(1); /* x4 pads the 2 nodes */
+    for (int i = 0; i < 2; i++) fns[i](buf, buf, 2);
+    for (int r = 0; r < CALIB_REPS; r++) {
+        for (int i = 0; i < 2; i++) {
+            uint64_t t0 = keccaktree_ticks();
+            for (int k = 0; k < 8; k++) fns[i](buf, buf, 2);
+            uint64_t t = keccaktree_ticks() - t0;
+            if (t < best[i]) best[i] = t;
+        }
+    }
+    keccaktree_avx2_small_tail(best[0] < best[1] ? 2 : 1);
+}
+#endif
+
 keccaktree_hash_fcn keccaktree_detect(void) {
 #ifdef __x86_64__
     uint32_t a = 0, b = 0, c = 0, d = 0;
@@ -146,6 +172,7 @@ keccaktree_hash_fcn keccaktree_detect(void) {
     if (os_ymm && (b & bit_AVX2) && bmi) {
         static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x8,
                                                 &keccaktree_keccak256_avx2_x4};
+        keccaktree_avx2_tail_calibrate();
         return keccaktree_calibrate(c, 2);
     }
     if (bmi) return &keccaktree_keccak256_x86_x1;

@@ -7,8 +7,8 @@
  * the unit of work and 2 nodes cost as much as 4. With two lanes of a node
  * per half, 2 nodes take 13 registers (5 rows x (lanes 0,1 | 2,3) and the
  * column-4 lanes as rows (0,1), (2,3), (4)), and the lane shuffles that
- * theta, pi and chi need stay inside the 128-bit halves (vshufpd,
- * vpermilpd, vmovddup: 1 cycle, no vpermq). About 147 vector operations
+ * theta, pi and chi need stay inside the 128-bit halves (vpunpck,
+ * vpblendd, vpalignr: 1 cycle, no vpermq). About 147 vector operations
  * per round for 2 nodes, against 183 for a padded batch of 4.
  *
  * The state lives in two 15-slot buffers in memory (as in the x4 kernel):
@@ -17,7 +17,7 @@
  *   theta:  D01 = (C4,C0) ^ rotl((C1,C2), 1), D23 = (C1,C2) ^
  *           rotl((C3,C4), 1), D4 = C3 ^ rotl(C0, 1) broadcast     18 ops
  *   rho:    R = rotl(slot ^ D, r) per lane (vpsllvq/vpsrlvq/vpor)  54 ops
- *   chi:    per row 6 vshufpd gather the B pairs (pi), 3 vpandn,
+ *   chi:    per row 6 pair gathers (pi), 3 vpandn,
  *           3 vpxor, 3 stores                                    60 ops
  *   iota                                                           1 op
  *   parity: C01, C23, C4 accumulated from the chi outputs         14 ops
@@ -67,9 +67,19 @@
 #define U1	ymm2
 #define U2	ymm4
 
-/* d = (a.q[qa], b.q[qb]) in each half */
+/* d = (a.q[qa], b.q[qb]) in each half, with integer-domain instructions
+ * (Intel cores add a bypass cycle between vshufpd and the logic ops, and
+ * vpblendd runs on three ports where every shuffle shares one) */
 .macro PAIR d, a, qa, b, qb
-	vshufpd		\d, \a, \b, 5*\qa + 10*\qb
+.if \qa == 0 && \qb == 0
+	vpunpcklqdq	\d, \a, \b
+.elseif \qa == 1 && \qb == 1
+	vpunpckhqdq	\d, \a, \b
+.elseif \qa == 0
+	vpblendd	\d, \a, \b, 0b11001100
+.else
+	vpalignr	\d, \b, \a, 8
+.endif
 .endm
 
 /* d = rotl(s, 1); t is scratch */
@@ -89,9 +99,9 @@
 	PAIR		U1, C4, 0, C01, 0		/* (C4, C0) */
 	ROL1		D4, C01, U2			/* (rotl C0, rotl C1) */
 	vpxor		D01, D01, U1
-	vpermilpd	U0, C23, 0b0101			/* (C3, C2) */
+	vpshufd		U0, C23, 0b01001110		/* (C3, C2) */
 	vpxor		D4, D4, U0
-	vmovddup	D4, D4				/* (D4, D4) */
+	vpunpcklqdq	D4, D4, D4			/* (D4, D4) */
 .endm
 
 /* r = rotl(r, by the lane pair's offsets at k) */
@@ -113,12 +123,12 @@
 	vpxor		R1_23, D23, SLOT(\in, 3)
 	vmovdqa		Q01, SLOT(\in, 10)
 	vmovdqa		Q23, SLOT(\in, 12)
-	vshufpd		Q01, Q01, SLOT(\in, 11), 0	/* (A40, A41) */
+	vpunpcklqdq	Q01, Q01, SLOT(\in, 11)	/* (A40, A41) */
 	vpxor		Q4, D4, SLOT(\in, 14)
 	vpxor		Q01, Q01, D4
 	vpxor		R3_01, D01, SLOT(\in, 6)
 	vpxor		R3_23, D23, SLOT(\in, 7)
-	vshufpd		Q23, Q23, SLOT(\in, 13), 0	/* (A42, A43) */
+	vpunpcklqdq	Q23, Q23, SLOT(\in, 13)	/* (A42, A43) */
 	vpxor		Q23, Q23, D4
 	RHO		R0_01, 0, T0
 	RHO		R0_23, 1, T1

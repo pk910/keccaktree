@@ -157,8 +157,14 @@ int main(void) {
     }
     if ((b & bit_AVX2) && (b & bit_BMI) && (b & bit_BMI2)) {
         test_backend("avx2_x2", keccaktree_keccak256_avx2_x2);
-        test_backend("avx2_x4", keccaktree_keccak256_avx2_x4);
-        test_backend("avx2_x8", keccaktree_keccak256_avx2_x8);
+        /* both remainder paths of avx2_x4 (and so of avx2_x8): 2 nodes
+         * padded, or handed to avx2_x2 */
+        keccaktree_avx2_small_tail(1);
+        test_backend("avx2_x4 (padded pair)", keccaktree_keccak256_avx2_x4);
+        test_backend("avx2_x8 (padded pair)", keccaktree_keccak256_avx2_x8);
+        keccaktree_avx2_small_tail(2);
+        test_backend("avx2_x4 (avx2_x2 pair)", keccaktree_keccak256_avx2_x4);
+        test_backend("avx2_x8 (avx2_x2 pair)", keccaktree_keccak256_avx2_x8);
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx2");
     }

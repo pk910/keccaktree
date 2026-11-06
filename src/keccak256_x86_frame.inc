@@ -4,9 +4,11 @@
  * label .Lbatch that hashes NODES nodes from [BIN] to [BOUT], and
  * optionally SLOTS (bytes of kernel scratch, default two rows of lanes),
  * SMALL_TAIL, a function that handles 1..SMALL_TAIL_MAX remaining nodes
- * faster than a padded batch, and SMALL_TAIL_X1, one that handles a single
- * remaining node (so that a node need not pass through every smaller
- * kernel's frame on its way to the scalar code).
+ * faster than a padded batch (or, with SMALL_TAIL_MAX_VAR, up to the count
+ * in that quadword, which the kernel can expose for run-time calibration),
+ * and SMALL_TAIL_X1, one that handles a single remaining node (so that a
+ * node need not pass through every smaller kernel's frame on its way to
+ * the scalar code).
  *
  * Calling convention: SysV (rdi, rsi, rdx) or Windows x64 (rcx, rdx, r8),
  * where xmm6..15, rsi and rdi are callee-saved. Inside, rdi = output,
@@ -84,7 +86,11 @@
 7:
 #endif
 #ifdef SMALL_TAIL
+#ifdef SMALL_TAIL_MAX_VAR
+	cmp		rdx, qword ptr [rip + SMALL_TAIL_MAX_VAR]
+#else
 	cmp		rdx, SMALL_TAIL_MAX
+#endif
 	ja		3f
 	mov		eax, 1
 	jmp		5f
