@@ -156,6 +156,7 @@ int main(void) {
         printf("  %-48s [ no CPU support ]\n", "x86_x1");
     }
     if ((b & bit_AVX2) && (b & bit_BMI) && (b & bit_BMI2)) {
+        test_backend("avx2_x2", keccaktree_keccak256_avx2_x2);
         test_backend("avx2_x4", keccaktree_keccak256_avx2_x4);
         test_backend("avx2_x8", keccaktree_keccak256_avx2_x8);
     } else {

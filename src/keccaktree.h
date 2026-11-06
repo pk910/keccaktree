@@ -38,6 +38,8 @@ void keccaktree_keccak256_generic(unsigned char* output, const unsigned char* in
 /* Undefined behavior if called without appropriate hardware support */
 void keccaktree_keccak256_avx2_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x8(unsigned char* output, const unsigned char* input, uint64_t count);
+/* 2 nodes at a time (lane pairs), the remainder path of the batch kernels */
+void keccaktree_keccak256_avx2_x2(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);
 /* one node at a time in the general registers (BMI1 + BMI2); the AVX2

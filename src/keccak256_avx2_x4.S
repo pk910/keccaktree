@@ -4,9 +4,10 @@
  *
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 4 at a time with
  * the rounds of keccak256_avx2.inc; rounds 1..22 are a plain loop between
- * the two state buffers. A single node goes to the scalar code, which is
- * faster than a padded batch. keccak256_avx2_x8 is faster for 8 or more
- * nodes and tail-calls this kernel for its remainder.
+ * the two state buffers. A single node goes to the scalar code and two to
+ * the lane-pair kernel, both faster than a padded batch (three are not).
+ * keccak256_avx2_x8 is faster for 8 or more nodes and tail-calls this
+ * kernel for its remainder.
  *
  * Registers: ymm0..15; rcx, rsi, r8 here and the frame's r9..r11.
  */
@@ -16,8 +17,9 @@
 #define NODES		4
 #define VBYTES		32
 #define SLOTS		(50*32)			/* the two state buffers */
-#define SMALL_TAIL	keccaktree_keccak256_x86_x1	/* a single node: scalar is faster */
-#define SMALL_TAIL_MAX	1
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar is faster */
+#define SMALL_TAIL	keccaktree_keccak256_avx2_x2	/* 2 nodes: lane pairs */
+#define SMALL_TAIL_MAX	2
 #include "keccak256_x86_frame.inc"
 
 #define RCP		rsi			/* round constants (broadcast) */

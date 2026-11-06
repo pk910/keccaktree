@@ -89,6 +89,7 @@ int main(void) {
     int avx512 = (b & bit_AVX512F) && (b & bit_AVX512VL), sha = b & bit_SHA;
     (void)sha;
     if (bmi) row("keccak256 x86_x1", keccaktree_keccak256_x86_x1);
+    if (avx2) row("keccak256 avx2_x2", keccaktree_keccak256_avx2_x2);
     if (avx2) row("keccak256 avx2_x4", keccaktree_keccak256_avx2_x4);
     if (avx2) row("keccak256 avx2_x8", keccaktree_keccak256_avx2_x8);
     if (avx512) row("keccak256 avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
