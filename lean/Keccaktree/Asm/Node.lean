@@ -16,6 +16,12 @@ def nodeBytes (w : Nat → BitVec 64) (i : Nat) : BitVec 8 := (w (i / 8) >>> (8 
 def absorbNode (w : Nat → BitVec 64) : Spec.State :=
   Spec.absorb ⟨fun _ _ => 0#64⟩ (fun i => Spec.padded 64 (nodeBytes w) (136 * 0 + i))
 
+theorem rotl0 (x : BitVec 64) : x.rotateLeft 0 = x := by bv_decide
+
+/-- A squeezed byte is a byte of a lane. -/
+theorem squeezeByte_eq (A : Spec.State) (i : Nat) :
+    Spec.squeezeByte A i = (L A (i / 8)).extractLsb' (8 * (i % 8)) 8 := rfl
+
 /-- keccak256 of the node, as `Spec.keccak256` sees it. -/
 theorem absorbNode_keccak (w : Nat → BitVec 64) :
     Spec.keccak256 64 (nodeBytes w) = Spec.squeezeByte (Spec.keccakF (absorbNode w)) := by
