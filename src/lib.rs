@@ -44,6 +44,9 @@ pub mod ffi {
         /// 2..max remaining nodes of the AVX2 kernels go to avx2_x2 (2) or a
         /// padded batch (1); detection times both and sets it.
         pub fn keccaktree_avx2_small_tail(max: u64);
+        /// 5..max remaining nodes of avx2_x10 / avx2_x9 go to avx2_x5 (4..9),
+        /// the rest run as a padded batch; detection times both and sets it.
+        pub fn keccaktree_avx2_x10_mid_tail(max: u64);
         pub fn keccaktree_keccak256_avx512vl_x4(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512_x8(output: *mut u8, input: *const u8, count: u64);
     }
