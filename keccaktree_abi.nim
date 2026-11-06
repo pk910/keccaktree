@@ -63,6 +63,7 @@ else:
       {.compile(asmDir & "keccak256_x86_x1.S", asmFlags).}
     elif defined(arm64):
       {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
+      {.compile(asmDir & "keccak256_neon_x3.S", asmFlags).}
       {.compile(asmDir & "keccak256_sha3_x2.S", asmFlags).}
       {.compile(asmDir & "keccak256_scalar_x1.S", asmFlags).}
       {.compile(asmDir & "keccak256_sha3_x3.S", asmFlags).}
@@ -120,6 +121,9 @@ when keccaktreeAsm and defined(arm64):
   func keccaktree_keccak256_neon_x2*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_scalar_x1*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  # neon_x2 interleaved with scalar_x1
+  func keccaktree_keccak256_neon_x3*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   # FEAT_SHA3 only
   func keccaktree_keccak256_sha3_x2*(output: pointer, input: pointer, count: uint64) {.

@@ -134,6 +134,7 @@ proc kernels(): seq[Kernel] =
   when keccaktreeAsm and defined(arm64):
     result.add (name: "neon_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_neon_x2), feature: 0)
     result.add (name: "scalar_x1", fn: KeccaktreeHashFcn(keccaktree_keccak256_scalar_x1), feature: 0)
+    result.add (name: "neon_x3", fn: KeccaktreeHashFcn(keccaktree_keccak256_neon_x3), feature: 0)
     result.add (name: "sha3_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x2), feature: 3)
     result.add (name: "sha3_x3", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x3), feature: 3)
     result.add (name: "sha3_x3r", fn: KeccaktreeHashFcn(keccaktree_keccak256_sha3_x3r), feature: 3)
