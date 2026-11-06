@@ -195,14 +195,15 @@ keccaktree_hash_fcn keccaktree_detect(void) {
     int os_ymm = (xcr0 & 0x6) == 0x6;
     int os_zmm = (xcr0 & 0xe6) == 0xe6;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
-    if (os_zmm && (b & bit_AVX512F) && (b & bit_AVX512VL)) {
+    /* the AVX-512 and AVX2 kernels hand single nodes to x86_x1, which
+     * needs BMI1 and BMI2 (every AVX2 core has them; a hypervisor could
+     * hide them) */
+    int bmi = (b & bit_BMI) && (b & bit_BMI2);
+    if (os_zmm && (b & bit_AVX512F) && (b & bit_AVX512VL) && bmi) {
         static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx512_x8,
                                                 &keccaktree_keccak256_avx512vl_x4};
         return keccaktree_calibrate(c, 2);
     }
-    /* the AVX2 kernels hand single nodes to x86_x1, which needs BMI1 and
-     * BMI2 (every AVX2 core has them; a hypervisor could hide them) */
-    int bmi = (b & bit_BMI) && (b & bit_BMI2);
     if (os_ymm && (b & bit_AVX2) && bmi) {
         /* avx2_x10 / avx2_x5 add scalar nodes (BMI1 andn, BMI2 rorx) to
          * the avx2_x8 / avx2_x4 rounds: faster where the integer ALUs are

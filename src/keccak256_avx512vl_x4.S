@@ -6,7 +6,9 @@
  * of a batch lives in qword lane j of every ymm register. AVX-512F + VL
  * (vprolq, vpternlogq and ymm16..31 on 256-bit vectors). Same rounds as the
  * zmm kernel (keccak256_avx512.inc). Used on Intel client cores, whose
- * 512-bit ALU is a single port, and for the last 1..4 nodes of the zmm one.
+ * 512-bit ALU is a single port, and for the last 2..4 nodes of the zmm one.
+ * A single node (a whole call or the last one) goes to
+ * keccaktree_keccak256_x86_x1 (BMI1 + BMI2; keccaktree_detect checks).
  */
 #ifdef __x86_64__
 .intel_syntax noprefix
@@ -22,6 +24,7 @@
 #define K63		qword ptr [rip + .LK63]{1to4}
 #define ROT8		ymmword ptr [rip + .LROT8]
 #define ROT56		ymmword ptr [rip + .LROT56]
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar */
 
 #include "keccak256_x86_frame.inc"
 #include "keccak256_avx512.inc"

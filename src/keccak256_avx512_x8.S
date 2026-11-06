@@ -5,8 +5,11 @@
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 8 at a time: node j
  * of a batch lives in qword lane j of every zmm register. AVX-512F + VL.
  * The rounds are in keccak256_avx512.inc, the frame (loop, tail, Windows ABI)
- * in keccak256_x86_frame.inc. 1..4 remaining nodes go to the ymm kernel,
- * which takes the same time for them; 5..7 are padded to a batch.
+ * in keccak256_x86_frame.inc. A single node (a whole call or the last
+ * one) goes to keccaktree_keccak256_x86_x1 (BMI1 + BMI2, which every
+ * AVX-512 core has: keccaktree_detect checks), 2..4 remaining nodes to the
+ * ymm kernel, which takes the same time for them; 5..7 are padded to a
+ * batch.
  *
  * The transposes between batches matter more than their size suggests: the
  * shuffles run on port 5 only, and while the next batch waits for its
@@ -28,6 +31,7 @@
 #define K63		qword ptr [rip + .LK63]{1to8}
 #define ROT8		zmmword ptr [rip + .LROT8]
 #define ROT56		zmmword ptr [rip + .LROT56]
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar */
 #define SMALL_TAIL	keccaktree_keccak256_avx512vl_x4
 #define SMALL_TAIL_MAX	4
 
