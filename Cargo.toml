@@ -13,26 +13,15 @@ links = "keccaktree"
 include = [
     "Cargo.toml",
     "build.rs",
-    "rust/**",
+    "src/lib.rs",
     "src/keccaktree.c",
     "src/keccak256_generic.c",
-    "src/*.h",
+    "src/keccaktree.h",
+    "src/*.S",
     "src/*.inc",
-    "src/asm/*",
     "lib/*/libkeccaktree.a",
     "LICENSE",
 ]
-
-[lib]
-path = "rust/lib.rs"
-
-[[test]]
-name = "keccaktree"
-path = "rust/tests/keccaktree.rs"
-
-[[example]]
-name = "basic_usage"
-path = "rust/examples/basic_usage.rs"
 
 [features]
 # Compile src/ with the cc crate instead of linking the attested static

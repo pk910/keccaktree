@@ -77,7 +77,7 @@ jobs:
           nim-version: ${{ matrix.nim }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Test
-        run: nim c -r -d:release ${{ matrix.flags }} nim/tests/test_keccaktree_abi.nim
+        run: nim c -r -d:release ${{ matrix.flags }} tests/test_keccaktree_abi.nim
 
   java-native:
     name: Java - ${{ matrix.platform }}
@@ -172,8 +172,8 @@ jobs:
       - name: Test (prebuilt lib and from source)
         run: |
           nimcross="--cpu:riscv64 --os:linux --gcc.exe:riscv64-linux-gnu-gcc --gcc.linkerexe:riscv64-linux-gnu-gcc"
-          nim c -d:release $nimcross -o:test-prebuilt nim/tests/test_keccaktree_abi.nim
-          nim c -d:release -d:keccaktreeFromSource $nimcross -o:test-source nim/tests/test_keccaktree_abi.nim
+          nim c -d:release $nimcross -o:test-prebuilt tests/test_keccaktree_abi.nim
+          nim c -d:release -d:keccaktreeFromSource $nimcross -o:test-source tests/test_keccaktree_abi.nim
           for cpu in rv64,zbb=false rv64,v=true,vlen=128; do
             for t in prebuilt source; do
               echo "== $cpu $t"

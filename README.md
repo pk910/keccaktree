@@ -1,155 +1,82 @@
 # keccaktree
 
-Batched **keccak256** (Ethereum Keccak-256, pad `0x01`, not NIST SHA3-256)
-for Merkle trees. It is a drop-in replacement for
-[hashtree](https://github.com/OffchainLabs/hashtree) and its Go bindings
-[hashtree-bindings](https://github.com/pk910/hashtree-bindings): same calls,
-same chunk layout, only the hash function changes.
-
-`digest[i] = keccak256(chunk[2i] || chunk[2i+1])`
-
-## Go
-
-```go
-import keccaktree "github.com/pk910/keccaktree"
-
-digests := make([][32]byte, len(chunks)/2)
-err := keccaktree.Hash(digests, chunks)        // or HashByteSlice(digestBytes, chunkBytes)
-```
-
-`Hash`, `HashByteSlice` and the error values match hashtree-bindings, so
-switching is an import change. `digests` may alias `chunks` (in-place layer
-reduction).
-
-The bindings follow the hashtree-bindings layout: the `cgo` subpackage links a
-prebuilt static library from `lib/<platform>/`, and small Go assembly wrappers
-call the kernel the C library's detection picks. Detection never looks at
-the CPU vendor, family or model. It probes the features each kernel needs,
-then, where several kernels qualify and which is fastest depends on the core
-rather than on a feature bit, times them once on a small batch at startup
-(well under a millisecond) and keeps the fastest:
-
-| Platform | Feature probed | Candidates (timed once) |
-|---|---|---|
-| linux/amd64, windows/amd64 | AVX-512F + AVX-512VL, OS zmm state | AVX-512 x8; ymm x4 (wins on cores with one 512-bit port) |
-| | AVX2, OS ymm state | AVX2 x8 (two interleaved x4 batches); AVX2 x4 |
-| linux/arm64, darwin/arm64 | FEAT_SHA3 (`AT_HWCAP` / `hw.optional` sysctl) | SHA3+scalar hybrid x3 with lazy rotations (Neoverse); x3 with explicit rotations (Apple); SHA3 x2 |
-| | Advanced SIMD | NEON x2; scalar x1 (cores whose integer side outruns NEON) |
-| linux/riscv64 | `riscv_hwprobe` IMA_EXT_0 + `vlenb` | RVV x(VLEN/64) with Zvkb; RVV x(VLEN/64) (VLEN >= 128); Zbb scalar x1; RV64I scalar x1 |
-| everything else, or `CGO_ENABLED=0` | pure Go (generated from the same core) |
-
-`lib/` is rebuilt and committed by the *Update Static Libraries* workflow
-whenever `src/` changes on `main`.
-
-## Rust, Nim, Java
-
-Thin bindings over the same C library, each tested against an independent
-keccak256 on every platform (`.github/workflows/bindings.yml`). All three
-link the attested `lib/<platform>/libkeccaktree.a`; Rust and Nim compile
-`src/` only for targets without one, or when asked (`--features
-build-from-source`, `-d:keccaktreeFromSource`).
-
-- **Rust** (`Cargo.toml`, `rust/`): `keccaktree::hash(&mut out, &chunks, count)`
-  with the `hashtree-rs` signature, plus `hash_in_place`, `hash_chunks` and
-  `Backend` to call one kernel.
-- **Nim** (`keccaktree_abi.nimble`): `import keccaktree_abi`, like
-  hashtree's `hashtree_abi`; `keccaktree_hash` plus `keccaktreeHash`
-  overloads for `openArray`s.
-- **Java** (`java/`, JNI, Java 11+): `Keccaktree.hash(out, in)`, offsets,
-  in-place and direct `ByteBuffer`s. `java/build-native.sh` links
-  `lib/<platform>/libkeccaktree.a` into the JNI library; CI packages all five
-  platforms into one jar (`keccaktree-java` artifact).
-
-## C
+keccaktree is a keccak256 library optimized for Merkle tree computation. It is
+a drop-in replacement for [hashtree](https://github.com/OffchainLabs/hashtree)
+and its Go bindings: same calls, same chunk layout, only the hash changes from
+SHA256 to Ethereum keccak256 (padding `0x01`, not NIST SHA3-256).
 
 ```c
-#include "keccaktree.h"
 void keccaktree_hash(unsigned char *output, const unsigned char *input, uint64_t count);
 ```
 
-`input` holds `count` 64-byte nodes, `output` receives `count` 32-byte
-digests. Define `KECCAKTREE_HASHTREE_COMPAT` before including the header to
-get the `hashtree_*` names. The SIMD and scalar kernels are hand-written
-assembly in `src/asm/`, one file per kernel on top of shared round and frame
-macros (`keccak256_avx512.inc`, `keccak256_neon.inc`, `keccak256_scalar.inc`,
-`keccak256_rv64.inc`, `keccak256_rvv.inc`):
-the 25 lanes stay in registers, every round names each lane's register, so
-pi is register renaming, and the first and last rounds skip the zero lanes
-and the unused output lanes. The AArch64 files assemble for ELF and Mach-O.
-The generic C fallback (and the pure Go one) come from one generated,
-fully unrolled permutation (`tools/gen_core.py`) specialised for the
-single-block 64-byte case.
+`input` holds `count` chunks of 64 bytes, `output` receives the `count`
+32-byte digests, `digest[i] = keccak256(input[64*i .. 64*i+63])`. `output`
+may alias `input` for in-place layer reduction. As in hashtree, there are no
+length checks. Define `KECCAKTREE_HASHTREE_COMPAT` before including
+`keccaktree.h` to get the `hashtree_*` names.
 
-Performance notes:
+The first call picks the kernel: it probes the CPU features (CPUID, `AT_HWCAP`,
+`hw.optional` sysctl, `riscv_hwprobe`), and where more than one kernel is
+supported it times them once on a small batch (well under a millisecond) and
+keeps the fastest. `keccaktree_init(fn)` sets one explicitly.
 
-- **x86-64.** The AVX-512 x8 kernel issues 90 vector instructions per round
-  plus 10 register copies (`vpternlogq` is destructive), keeps lanes 0..4 in
-  memory to fit the 32 registers, and runs at the limit of the two 512-bit
-  ports (~100 cycles per node on Ice Lake server). AVX2 x4 keeps the state in
-  two stack buffers (16 registers) and is likewise bound by its vector ALU
-  ports, but every round starts with theta on the parities of the previous
-  one, which idles the ports for a few cycles per round; `avx2_x8` alternates
-  the rounds of two independent 4-node batches to fill that gap (10% faster
-  on Zen) and keeps the idle batch's parities in memory. Interleaving a scalar BMI2 stream with either (as on ARM) was
-  measured at 2x slower: with 16 general registers the scalar state spills.
-  On cores with only one 512-bit ALU port the 256-bit `avx512vl_x4`
-  kernel is faster; detection finds that by timing both.
-  A single-node AVX2 call goes to the scalar code (25% faster on Zen 3).
-- **AArch64.** `sha3_x2` is 67 instructions per round with no moves or
-  spills (EOR3, RAX1, XAR, BCAX). `scalar_x1` keeps every lane in a lazily
-  rotated form, with the rotation offsets tracked by the assembler: rho costs
-  nothing, because EOR and BIC rotate their second operand for free, leaving
-  106 instructions per round in 30 general registers. `sha3_x3`
-  interleaves that scalar stream with the SHA3 x2 vector stream, so the
-  integer ALUs work while the vector pipes are busy. Neoverse cores issue
-  every SHA3 instruction on a single vector pipe, one per cycle, so
-  `sha3_x3` additionally computes four of the five chi outputs of each row
-  as BIC + EOR for the second pipe and pipelines the round (row 4's chi
-  overlaps the next theta, each row's chi the next row's rho) to keep both
-  pipes fed. On Neoverse N2 (GitHub `ubuntu-24.04-arm`): sha3_x3 122
-  ns/node vs sha3_x2 220 (1.8x), scalar_x1 195 vs 322 for plain C. Apple
-  cores execute a rotated operand at 2 cycles latency on half their integer
-  pipes (scalar_x1 is 2x slower than plain C on M1), so they get
-  `sha3_x3r`: the SHA3 x2 vector stream with a scalar stream that rotates
-  in place with ROR (130 instructions per round, 9 of them shifted). On M1
-  that runs at the 8-wide front end (~7.6 IPC): 66 ns/node vs 77 for
-  sha3_x2 (1.16x). No feature bit says whether a rotated operand is
-  cheap, so detection times `sha3_x3`, `sha3_x3r` and `sha3_x2` (and
-  `neon_x2` against `scalar_x1` without FEAT_SHA3) and keeps the fastest.
-- **RISC-V (RV64).** The scalar kernels keep the 25 lanes in fixed registers
-  (25 of the 28 allocatable ones, so pointers and four column parities live
-  on the stack) and do rho and pi as one chain along pi's 24-cycle, each lane
-  rotated straight into its destination register: 145 instructions per round
-  with Zbb (`rori`, `andn`), 228 on plain RV64I. The vector kernels are
-  vector-length agnostic (SEW 64, LMUL 1): one register holds a lane of
-  VLEN/64 nodes, a segment load transposes the input, and a round is
-  131 vector instructions with Zvkb (`vror.vi`, `vandn`) and 214
-  without. Which wins depends on VLEN and the core (not yet measured on
-  hardware: GitHub has no RISC-V runners), so detection times every kernel
-  the extensions allow and keeps the fastest. Misaligned buffers go through a bounce buffer with
-  byte accesses, as RVV may fault on misaligned elements.
+## Kernels
 
-`.github/workflows/bench.yml` runs `bench` (all kernels next to hashtree's
-sha256 kernels) on GitHub's Apple M1, Neoverse N2 and x86-64 runners; start it
-by hand or push to a `bench/**` branch.
+All kernels are hand-written assembly in `src/`, one `.S` per kernel on shared
+round and frame macros (`.inc`). The header of each file explains its design.
+
+| Platform | Kernels | ns per 64-byte chunk |
+|---|---|---|
+| x86-64 AVX-512 | `avx512_x8`, `avx512vl_x4` (cores with one 512-bit port) | 25 (Xeon; hashtree avx512_x16: 18) |
+| x86-64 AVX2 | `avx2_x8`, `avx2_x4` | 96 (Zen 3; hashtree shani: 38) |
+| AArch64 FEAT_SHA3 | `sha3_x3` (Neoverse), `sha3_x3r` (Apple), `sha3_x2` | 122 (Neoverse N2), 66 (Apple M1) |
+| AArch64 | `neon_x2`, `scalar_x1` | |
+| RISC-V 64 | `rvv_zvkb`, `rvv`, `zbb_x1`, `rv64_x1` | not measured on hardware |
+| any | `generic` (portable C) | |
+
+Every kernel can also be called directly (`keccaktree_keccak256_<kernel>`).
+Calling a kernel on a CPU that does not support it is undefined behavior.
+
+## Building
+
+The only build dependency is a GCC or clang compatible compiler and assembler.
 
 ```shell
-make -C src test && ./build/test
-make -C src bench HASHTREE=1 HASHTREE_DIR=/path/to/hashtree && ./build/bench
+make          # build/lib/libkeccaktree.a, build/test, build/bench
+make test && ./build/test
+make bench && ./build/bench
+make bench HASHTREE=1 HASHTREE_DIR=/path/to/hashtree   # also bench hashtree (built in build/)
 ```
 
-## Benchmarks
+Cross compile with `CC`, e.g. `CC=aarch64-linux-gnu-gcc make` or
+`CC=x86_64-w64-mingw32-gcc make test`.
 
-`bench/` is a separate Go module comparing keccaktree with hashtree-bindings:
+## Bindings
 
-```shell
-cd bench && go test -bench . -count 6
-```
+Prebuilt static libraries for linux amd64/arm64/riscv64, darwin arm64 and
+windows amd64 are in [`lib/`](lib/README.md). CI builds them on native
+runners and attests their provenance. All bindings link these libraries.
 
-## Tests
+- **Go** (`github.com/pk910/keccaktree`): `Hash(digests, chunks)` and
+  `HashByteSlice`, with the same signatures and errors as hashtree-bindings,
+  so switching is an import change. Other platforms and `CGO_ENABLED=0` use
+  a pure-Go fallback. `bench/` compares it with hashtree-bindings.
+- **Rust** (`Cargo.toml`, `src/lib.rs`): `keccaktree::hash(&mut out, &chunks, count)`
+  with the hashtree-rs signature, `hash_in_place`, `hash_chunks`, `Backend`.
+  `--features build-from-source` compiles `src/` instead of linking `lib/`.
+- **Nim** (`keccaktree_abi.nimble`): `import keccaktree_abi`, like hashtree's
+  `hashtree_abi`. `-d:keccaktreeFromSource` compiles `src/`.
+- **Java** (`java/`, JNI, Java 11+): `Keccaktree.hash(out, in)`, with offsets,
+  in-place and direct `ByteBuffer` variants. `java/build-native.sh` builds
+  the JNI library from `lib/`.
 
-- C: reference sponge checked against published keccak256 / SHA3-256 vectors,
-  then every backend for counts 0..300, unaligned buffers and in-place use.
-- Go: every result checked against `golang.org/x/crypto/sha3`
-  `NewLegacyKeccak256`, every dispatch path forced, plus a qemu CPU matrix
-  (`.github/scripts/test-matrix.sh`).
+## Contributing
+
+CI tests pull requests against the libraries committed in `lib/`, so a pull
+request that changes `src/` must commit rebuilt libraries. Run
+`.github/scripts/build-pr-libs.sh` to cross-compile all of them with zig.
+These are temporary: after the merge, CI rebuilds them on main with native
+toolchains and attests them.
+
+`.github/workflows/bench.yml` runs `build/bench` on GitHub's x86-64, Neoverse
+N2 and Apple M1 runners. Start it by hand or push to a `bench/**` branch.

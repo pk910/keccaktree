@@ -3,7 +3,7 @@
 
 macOS's BSD `ar`/`ranlib` ignore `SOURCE_DATE_EPOCH` and stamp the real
 wall-clock build time (plus uid/gid) into every archive member header, which
-makes the resulting `libhashtree.a` differ on every rebuild even when the
+makes the resulting `libkeccaktree.a` differ on every rebuild even when the
 compiled object code is byte-for-byte identical. GNU binutils avoids this by
 defaulting to deterministic archives; this script reproduces that behaviour for
 toolchains that do not, by rewriting the mtime/uid/gid fields of each member

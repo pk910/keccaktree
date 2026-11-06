@@ -7,11 +7,10 @@
 # "Update Static Libraries" rebuilds every library on main with the native
 # toolchains (gcc, Apple clang, MSYS2 gcc) and attests it, replacing these.
 #
-#   .github/scripts/build-libs.sh
+#   .github/scripts/build-pr-libs.sh
 #
 # Needs zig (https://ziglang.org, or `pip install ziglang`), llvm-ar and
-# llvm-ranlib. Alternatively, .github/scripts/fetch-ci-libs.sh copies the
-# artifacts of a "Build & Test" run on your branch.
+# llvm-ranlib.
 
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"

@@ -68,7 +68,7 @@ fn main() {
         println!("cargo:rustc-cfg=keccaktree_asm");
     }
     for k in kernels {
-        build.file(src.join("asm").join(format!("keccak256_{}.S", k)));
+        build.file(src.join(format!("keccak256_{}.S", k)));
     }
     if os == "windows" && build.get_compiler().is_like_gnu() {
         // same as src/Makefile: gcc on Windows does not realign the stack for

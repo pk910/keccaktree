@@ -25,11 +25,9 @@ request cannot produce those, but its CI tests the Go bindings against the
 libraries committed here, so a PR that changes `src/` commits **temporary**
 libraries of its own:
 
-- `.github/scripts/build-libs.sh` cross-compiles all of them on one host with
-  `zig cc`. Zig is used for nothing else: it is only a convenience for these
-  throwaway PR builds, so a contributor needs no Mac or Windows machine.
-- or `.github/scripts/fetch-ci-libs.sh` copies the artifacts of a *Build &
-  Test* run on the PR branch (`gh workflow run build.yml --ref <branch>`).
+`.github/scripts/build-pr-libs.sh` cross-compiles all of them on one host
+with `zig cc`, so a contributor needs no Mac or Windows machine. Zig is used
+for nothing else: it only exists for these throwaway PR builds.
 
 After the merge, *Update Static Libraries* rebuilds every library on main
 with the native toolchains, replaces the PR's temporary copies, and records
