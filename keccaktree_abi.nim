@@ -53,8 +53,8 @@ else:
     when defined(amd64):
       {.compile(asmDir & "keccak256_avx512_x8.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx512vl_x4.S", asmFlags).}
-      {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x8.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
     elif defined(arm64):
       {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
       {.compile(asmDir & "keccak256_sha3_x2.S", asmFlags).}
