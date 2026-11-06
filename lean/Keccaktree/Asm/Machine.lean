@@ -20,6 +20,16 @@ otherwise).  Distinct regions are assumed not to overlap.
 
 namespace Keccaktree.Asm
 
+/-- `vpternlogq imm`: bit-wise `imm[a b c]`, the sum of the minterms the
+immediate selects (a native lane operation: expanding it into its minterms
+in the symbolic executor multiplies the expression trees out). -/
+def ternlogW (imm : Nat) (a b c : BitVec 64) : BitVec 64 :=
+  let lit (x : BitVec 64) (bit : Bool) := if bit then x else ~~~ x
+  (List.range 8).foldl (fun acc i =>
+    if imm.testBit i then
+      acc ||| (lit a (i.testBit 2) &&& (lit b (i.testBit 1) &&& lit c (i.testBit 0)))
+    else acc) 0#64
+
 /-- The lane operations the kernels use, over some value type. -/
 class LaneOps (α : Type) where
   const : BitVec 64 → α
@@ -31,6 +41,7 @@ class LaneOps (α : Type) where
   shr : α → Nat → α
   rol : α → Nat → α
   add : α → α → α
+  ternlog : Nat → α → α → α → α
   /-- the value if it is a known constant (masks, shuffle controls) -/
   asConst : α → Option (BitVec 64)
 
@@ -44,6 +55,7 @@ instance : LaneOps (BitVec 64) where
   shr := (· >>> ·)
   rol := BitVec.rotateLeft
   add := (· + ·)
+  ternlog := ternlogW
   asConst := some
 
 /-- Symbolic 64-bit lane expressions. -/
@@ -58,6 +70,7 @@ inductive E where
   | shr (a : E) (n : Nat)
   | rol (a : E) (n : Nat)
   | add (a b : E)
+  | ternlog (imm : Nat) (a b c : E)
   deriving Repr, DecidableEq, Inhabited
 
 /-- The value of a closed expression (no variables): the symbolic executor's
@@ -74,6 +87,8 @@ def E.closed : E → Option (BitVec 64)
   | .shr a n => match a.closed with | some x => some (x >>> n) | none => none
   | .rol a n => match a.closed with | some x => some (x.rotateLeft n) | none => none
   | .add a b => match a.closed, b.closed with | some x, some y => some (x + y) | _, _ => none
+  | .ternlog imm a b c => match a.closed, b.closed, c.closed with
+    | some x, some y, some z => some (ternlogW imm x y z) | _, _, _ => none
 
 instance : LaneOps E where
   const := .const
@@ -85,6 +100,7 @@ instance : LaneOps E where
   shr := .shr
   rol := .rol
   add := .add
+  ternlog := .ternlog
   asConst := E.closed
 
 def E.eval (env : Nat → BitVec 64) : E → BitVec 64
@@ -98,6 +114,7 @@ def E.eval (env : Nat → BitVec 64) : E → BitVec 64
   | .shr a n => a.eval env >>> n
   | .rol a n => (a.eval env).rotateLeft n
   | .add a b => a.eval env + b.eval env
+  | .ternlog imm a b c => ternlogW imm (a.eval env) (b.eval env) (c.eval env)
 
 /-- Memory regions: 0 = no region (a plain number), 1 input, 2 output,
 3 stack, 4 read-only constants; at most 8. -/

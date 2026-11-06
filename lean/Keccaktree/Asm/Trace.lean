@@ -101,7 +101,7 @@ theorem Isa.run_of_pathOk (isa : Isa) (rodata : Array (BitVec 64)) (prog : Array
     exact ih _ hrest
 
 /-- The x86-64 instruction set. -/
-def X86.isa : Isa where
+@[reducible] def X86.isa : Isa where
   Instr := X86.Instr
   nop := .nop
   exec := X86.exec

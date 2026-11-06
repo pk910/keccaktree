@@ -211,7 +211,7 @@ theorem err_exec (rodata : Array (BitVec 64)) (i : Instr) (st : State α) (h : s
   · simp [exec, hh, h]
 
 /-- The AArch64 instruction set. -/
-def isa : Isa where
+@[reducible] def isa : Isa where
   Instr := Instr
   nop := .nop
   exec := exec

@@ -17,6 +17,7 @@ structure IsHom [LaneOps α] [LaneOps β] (f : α → β) : Prop where
   shr : ∀ a n, f (LaneOps.shr a n) = LaneOps.shr (f a) n
   rol : ∀ a n, f (LaneOps.rol a n) = LaneOps.rol (f a) n
   add : ∀ a b, f (LaneOps.add a b) = LaneOps.add (f a) (f b)
+  ternlog : ∀ imm a b c, f (LaneOps.ternlog imm a b c) = LaneOps.ternlog imm (f a) (f b) (f c)
   asConst : ∀ a v, LaneOps.asConst a = some v → LaneOps.asConst (f a) = some v
 
 theorem E.eval_isHom (env : Nat → BitVec 64) : IsHom (E.eval env) where
@@ -29,6 +30,7 @@ theorem E.eval_isHom (env : Nat → BitVec 64) : IsHom (E.eval env) where
   shr _ _ := rfl
   rol _ _ := rfl
   add _ _ := rfl
+  ternlog _ _ _ _ := rfl
   asConst a v h := by
     show some (E.eval env a) = some v
     rw [E.closed_eval env a v h]
@@ -43,6 +45,7 @@ theorem E.subst_isHom (σ : Nat → E) : IsHom (E.subst σ) where
   shr _ _ := rfl
   rol _ _ := rfl
   add _ _ := rfl
+  ternlog _ _ _ _ := rfl
   asConst a v h := E.closed_subst σ a v h
 
 namespace X86
@@ -124,14 +127,7 @@ theorem foldl_hom {γ δ ι : Type} (g : γ → δ) (step : γ → ι → γ) (s
   | cons i l ih => simp only [List.foldl_cons, ih, h]
 
 theorem ternlog_map (imm : Nat) (a b c : α) :
-    ternlog imm (f a) (f b) (f c) = f (ternlog imm a b c) := by
-  simp only [ternlog]
-  rw [foldl_hom f _ _ ?_ _ _, hf.const]
-  intro acc i
-  split
-  · simp only [hf.or, hf.and]
-    (repeat' split) <;> simp [hf.not]
-  · rfl
+    LaneOps.ternlog imm (f a) (f b) (f c) = f (LaneOps.ternlog imm a b c) := (hf.ternlog imm a b c).symm
 
 theorem lane128_map (xs : List α) (j : Nat) :
     lane128 (xs.map f) j = (lane128 xs j).map f := by

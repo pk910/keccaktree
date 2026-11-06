@@ -23,6 +23,7 @@ def E.subst (σ : Nat → E) : E → E
   | .shr a n => .shr (a.subst σ) n
   | .rol a n => .rol (a.subst σ) n
   | .add a b => .add (a.subst σ) (b.subst σ)
+  | .ternlog imm a b c => .ternlog imm (a.subst σ) (b.subst σ) (c.subst σ)
 
 theorem E.eval_subst (env : Nat → BitVec 64) (σ : Nat → E) (e : E) :
     (e.subst σ).eval env = e.eval (fun i => (σ i).eval env) := by
@@ -66,6 +67,10 @@ theorem E.closed_eval (env : Nat → BitVec 64) (e : E) (v : BitVec 64) (h : e.c
     simp only [E.closed] at h; split at h
     · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›]
     · exact absurd h (by simp)
+  | ternlog imm a b c iha ihb ihc =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.eval, iha _ ‹_›, ihb _ ‹_›, ihc _ ‹_›]
+    · exact absurd h (by simp)
 
 /-- Substitution keeps closed expressions closed, with their value. -/
 theorem E.closed_subst (σ : Nat → E) (e : E) (v : BitVec 64) (h : e.closed = some v) :
@@ -104,6 +109,10 @@ theorem E.closed_subst (σ : Nat → E) (e : E) (v : BitVec 64) (h : e.closed = 
   | rol a n iha =>
     simp only [E.closed] at h; split at h
     · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›]
+    · exact absurd h (by simp)
+  | ternlog imm a b c iha ihb ihc =>
+    simp only [E.closed] at h; split at h
+    · simp only [Option.some.injEq] at h; subst h; simp [E.subst, E.closed, iha _ ‹_›, ihb _ ‹_›, ihc _ ‹_›]
     · exact absurd h (by simp)
 
 namespace X86

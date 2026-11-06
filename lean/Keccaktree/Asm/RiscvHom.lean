@@ -189,7 +189,7 @@ theorem err_exec (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (st : St
   · simp [exec, hh, h]
 
 /-- The RISC-V instruction set, for a vector length of `vlmax` 64-bit lanes. -/
-def isa (vlmax : Nat) : Isa where
+@[reducible] def isa (vlmax : Nat) : Isa where
   Instr := Instr
   nop := .nop
   exec := exec vlmax

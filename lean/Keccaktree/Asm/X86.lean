@@ -173,15 +173,6 @@ def binop (rodata : Array (BitVec 64)) (s : State α) (lanes d a : Nat) (b : Src
     writeV s d lanes (List.zipWith f ((s.getV a).take lanes) bs)
   | none => s.fail
 
-/-- `vpternlogq imm`: bit-wise `imm[a b c]`, as the sum of the minterms the
-immediate selects (a = destination register, the first source). -/
-def ternlog (imm : Nat) (a b c : α) : α :=
-  let lit (x : α) (bit : Bool) := if bit then x else not x
-  (List.range 8).foldl (fun acc i =>
-    if imm.testBit i then
-      or acc (and (lit a (i.testBit 2)) (and (lit b (i.testBit 1)) (lit c (i.testBit 0))))
-    else acc) (const 0)
-
 /-- `vpshufb` on one 128-bit lane (two words `lo`, `hi`) with control bytes
 `ctrl` (16 bytes, as two words): byte `i` is zero if the control's bit 7 is
 set, else source byte `ctrl & 15`. -/
@@ -237,7 +228,7 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
     | some bs =>
       let ds := (s.getV d).take lanes
       let as_ := (s.getV a).take lanes
-      let r := (List.range lanes).map fun i => ternlog imm (ds.getD i (const 0)) (as_.getD i (const 0)) (bs.getD i (const 0))
+      let r := (List.range lanes).map fun i => LaneOps.ternlog imm (ds.getD i (const 0)) (as_.getD i (const 0)) (bs.getD i (const 0))
       { writeV s d lanes r with pc := s.pc + 1 }
     | none => s.fail
   | .vpshufb lanes d a ctrl =>

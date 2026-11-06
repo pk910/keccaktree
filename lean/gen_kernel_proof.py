@@ -52,7 +52,7 @@ def matches(kernel, count, steps, lanes, rnd, region_filter=None):
             var = f'(regVar {a} {b})'
         else:
             if region_filter is not None and int(a) != region_filter: continue
-            var = f'(memVar {a} {b})'
+            var = mem_var(int(a), int(b))
         alloc.append((int(node), int(kind), var, int(rot), ln))
     return alloc
 
@@ -99,14 +99,27 @@ def find_ctls(kernel, count, bounds):
                     assert t.startswith('(.const '), f'control word {v} of cut {c} is computed by slice {c - 1}: {t[:100]}'
     return {c: sorted(need[c]) for c in range(24)}
 
+def mem_var(region, q):
+    """the Lean text of a memory variable; the input and output regions are written with their names
+    and node-relative indices so that the kernel theorems match the invariants syntactically"""
+    if region == 1 and q >= 0: return f'(memVar rInput (Int.ofNat (8 * {q // 8} + {q % 8})))'
+    if region == 2 and q >= 0: return f'(memVar rOutput (Int.ofNat (4 * {q // 4} + {q % 4})))'
+    return f'(memVar {region} ({q}))'
+
 def var_id(v):
-    """numeric id of a variable expression (regVar r l) / (memVar region q)"""
+    """numeric id of a variable expression (regVar r l) / (gdVar n) / (memVar region q)"""
     m = re.match(r'\(regVar (\d+) (\d+)\)', v)
     if m: return 8 * int(m.group(1)) + int(m.group(2))
     m = re.match(r'\(gdVar (\d+)\)', v)
     if m: return 256 + int(m.group(1))
-    m = re.match(r'\(memVar (\d+) \(?(-?\d+)\)?\)', v)
-    r, q = int(m.group(1)), int(m.group(2))
+    m = re.match(r'\(memVar rInput \(Int.ofNat \(8 \* (\d+) \+ (\d+)\)\)\)', v)
+    if m: r, q = 1, 8 * int(m.group(1)) + int(m.group(2))
+    else:
+        m = re.match(r'\(memVar rOutput \(Int.ofNat \(4 \* (\d+) \+ (\d+)\)\)\)', v)
+        if m: r, q = 2, 4 * int(m.group(1)) + int(m.group(2))
+        else:
+            m = re.match(r'\(memVar (\d+) \(?(-?\d+)\)?\)', v)
+            r, q = int(m.group(1)), int(m.group(2))
     enc = 2 * q if q >= 0 else 2 * (-q) - 1
     return 288 + 8 * enc + r
 
@@ -234,7 +247,7 @@ set_option maxRecDepth 100000 in
 /-- Lane kind {kind} (rotated by {rot}) of round {round_in}, for any node `n` whose quantities are at `v*`. -/
 theorem lane{c}_g{g} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (n : Fin {count}) ({params} : Nat) {hyps} :
     E.eval env ({sig}) = (specQuantity (Spec.round {round_in} (A n)) {kind}).rotateLeft {rot} := by
-  simp only [E.eval]
+  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
   {"simp only [specQuantity]" + at_h if hnames else "skip"}
   simp only [{SIMP_SPEC}]
   bv_decide
@@ -318,21 +331,12 @@ open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak
 
 /-- The slices of the batch. -/
 def slices : Nat → List {ISA}.Instr
-''' + ''.join(f'  | {c} => slice{c}\n' for c in range(24)) + '''  | _ => []
-
-/-- The whole batch trace. -/
-def batchTrace : List {ISA}.Instr := (List.range 24).foldr (fun c acc => slices c ++ acc) []
+''' + ''.join(f'  | {c} => slice{c}\n' for c in range(24)) + f'''  | _ => []
 
 /-- The concrete states along the batch. -/
 def stateAt (S0 : State (BitVec 64)) : Nat → State (BitVec 64)
   | 0 => S0
   | c + 1 => {ISA_EXPR}.execTrace rodata (slices c) (stateAt S0 c)
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 40000000 in
-theorem stateAt_batch (S0 : State (BitVec 64)) : {ISA_EXPR}.execTrace rodata batchTrace S0 = stateAt S0 24 := by
-  simp only [batchTrace, List.range, List.range.loop, List.foldr, Isa.execTrace, List.foldl_append]
-  rfl
 
 /-- Status of a concrete state at a cut. -/
 def Ok (S : State (BitVec 64)) : Prop := S.err = false ∧ S.halted = false ∧ S.tail = none
@@ -350,56 +354,59 @@ def Ok (S : State (BitVec 64)) : Prop := S.err = false ∧ S.halted = false ∧ 
   simp only at h2
   obtain ⟨hg, hk, hzf, hcf, hnf, hvf, hvl, hpc, hdepth, herr, hhalted, htail⟩ := h2
   have hctrl := ctrl{c}
+  have hT : stateAt S0 {c + 1} = {ISA_EXPR}.execTrace rodata slice{c} (stateAt S0 {c}) := rfl
 ''' + (f'''  refine ⟨h1, ⟨?_, ?_, ?_⟩, ?_⟩
-  · show (stateAt S0 {c + 1}).err = false; simp only [stateAt, slices]; rw [herr]; exact hctrl.2.2.2.2.2.2.2.2.2.1
-  · show (stateAt S0 {c + 1}).halted = false; simp only [stateAt, slices]; rw [hhalted]; exact hctrl.2.2.2.2.2.2.2.2.2.2.1
-  · show (stateAt S0 {c + 1}).tail = none; simp only [stateAt, slices]; rw [htail]; exact hctrl.2.2.2.2.2.2.2.2.2.2.2
+  · rw [hT, herr]; exact hctrl.2.2.2.2.2.2.2.2.2.1
+  · rw [hT, hhalted]; exact hctrl.2.2.2.2.2.2.2.2.2.2.1
+  · rw [hT, htail]; exact hctrl.2.2.2.2.2.2.2.2.2.2.2
 ''' if nxt is not None else f'''  refine ⟨h1, ?_, ?_⟩
-  · show (stateAt S0 {c + 1}).err = false; simp only [stateAt, slices]; rw [herr]; exact hctrl.2.2.2.2.2.2.2.2.2.1
-  · show (stateAt S0 {c + 1}).halted = true; simp only [stateAt, slices]; rw [hhalted]; exact hctrl.2.2.2.2.2.2.2.2.2.2.1
+  · rw [hT, herr]; exact hctrl.2.2.2.2.2.2.2.2.2.1
+  · rw [hT, hhalted]; exact hctrl.2.2.2.2.2.2.2.2.2.2.1
 '''))
             if nxt is not None:
                 f.write(f'''  · show cutOf ctl{nxt} (stateAt S0 {c + 1}) = cutOf ctl{nxt} sc{nxt}
     apply cutOf_eq_of_ctrl
-    · simp only [stateAt, slices]
+    · rw [hT]
       refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [hg, hctrl.1]; rfl
-      · rw [hk, hctrl.2.1]; rfl
-      · rw [hzf, hctrl.2.2.1]; rfl
-      · rw [hcf, hctrl.2.2.2.1]; rfl
-      · rw [hnf, hctrl.2.2.2.2.1]; rfl
-      · rw [hvf, hctrl.2.2.2.2.2.1]; rfl
-      · rw [hvl, hctrl.2.2.2.2.2.2.1]; rfl
-      · rw [hpc, hctrl.2.2.2.2.2.2.2.1]; rfl
-      · rw [hdepth, hctrl.2.2.2.2.2.2.2.2.1]; rfl
+      · rw [hg]; exact hctrl.1.trans rfl
+      · rw [hk]; exact hctrl.2.1.trans rfl
+      · rw [hzf]; exact hctrl.2.2.1.trans rfl
+      · rw [hcf]; exact hctrl.2.2.2.1.trans rfl
+      · rw [hnf]; exact hctrl.2.2.2.2.1.trans rfl
+      · rw [hvf]; exact hctrl.2.2.2.2.2.1.trans rfl
+      · rw [hvl]; exact hctrl.2.2.2.2.2.2.1.trans rfl
+      · rw [hpc]; exact hctrl.2.2.2.2.2.2.2.1.trans rfl
+      · rw [hdepth]; exact hctrl.2.2.2.2.2.2.2.2.1.trans rfl
 ''')
                 ctln = CTLS[nxt]
                 if not ctln:
                     f.write(f'    · intro i hi; simp only [ctl{nxt}, List.mem_nil_iff] at hi\n')
                 else:
-                    f.write(f'    · intro i hi\n      simp only [ctl{nxt}, List.mem_cons, List.mem_nil_iff, or_false] at hi\n')
+                    f.write(f'    · intro i hi\n      rw [hT]\n      simp only [ctl{nxt}, List.mem_cons, List.mem_nil_iff, or_false] at hi\n')
                     f.write('      rcases hi with ' + ' | '.join('rfl' for _ in ctln) + '\n')
                     for j, v in enumerate(ctln):
-                        f.write(f'      · simp only [h1, ctlv{c}_{j}, E.eval]; decide +kernel\n')
+                        f.write(f'      · rw [h1]\n        show E.eval (envOf (stateAt S0 {c})) (readVar result{c} {v}) = envOf sc{nxt} {v}\n        rw [ctlv{c}_{j}]; rfl\n')
             f.write('\n')
         f.write(f'''set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 /-- The cut environment after the batch is the chained symbolic one. -/
 theorem env_chain (S0 : State (BitVec 64)) (hc : cutOf ctl0 S0 = cut0) (hs : Ok S0) :
     envOf (stateAt S0 24) = envAt (envOf S0) 24 := by
+  show envOf (stateAt S0 24) = envAt (envOf (stateAt S0 0)) 24
   have c0 := conc0 S0 hc hs
-''' + ''.join(f'  have c{c} := conc{c} S0 c{c - 1}.2.2 c{c - 1}.2.1\n' for c in range(1, 24)) + '''  simp only [envAt]
-''' + ''.join(f'  rw [← c{c}.1]\n' for c in range(23, -1, -1)) + f'''
+''' + ''.join(f'  have c{c} := conc{c} S0 c{c - 1}.2.2 c{c - 1}.2.1\n' for c in range(1, 24)) + f'''  rw [''' + ', '.join(f'c{c}.1' for c in range(23, -1, -1)) + f''']
+  simp only [envAt]
+
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 /-- **The batch on the concrete machine**: from any concrete state at the
 batch entry with the entry cut's control part (`hc`) whose input locations
-hold the nodes' words (`Inv0`), the output locations after the batch hold
-the digest lanes of `Spec.rounds 24` of every node. -/
+hold the nodes' words (`Inv0`), the output locations after the 24 slices
+hold the digest lanes of `Spec.rounds 24` of every node. -/
 theorem batch_correct (S0 : State (BitVec 64)) (A : Fin {count} → Spec.State)
     (hc : cutOf ctl0 S0 = cut0) (hs : Ok S0) (h0 : Inv0 (envOf S0) A) :
-    Inv24 (envOf ({ISA_EXPR}.execTrace rodata batchTrace S0)) (fun n => Spec.rounds 24 (A n)) := by
-  rw [stateAt_batch, env_chain S0 hc hs]
+    Inv24 (envOf (stateAt S0 24)) (fun n => Spec.rounds 24 (A n)) := by
+  rw [env_chain S0 hc hs]
   exact chain (envOf S0) A h0
 
 /-! ### The fetch-execute loop follows the recorded paths -/
@@ -410,31 +417,50 @@ theorem batch_correct (S0 : State (BitVec 64)) (A : Fin {count} → Spec.State)
   rw [← hc, eval_cutOf ctl{c} (stateAt S0 {c}) hs] at h
   exact h
 
-''' for c in range(24)) + '''/-- The number of instructions of the batch. -/
-def batchLen : Nat := ''' + ' + '.join(f'idx{c}.length' for c in range(24)) + '''
+''' for c in range(24)) + f'''/-- The number of instructions of the batch. -/
+def batchLen : Nat := ''' + ' + '.join(f'idx{c}.length' for c in range(24)) + f'''
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 theorem run_batch (S0 : State (BitVec 64)) (hc : cutOf ctl0 S0 = cut0) (hs : Ok S0) :
     {ISA_EXPR}.run rodata prog batchLen S0 = stateAt S0 24 := by
+  show {ISA_EXPR}.run rodata prog batchLen (stateAt S0 0) = stateAt S0 24
   have c0 := conc0 S0 hc hs
-''' + ''.join(f'  have c{c} := conc{c} S0 c{c - 1}.2.2 c{c - 1}.2.1\n' for c in range(1, 24)) + '''  simp only [batchLen, Isa.run_add]
-  rw [run_slice0 S0 hc hs''' + ''.join(f', run_slice{c} S0 c{c - 1}.2.2 c{c - 1}.2.1' for c in range(1, 24)) + ''']
+''' + ''.join(f'  have c{c} := conc{c} S0 c{c - 1}.2.2 c{c - 1}.2.1\n' for c in range(1, 24)) + f'''  unfold batchLen
+  repeat rw [Isa.run_add]
+  rw [run_slice0 S0 hc hs''' + ''.join(f', run_slice{c} S0 c{c - 1}.2.2 c{c - 1}.2.1' for c in range(1, 24)) + f''']
 
-/-- The entry state of the kernel on `count` nodes of the message `input`. -/
-def entryState (input : Int → BitVec 64) : State (BitVec 64) := initState input 0 {count} entry
+/-- The control part of the entry state (pointers, count, stack pointer; closed). -/
+def entryCtrl : State (BitVec 64) := {ISA}.initState (fun _ => 0#64) 0 {count} entry
+
+/-- The entry state of the kernel on `count` nodes of the message `input`
+(`initState input 0 count entry`: the control part and the input region). -/
+def entryState (input : Int → BitVec 64) : State (BitVec 64) := {{ entryCtrl with mem := initMem input 0 }}
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 40000000 in
 /-- The entry state has the entry cut's control part (the pointers, the count,
 the stack pointer) for any message. -/
 theorem entry_cut (input : Int → BitVec 64) : cutOf ctl0 (entryState input) = cut0 := by
   apply cutOf_eq_of_ctrl
-  · exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  · exact ⟨Eq.trans (rfl : (entryState input).g = entryCtrl.g) (show entryCtrl.g = sc0.g by decide +kernel),
+      Eq.trans (rfl : (entryState input).k = entryCtrl.k) (show entryCtrl.k = sc0.k by decide +kernel),
+      Eq.trans (rfl : (entryState input).zf = entryCtrl.zf) (show entryCtrl.zf = sc0.zf by decide +kernel),
+      Eq.trans (rfl : (entryState input).cf = entryCtrl.cf) (show entryCtrl.cf = sc0.cf by decide +kernel),
+      Eq.trans (rfl : (entryState input).nf = entryCtrl.nf) (show entryCtrl.nf = sc0.nf by decide +kernel),
+      Eq.trans (rfl : (entryState input).vf = entryCtrl.vf) (show entryCtrl.vf = sc0.vf by decide +kernel),
+      Eq.trans (rfl : (entryState input).vl = entryCtrl.vl) (show entryCtrl.vl = sc0.vl by decide +kernel),
+      Eq.trans (rfl : (entryState input).pc = entryCtrl.pc) (show entryCtrl.pc = sc0.pc by decide +kernel),
+      Eq.trans (rfl : (entryState input).depth = entryCtrl.depth) (show entryCtrl.depth = sc0.depth by decide +kernel)⟩
   · intro i hi
     simp only [ctl0, List.mem_cons, List.mem_nil_iff, or_false] at hi
-''' + ('    rcases hi with ' + ' | '.join('rfl' for _ in CTLS[0]) + '\n' + ''.join('    · rfl\n' for _ in CTLS[0]) if CTLS[0] else '') + '''
+''' + ('    rcases hi with ' + ' | '.join('rfl' for _ in CTLS[0]) + '\n' +
+       ''.join((f'    · exact Eq.trans (rfl : envOf (entryState input) {v} = envOf entryCtrl {v}) (show envOf entryCtrl {v} = envOf sc0 {v} by decide +kernel)\n' if v < 288 else
+                f'    · show initMem input 0 (memVarRegion {v}) (memVarIndex {v}) = envOf sc0 {v}\n      simp +decide only [initMem, memVarRegion, memVarIndex, ↓reduceIte]\n      try decide +kernel\n')
+               for v in CTLS[0]) if CTLS[0] else '') + f'''
 theorem entry_ok (input : Int → BitVec 64) : Ok (entryState input) := ⟨rfl, rfl, rfl⟩
+
+/-- The state after the kernel call (`batchLen` instructions, up to and including the final `ret`). -/
+def finalState (input : Int → BitVec 64) : State (BitVec 64) := {ISA_EXPR}.run rodata prog batchLen (entryState input)
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -444,12 +470,11 @@ model fault, and the output locations hold the digest lanes of
 `Spec.rounds 24` of every node whose words were in the input locations. -/
 theorem kernel_correct (input : Int → BitVec 64) (A : Fin {count} → Spec.State)
     (h0 : Inv0 (envOf (entryState input)) A) :
-    let Sf := {ISA_EXPR}.run rodata prog batchLen (entryState input)
-    Sf.halted = true ∧ Sf.err = false ∧ Inv24 (envOf Sf) (fun n => Spec.rounds 24 (A n)) := by
-  intro Sf
-  have hb : Sf = stateAt (entryState input) 24 := run_batch (entryState input) (entry_cut input) (entry_ok input)
+    (finalState input).halted = true ∧ (finalState input).err = false ∧
+    Inv24 (envOf (finalState input)) (fun n => Spec.rounds 24 (A n)) := by
+  have hb : finalState input = stateAt (entryState input) 24 := run_batch (entryState input) (entry_cut input) (entry_ok input)
   have c0 := conc0 (entryState input) (entry_cut input) (entry_ok input)
-''' + ''.join(f'  have c{c} := conc{c} (entryState input) c{c - 1}.2.2 c{c - 1}.2.1\n' for c in range(1, 24)) + '''  refine ⟨?_, ?_, ?_⟩
+''' + ''.join(f'  have c{c} := conc{c} (entryState input) c{c - 1}.2.2 c{c - 1}.2.1\n' for c in range(1, 24)) + f'''  refine ⟨?_, ?_, ?_⟩
   · rw [hb]; exact c23.2.2
   · rw [hb]; exact c23.2.1
   · rw [hb, env_chain (entryState input) (entry_cut input) (entry_ok input)]
@@ -460,8 +485,9 @@ theorem kernel_correct (input : Int → BitVec 64) (A : Fin {count} → Spec.Sta
 /-- The words of node `n` of the message. -/
 def nodeWords (input : Int → BitVec 64) (n : Nat) (w : Nat) : BitVec 64 := input (Int.ofNat (8 * n + w))
 
-theorem entry_mem_input (input : Int → BitVec 64) (q : Int) : envOf (entryState input) (memVar 1 q) = input q := by
-  rw [envOf_mem]; rfl
+theorem entry_mem_input (input : Int → BitVec 64) (q : Int) : envOf (entryState input) (memVar rInput q) = input q := by
+  rw [envOf_mem]; show initMem input 0 rInput q = input q
+  simp only [initMem, ↓reduceIte]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -471,7 +497,7 @@ theorem entry_inv (input : Int → BitVec 64) :
     Inv0 (envOf (entryState input)) (fun n => absorbNode (nodeWords input n)) := by
   refine ⟨''' + ', '.join(
       [f'(by rw [entry_mem_input]; simp only [specQuantity, absorbNode_lane{w}, nodeWords, rotl0]; try rfl)' for n in range(count) for w in range(8)] +
-      [f'(absorbNode_lane{k} _)' for n in range(count) for k in range(8, 25)]) + '''⟩
+      [f'(absorbNode_lane{k} _)' for n in range(count) for k in range(8, 25)]) + f'''⟩
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -480,23 +506,24 @@ set_option maxHeartbeats 40000000 in
 node `n` (`Spec.keccak256` of its 64 bytes) is byte `i` of output word
 `4n+w`. -/
 theorem kernel_keccak256 (input : Int → BitVec 64) :
-    let Sf := {ISA_EXPR}.run rodata prog batchLen (entryState input)
-    Sf.halted = true ∧ Sf.err = false ∧
+    (finalState input).halted = true ∧ (finalState input).err = false ∧
     ∀ n w i : Nat, n < {count} → w < 4 → i < 8 →
-      (Sf.mem rOutput (Int.ofNat (4 * n + w))).extractLsb' (8 * i) 8 =
+      ((finalState input).mem rOutput (Int.ofNat (4 * n + w))).extractLsb' (8 * i) 8 =
         Spec.keccak256 64 (nodeBytes (nodeWords input n)) (8 * w + i) := by
-  intro Sf
   obtain ⟨hh, he, hout⟩ := kernel_correct input (fun n => absorbNode (nodeWords input n)) (entry_inv input)
+  generalize finalState input = Sf at hh he hout ⊢
   refine ⟨hh, he, ?_⟩
   intro n w i hn hw hi
-  rw [absorbNode_keccak, squeezeByte_eq]
+  simp only [Inv24, specQuantity, rotl0, envOf_mem] at hout
+''' + ''.join(f'  have f{k} : (({k} : Fin {count}) : Nat) = {k} := by decide\n' for k in range(count)) + f'''  simp only [''' + ', '.join(f'f{k}' for k in range(count)) + f'''] at hout
+  have key : Sf.mem rOutput (Int.ofNat (4 * n + w)) = L (Spec.rounds 24 (absorbNode (nodeWords input n))) w := by
+    rcases n with ''' + ' | '.join(['_'] * count + ['n']) + ''' <;> rcases w with _ | _ | _ | _ | w <;> (try omega)
+''' + ''.join(f'    · exact hout{"".join(".2" for _ in range(4 * n + w))}{".1" if 4 * n + w + 1 < 4 * count else ""}\n' for n in range(count) for w in range(4)) + f'''  rw [key, absorbNode_keccak, squeezeByte_eq]
   have h1 : (8 * w + i) / 8 = w := by omega
   have h2 : (8 * w + i) % 8 = i := by omega
   rw [h1, h2]
-  simp only [Inv24, specQuantity, rotl0, envOf_mem] at hout
-  congr 1
-  rcases n with ''' + ' | '.join(['_'] * count + ['n']) + ''' <;> rcases w with _ | _ | _ | _ | w <;> (try omega)
-''' + ''.join(f'  · exact hout{"".join(".2" for _ in range(4 * n + w))}{".1" if 4 * n + w + 1 < 4 * count else ""}\n' for n in range(count) for w in range(4)) + '''
+  simp only [Spec.keccakF]
+
 end Keccaktree.Kernels.{ns}
 ''')
 
@@ -516,7 +543,7 @@ def main():
     print(f'control words per slice: {[CTLS[c] for c in range(24)]}', file=sys.stderr)
     # the invariants at every cut (and the outputs), once
     allocs = {}
-    allocs[0] = [(n, w, f'(memVar 1 ({8 * n + w}))', 0, f'input word {w} of node {n}') for n in range(count) for w in range(8)]
+    allocs[0] = [(n, w, mem_var(1, 8 * n + w), 0, f'input word {w} of node {n}') for n in range(count) for w in range(8)]
     for c in range(1, 24):
         allocs[c] = matches(kernel, count, bounds[c], lanes, c)
     allocs[24] = matches(kernel, count, bounds[24], lanes, 24, region_filter=2)

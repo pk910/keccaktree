@@ -31,11 +31,13 @@ def _root_.Keccaktree.Asm.E.toLean : E → String
   | .shr a n => s!"(.shr {E.toLean a} {n})"
   | .rol a n => s!"(.rol {E.toLean a} {n})"
   | .add a b => s!"(.add {E.toLean a} {E.toLean b})"
+  | .ternlog imm a b c => s!"(.ternlog {imm} {E.toLean a} {E.toLean b} {E.toLean c})"
 
 def _root_.Keccaktree.Asm.E.size : E → Nat
   | .var _ => 1 | .const _ => 1
   | .xor a b | .and a b | .or a b | .add a b => 1 + a.size + b.size
   | .not a | .shl a _ | .shr a _ | .rol a _ => 1 + a.size
+  | .ternlog _ a b c => 1 + a.size + b.size + c.size
 
 def addrToLean (a : Addr) : String := s!"⟨{a.region}, ({a.off})⟩"
 
@@ -109,6 +111,7 @@ partial def _root_.Keccaktree.Asm.E.vars : E → List Nat
   | .const _ => []
   | .xor a b | .and a b | .or a b | .add a b => a.vars ++ b.vars
   | .not a | .shl a _ | .shr a _ | .rol a _ => a.vars
+  | .ternlog _ a b c => a.vars ++ b.vars ++ c.vars
 
 /-- The state before the first failing instruction of a symbolic slice run, and its position. -/
 def firstFail (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : List Nat) (s : State E) : Option (State E × Nat) := Id.run do
@@ -129,21 +132,28 @@ partial def findCtl (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : L
   match firstFail T rodata prog idx (cutOf ctl sc) with
   | none => return ctl
   | some (st, n) =>
-    -- the general registers' variables, and the stack cells that are still variables (saved pointers, return addresses)
-    let stackCells := (List.range 1024).filterMap fun (i : Nat) =>
+    -- candidates: the general registers' variables (singly, then together and minimised), then the stack cells
+    -- that are still variables (return addresses read by `ret`/`pop` directly from memory)
+    let regCands := (st.gd.toList.flatMap E.vars).eraseDups.filter (!ctl.contains ·)
+    let stackCands := (List.range 1024).filterMap fun (i : Nat) =>
       let q : Int := 131072 - 1024 + Int.ofNat i
-      match st.mem rStack q with | .var v => some v | _ => none
-    let cands := (st.gd.toList.flatMap E.vars ++ stackCells).eraseDups.filter (!ctl.contains ·)
+      match st.mem rStack q with | .var v => if ctl.contains v then none else some v | _ => none
     let advances (extra : List Nat) : Bool :=
       match firstFail T rodata prog idx (cutOf (extra ++ ctl) sc) with
       | none => true
       | some (_, n') => n' > n
-    for c in cands do
+    for c in regCands do
       if advances [c] then return ← findCtl rodata prog idx sc (c :: ctl)
-    -- an instruction needing several words at once (`bne t1, t2`): all bare-variable registers, minimised
-    if advances cands then
-      let mut keep := cands
-      for c in cands do
+    if advances regCands then
+      let mut keep := regCands
+      for c in regCands do
+        if advances (keep.erase c) then keep := keep.erase c
+      return ← findCtl rodata prog idx sc (keep ++ ctl)
+    for c in stackCands do
+      if advances [c] then return ← findCtl rodata prog idx sc (c :: ctl)
+    if advances (regCands ++ stackCands) then
+      let mut keep := regCands ++ stackCands
+      for c in regCands ++ stackCands do
         if advances (keep.erase c) then keep := keep.erase c
       return ← findCtl rodata prog idx sc (keep ++ ctl)
     throw (IO.userError s!"symbolic slice fails at step {n} (instruction {idx.getD n 0}); no control variable fixes it")
