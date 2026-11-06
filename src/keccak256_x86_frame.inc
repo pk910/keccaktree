@@ -82,21 +82,34 @@
 3:
 #endif
 	/* hash a copy in the stack buffer; lanes past count hash whatever is
-	 * there and are not stored */
+	 * there and are not stored. The copies are vector loops, not rep movsb:
+	 * at these sizes (64..448 bytes) rep movsb's startup costs more than
+	 * the copy itself (Zen 3: ~20 ns per tail with rep movsb, ~5 with
+	 * ymm moves). */
 	mov		rax, rdx
 	mov		rsi, BIN
 	lea		rdi, [rsp + TAIL_IN]
 	mov		rcx, rax
-	shl		rcx, 6
-	rep movsb
+7:	vmovdqu		ymm0, ymmword ptr [rsi]
+	vmovdqu		ymm1, ymmword ptr [rsi + 32]
+	vmovdqu		ymmword ptr [rdi], ymm0
+	vmovdqu		ymmword ptr [rdi + 32], ymm1
+	add		rsi, 64
+	add		rdi, 64
+	dec		rcx
+	jnz		7b
 	mov		rdi, BOUT
 	lea		BIN, [rsp + TAIL_IN]
 	lea		BOUT, [rsp + TAIL_OUT]
 	call		.Lbatch
 	lea		rsi, [rsp + TAIL_OUT]
 	mov		rcx, rax
-	shl		rcx, 5
-	rep movsb
+8:	vmovdqu		ymm0, ymmword ptr [rsi]
+	vmovdqu		ymmword ptr [rdi], ymm0
+	add		rsi, 32
+	add		rdi, 32
+	dec		rcx
+	jnz		8b
 4:	/* done */
 	xor		eax, eax
 5:	/* eax != 0: tail-call SMALL_TAIL for the rest (rdx nodes) */
