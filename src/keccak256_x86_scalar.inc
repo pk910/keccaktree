@@ -317,10 +317,23 @@
 .endr
 .endm
 
-/* the vector lane hook: SNUM/SDEN chunks per call (at most two) */
+/* the vector lane hook: SNUM/SDEN chunks per call (at most two); with
+ * SNUM_T / SNUM_R / SNUM_C defined, that many per theta, rho and chi hook */
 #define VHOOK_DEFINED
-.macro VHOOK
+.macro VHOOK kind
+#ifdef SNUM_T
+.ifc \kind, t
+	.set		scredit, scredit + SNUM_T
+.endif
+.ifc \kind, r
+	.set		scredit, scredit + SNUM_R
+.endif
+.ifc \kind, c
+	.set		scredit, scredit + SNUM_C
+.endif
+#else
 	.set		scredit, scredit + SNUM
+#endif
 .if scredit >= SDEN
 	.set		scredit, scredit - SDEN
 	SNEXT

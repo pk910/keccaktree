@@ -20,9 +20,9 @@
  *
  * Some kernels differ only in how they suit the microarchitecture, a
  * property no feature bit reports: avx512vl_x4 beats avx512_x8 on cores
- * with a single 512-bit ALU port, avx2_x10 and avx2_x9 (scalar nodes
- * interleaved into the AVX2 rounds) win only where the integer ALUs are
- * separate from the vector pipes, sha3_x3 (lazy rotations) needs EOR/BIC
+ * with a single 512-bit ALU port, avx2_x10, avx2_x9 and avx2_x5 (scalar
+ * nodes interleaved into the AVX2 rounds) win only where the integer ALUs
+ * are separate from the vector pipes, sha3_x3 (lazy rotations) needs EOR/BIC
  * with a rotated operand at full rate, sha3_x3r does not, and scalar_x1
  * beats neon_x2 where the integer side outruns the vector side; on RISC-V
  * the scalar and vector kernels trade places with VLEN and the core. For these,
@@ -106,7 +106,7 @@ static inline uint64_t keccaktree_ticks(void) {
  * alike, and returns the one with the lowest minimum. */
 static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
     unsigned char buf[CALIB_NODES * 64] __attribute__((aligned(64)));
-    uint64_t best[4];
+    uint64_t best[8];
     for (int i = 0; i < CALIB_NODES * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
     for (int i = 0; i < n; i++) {
         fns[i](buf, buf, CALIB_NODES); /* warm code, data and vector units */
@@ -143,16 +143,18 @@ keccaktree_hash_fcn keccaktree_detect(void) {
         return keccaktree_calibrate(c, 2);
     }
     if (os_ymm && (b & bit_AVX2)) {
-        /* avx2_x10 / avx2_x9 add scalar nodes (BMI1 andn, BMI2 rorx) to the
-         * avx2_x8 rounds: faster where the integer and vector pipes are
-         * separate (Zen 3, Gracemont), slower where they share ports
-         * (Golden Cove), so the timing decides */
+        /* avx2_x10 / avx2_x9 / avx2_x5 add scalar nodes (BMI1 andn, BMI2
+         * rorx) to the avx2_x8 / avx2_x4 rounds: faster where the integer
+         * ALUs are separate from the vector pipes (Zen 3: x10; Gracemont:
+         * x5 and x10 alike), slower where they share ports (Golden Cove),
+         * so the timing decides */
         static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x10,
                                                 &keccaktree_keccak256_avx2_x9,
+                                                &keccaktree_keccak256_avx2_x5,
                                                 &keccaktree_keccak256_avx2_x8,
                                                 &keccaktree_keccak256_avx2_x4};
-        if ((b & bit_BMI) && (b & bit_BMI2)) return keccaktree_calibrate(c, 4);
-        return keccaktree_calibrate(c + 2, 2);
+        if ((b & bit_BMI) && (b & bit_BMI2)) return keccaktree_calibrate(c, 5);
+        return keccaktree_calibrate(c + 3, 2);
     }
 #endif
 #ifdef __aarch64__

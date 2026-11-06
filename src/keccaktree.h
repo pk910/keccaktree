@@ -38,9 +38,11 @@ void keccaktree_keccak256_generic(unsigned char* output, const unsigned char* in
 /* Undefined behavior if called without appropriate hardware support */
 void keccaktree_keccak256_avx2_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x8(unsigned char* output, const unsigned char* input, uint64_t count);
-/* avx2_x8 interleaved with one or two nodes in the general registers (AVX2 + BMI1 + BMI2) */
+/* avx2_x8 interleaved with one or two nodes in the general registers, and
+ * avx2_x4 with one (AVX2 + BMI1 + BMI2) */
 void keccaktree_keccak256_avx2_x9(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x10(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_avx2_x5(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);
 #endif
