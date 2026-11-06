@@ -18,9 +18,16 @@ extern "C" {
  * `output` may alias `input` (in-place layer reduction, output == input). */
 typedef void (*keccaktree_hash_fcn)(unsigned char*, const unsigned char*, uint64_t);
 
-/** Select the implementation, or auto-detect from the CPU when `NULL`.
+/** Select the implementation, or auto-detect from the CPU when `NULL`:
+ * probe the CPU features, then time the kernels the CPU supports once on a
+ * small batch and keep the fastest (well under a millisecond).
  * Optional: auto-detection also happens on the first hash call. */
 void keccaktree_init(keccaktree_hash_fcn override);
+
+/** The kernel auto-detection picks (feature probe plus the one-time timing
+ * of the supported kernels), without installing it. Each call measures
+ * again; keccaktree_init(NULL) caches the result. */
+keccaktree_hash_fcn keccaktree_detect(void);
 
 void keccaktree_hash(unsigned char* output, const unsigned char* input, uint64_t count);
 

@@ -12,20 +12,19 @@
 #include <sys/sysctl.h>
 #endif
 
-/* Kernel selection probes the instruction set extensions the kernel needs
+/* Kernel selection probes the instruction set extensions a kernel needs
  * (CPUID feature bits plus the OS register state from XGETBV on x86-64,
  * AT_HWCAP on Linux/AArch64, hw.optional sysctls on macOS), never CPU
- * vendors, families or models. Where several supported kernels fit, the
- * choice is a fixed default:
- *   AVX-512F+VL  avx512_x8  (avx512vl_x4 is the 1..4 node tail and an
- *                            override for cores with one 512-bit ALU port)
- *   AVX2         avx2_x8    (avx2_x4 via override)
- *   SHA3, Linux  sha3_x3    (lazy rotations; shifted-operand EOR/BIC at full
- *                            rate, as on Neoverse)
- *   SHA3, macOS  sha3_x3r   (explicit rotations: the arm64 macOS default,
- *                            as Apple's cores take 2 cycles per shifted operand)
- *   ASIMD        neon_x2    (scalar_x1 via override)
- * Every kernel stays callable directly or through keccaktree_init(). */
+ * vendors, families or models.
+ *
+ * Some kernels differ only in how they suit the microarchitecture, a
+ * property no feature bit reports: avx512vl_x4 beats avx512_x8 on cores
+ * with a single 512-bit ALU port, sha3_x3 (lazy rotations) needs EOR/BIC
+ * with a rotated operand at full rate, sha3_x3r does not, and scalar_x1
+ * beats neon_x2 where the integer side outruns the vector side. For these,
+ * detection runs every feature-qualified candidate once on a small warm
+ * batch and keeps the fastest (keccaktree_calibrate): tens of microseconds
+ * up to ~0.5 ms, once per process. keccaktree_init(fn) skips it. */
 
 static void init_and_hash(unsigned char* output, const unsigned char* input, uint64_t count);
 static keccaktree_hash_fcn hash_ptr = init_and_hash;
@@ -46,7 +45,55 @@ static uint64_t xgetbv0(void) {
 }
 #endif
 
-static keccaktree_hash_fcn keccaktree_detect(void) {
+#if defined(__x86_64__) || defined(__aarch64__)
+/* Cheap monotonic tick counter, only compared against itself: the TSC on
+ * x86-64, the generic timer's virtual count on AArch64 (readable from user
+ * space on Linux and macOS). */
+static inline uint64_t keccaktree_ticks(void) {
+#ifdef __x86_64__
+    uint32_t lo, hi;
+    __asm__ volatile("lfence\n\trdtsc" : "=a"(lo), "=d"(hi) : : "memory");
+    return ((uint64_t)hi << 32) | lo;
+#else
+    uint64_t t;
+    __asm__ volatile("isb\n\tmrs %0, cntvct_el0" : "=r"(t) : : "memory");
+    return t;
+#endif
+}
+
+/* a multiple of every kernel's batch (2, 3, 4, 8), long enough that the
+ * 24 MHz counter of Apple cores resolves a few percent */
+#define CALIB_NODES 96
+#define CALIB_REPS  7
+
+/* Times each candidate on CALIB_NODES nodes, interleaved so a frequency
+ * change hits all of them alike, and returns the one with the lowest
+ * minimum. */
+static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
+    unsigned char in[CALIB_NODES * 64] __attribute__((aligned(64)));
+    unsigned char out[CALIB_NODES * 32] __attribute__((aligned(64)));
+    uint64_t best[4];
+    for (int i = 0; i < CALIB_NODES * 64; i++) in[i] = (unsigned char)(i * 131 + 7);
+    for (int i = 0; i < n; i++) {
+        fns[i](out, in, CALIB_NODES); /* warm code, data and vector units */
+        best[i] = UINT64_MAX;
+    }
+    for (int r = 0; r < CALIB_REPS; r++) {
+        for (int i = 0; i < n; i++) {
+            uint64_t t0 = keccaktree_ticks();
+            fns[i](out, in, CALIB_NODES);
+            uint64_t t = keccaktree_ticks() - t0;
+            if (t < best[i]) best[i] = t;
+        }
+    }
+    int pick = 0;
+    for (int i = 1; i < n; i++)
+        if (best[i] < best[pick]) pick = i;
+    return fns[pick];
+}
+#endif
+
+keccaktree_hash_fcn keccaktree_detect(void) {
 #ifdef __x86_64__
     uint32_t a = 0, b = 0, c = 0, d = 0;
     __get_cpuid_count(1, 0, &a, &b, &c, &d);
@@ -56,23 +103,32 @@ static keccaktree_hash_fcn keccaktree_detect(void) {
     int os_zmm = (xcr0 & 0xe6) == 0xe6;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
     if (os_zmm && (b & bit_AVX512F) && (b & bit_AVX512VL)) {
-        return &keccaktree_keccak256_avx512_x8;
+        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx512_x8,
+                                                &keccaktree_keccak256_avx512vl_x4};
+        return keccaktree_calibrate(c, 2);
     }
     if (os_ymm && (b & bit_AVX2)) {
-        return &keccaktree_keccak256_avx2_x8;
+        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x8,
+                                                &keccaktree_keccak256_avx2_x4};
+        return keccaktree_calibrate(c, 2);
     }
 #endif
 #ifdef __aarch64__
+    static const keccaktree_hash_fcn sha3[] = {&keccaktree_keccak256_sha3_x3,
+                                               &keccaktree_keccak256_sha3_x3r,
+                                               &keccaktree_keccak256_sha3_x2};
+    static const keccaktree_hash_fcn simd[] = {&keccaktree_keccak256_neon_x2,
+                                               &keccaktree_keccak256_scalar_x1};
 #if defined(__APPLE__)
     if (keccaktree_sysctl_flag("hw.optional.arm.FEAT_SHA3") || keccaktree_sysctl_flag("hw.optional.armv8_2_sha3"))
-        return &keccaktree_keccak256_sha3_x3r;
-    return &keccaktree_keccak256_neon_x2; /* Advanced SIMD is mandatory on AArch64 */
+        return keccaktree_calibrate(sha3, 3);
+    return keccaktree_calibrate(simd, 2); /* Advanced SIMD is mandatory on AArch64 */
 #elif defined(__linux__)
     unsigned long hwcaps = getauxval(AT_HWCAP);
 #ifdef HWCAP_SHA3
-    if (hwcaps & HWCAP_SHA3) return &keccaktree_keccak256_sha3_x3;
+    if (hwcaps & HWCAP_SHA3) return keccaktree_calibrate(sha3, 3);
 #endif
-    if (hwcaps & HWCAP_ASIMD) return &keccaktree_keccak256_neon_x2;
+    if (hwcaps & HWCAP_ASIMD) return keccaktree_calibrate(simd, 2);
 #endif
 #endif
     return &keccaktree_keccak256_generic;
