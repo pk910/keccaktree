@@ -71,9 +71,18 @@
  * to do and the kernel is bound by its ALU instructions): one EOR plus
  * five instead of two EORs per lane of column 4. Lane 2 is the last lane
  * chi reads (row 4), so its reload has the whole chi of rows 0..3 to
- * arrive and its theta EOR (SRHO_LANE2) goes just before that row. */
+ * arrive and its theta EOR (SRHO_LANE2) goes just before that row.
+ * SCALAR_D4_SPILL 0 keeps the two EORs per lane instead (no store, no
+ * load): for a kernel whose scalar stream has ALU slack but shares the
+ * dispatch and the load/store pipes with a vector stream that has none
+ * (keccak256_sha3_x3.S on Neoverse N2: the spill cost 0.6%). */
+#ifndef SCALAR_D4_SPILL
+#define SCALAR_D4_SPILL 1
+#endif
 .macro STHETA_C01 SARGS
+#if SCALAR_D4_SPILL
 	str		x\s2, [sp, #OUT_SLOT + 24]
+#endif
 	SXOR		\c0, \s0, \s5, O0, O5
 	SXOR		\c1, \s1, \s6, O1, O6
 	SXOR		\c2, \s2, \s7, O2, O7
@@ -102,6 +111,7 @@
 	SXOR		\c4, \c4, \s24, O4, O24
 .endm
 .macro STHETA_COL4 SARGS
+#if SCALAR_D4_SPILL
 	SXOR		\s2, \c3, \c0, O3, O0 + 1
 	SXOR		\s4, \s4, \s2, O4, O3
 	SXOR		\s9, \s9, \s2, O9, O3
@@ -109,6 +119,18 @@
 	SXOR		\s19, \s19, \s2, O19, O3
 	SXOR		\s24, \s24, \s2, O24, O3
 	ldr		x\s2, [sp, #OUT_SLOT + 24]
+#else
+	SXOR		\s4, \s4, \c3, O4, O3
+	SXOR		\s9, \s9, \c3, O9, O3
+	SXOR		\s14, \s14, \c3, O14, O3
+	SXOR		\s19, \s19, \c3, O19, O3
+	SXOR		\s24, \s24, \c3, O24, O3
+	SXOR		\s4, \s4, \c0, O4, O0 + 1
+	SXOR		\s9, \s9, \c0, O9, O0 + 1
+	SXOR		\s14, \s14, \c0, O14, O0 + 1
+	SXOR		\s19, \s19, \c0, O19, O0 + 1
+	SXOR		\s24, \s24, \c0, O24, O0 + 1
+#endif
 .endm
 .macro STHETA_D SARGS
 	SXOR		\c0, \c0, \c2, O0, O2 + 1
@@ -132,6 +154,9 @@
 .macro SRHO_ROWS01 SARGS
 	SXOR		\s0, \s0, \c4, O0, O4
 	SXOR		\s1, \s1, \c0, O1, O0
+#if !SCALAR_D4_SPILL
+	SXOR		\s2, \s2, \c1, O2, O1
+#endif
 	SXOR		\s3, \s3, \c2, O3, O2
 	SXOR		\s5, \s5, \c4, O5, O4
 	SXOR		\s6, \s6, \c0, O6, O0
@@ -153,7 +178,9 @@
 	SXOR		\s23, \s23, \c2, O23, O2
 .endm
 .macro SRHO_LANE2 SARGS
+#if SCALAR_D4_SPILL
 	SXOR		\s2, \s2, \c1, O2, O1
+#endif
 .endm
 .macro SRHO SARGS
 	SRHO_ROWS01	SPASS

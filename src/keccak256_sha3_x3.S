@@ -28,6 +28,10 @@
 #include "keccak256_arm_frame.inc"
 #define OUT_SLOT	160
 #define OUT_OFF		64
+/* the scalar D4 stays two EORs per lane: with the vector stream at the
+ * dispatch width, the spill's store and load cost more than the four ALU
+ * instructions they save (Neoverse N2: 121.1 vs 121.8 ns per node) */
+#define SCALAR_D4_SPILL	0
 #include "keccak256_scalar.inc"
 
 #define CHI_SPLIT	15
