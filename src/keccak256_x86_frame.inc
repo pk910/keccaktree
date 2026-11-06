@@ -2,20 +2,55 @@
  * Function frame shared by the x86-64 batch kernels. The including file
  * defines NODES (nodes per batch), VBYTES (vector register size), a local
  * label .Lbatch that hashes NODES nodes from [BIN] to [BOUT], and
- * optionally SLOTS (bytes of kernel scratch, default two rows of lanes),
- * SMALL_TAIL, a function that handles 1..SMALL_TAIL_MAX remaining nodes
- * faster than a padded batch (or, with SMALL_TAIL_MAX_VAR, up to the count
- * in that quadword, which the kernel can expose for run-time calibration),
- * and SMALL_TAIL_X1, one that handles a single remaining node (so that a
- * node need not pass through every smaller kernel's frame on its way to
- * the scalar code).
+ * optionally SLOTS (bytes of kernel scratch, default two rows of lanes)
+ * and the tail policy below.
+ *
+ * Tail policy. After the full batches, 0 < r < NODES nodes remain; which
+ * code hashes them is chosen by thresholds, in this order:
+ *   SMALL_TAIL_X1       a scalar kernel for r <= SMALL_TAIL_X1_MAX (default
+ *                       1; a whole call of at most that many nodes goes
+ *                       there before the prologue); after at least one
+ *                       batch of this kernel the limit is
+ *                       SMALL_TAIL_X1_MAX_AFTER instead (default
+ *                       SMALL_TAIL_X1_MAX): see below why they differ.
+ *   SMALL_TAIL          a smaller batch kernel for r <= SMALL_TAIL_MAX (or
+ *                       the count in the quadword SMALL_TAIL_MAX_VAR, which
+ *                       a kernel can expose for run-time calibration).
+ *   SMALL_TAIL_MID      another kernel for r <= SMALL_TAIL_MID_MAX (or the
+ *                       quadword SMALL_TAIL_MID_MAX_VAR), above SMALL_TAIL.
+ *   otherwise           a padded batch of this kernel: the r nodes are
+ *                       copied to a stack buffer, the batch hashes NODES
+ *                       lanes (the rest whatever is there) and r digests
+ *                       are copied out.
+ * ENTRY_ALT / ENTRY_ALT2 with ENTRY_ALT_MASK / ENTRY_ALT2_MASK hand a whole
+ * call to another kernel, before the prologue, when bit count of the mask
+ * is set (count < 64): for the counts where that kernel, with its own
+ * tail, is faster than a batch of this one plus a tail.
+ *
+ * Why the thresholds depend on what ran before: the kernels are chosen by
+ * the time of a batch, but a kernel that follows another one may run
+ * from the decoder instead of the op cache. The avx2_x10 loop body is
+ * about 9 KB of dense code and fills most of the 4K-op cache of Zen 3;
+ * an AVX2 kernel called after it (x2, x4, x8, x5, x9) decodes most of its
+ * first batch again: +210..420 ns, measured with perf (de_src_op_disp
+ * from the decoder 3665 per x4 call after x10 vs 2 when hot). The small
+ * scalar kernel is not affected, and neither is a padded batch of the
+ * kernel that just ran. So after an x10 batch, two nodes go to the scalar
+ * kernel (440 ns, the lane-pair kernel costs 566 cold) and 5..9 nodes to
+ * a padded x10 batch (683 ns; the x8 chain costs 950..1300 cold), while
+ * at entry, with nothing cold, x5 (5..6 nodes) and x8 (8, 12, 16 nodes)
+ * are faster than x10 batches with a tail. Cores whose op cache holds
+ * both (Gracemont) hash 5..9 remaining nodes faster through x5, so that
+ * limit is calibrated (keccaktree.c). The thresholds are documented with
+ * the measurements in each kernel.
  *
  * Calling convention: SysV (rdi, rsi, rdx) or Windows x64 (rcx, rdx, r8),
  * where xmm6..15, rsi and rdi are callee-saved. Inside, rdi = output,
  * rsi = input, rdx = count on both, and r9 points at the 64-byte aligned
  * frame: VMEM slots first, then the tail buffers. A kernel that uses the
  * callee-saved rbx and r12..r15 defines SAVE_GPRS: the frame pushes them
- * after rbp and restores them on exit.
+ * after rbp and restores them on exit. The tail kernels are tail-called
+ * after the epilogue, with the remaining nodes in the argument registers.
  */
 #ifdef _WIN64
 #define ARG_OUT		rcx
@@ -45,6 +80,33 @@
 .type \name,%function
 #endif
 \name:
+#ifdef SMALL_TAIL_X1
+#ifndef SMALL_TAIL_X1_MAX
+#define SMALL_TAIL_X1_MAX 1
+#endif
+#ifndef SMALL_TAIL_X1_MAX_AFTER
+#define SMALL_TAIL_X1_MAX_AFTER SMALL_TAIL_X1_MAX
+#endif
+	/* a count the scalar kernel handles (0 included: it returns): no frame */
+	cmp		ARG_COUNT, SMALL_TAIL_X1_MAX
+	jbe		SMALL_TAIL_X1
+#endif
+#if defined(ENTRY_ALT) || defined(ENTRY_ALT2)
+	/* counts another kernel handles faster as a whole: no frame */
+	cmp		ARG_COUNT, 63
+	ja		1f
+#ifdef ENTRY_ALT
+	mov		rax, ENTRY_ALT_MASK
+	bt		rax, ARG_COUNT
+	jc		ENTRY_ALT
+#endif
+#ifdef ENTRY_ALT2
+	mov		rax, ENTRY_ALT2_MASK
+	bt		rax, ARG_COUNT
+	jc		ENTRY_ALT2
+#endif
+1:
+#endif
 	push		rbp
 	mov		rbp, rsp
 #ifdef SAVE_GPRS
@@ -87,24 +149,27 @@
 	mov		r9, rsp
 	mov		BIN, rsi
 	mov		BOUT, rdi
-1:	/* full batches */
-	cmp		rdx, NODES
+1:	cmp		rdx, NODES
 	jb		2f
+9:	/* full batches */
 	call		.Lbatch
 	add		BIN, NODES*64
 	add		BOUT, NODES*32
 	sub		rdx, NODES
-	jmp		1b
-2:	/* 0 < count < NODES */
+	cmp		rdx, NODES
+	jae		9b
+#ifdef SMALL_TAIL_X1
+	/* 0 <= rdx < NODES after a batch of this kernel */
+	cmp		rdx, SMALL_TAIL_X1_MAX_AFTER
+	ja		2f
 	test		rdx, rdx
 	jz		4f
-#ifdef SMALL_TAIL_X1
-	cmp		rdx, 1
-	jne		7f
 	mov		eax, 2
 	jmp		5f
-7:
 #endif
+2:	/* 0 <= rdx < NODES, and above SMALL_TAIL_X1_MAX unless a batch ran */
+	test		rdx, rdx
+	jz		4f
 #ifdef SMALL_TAIL
 #ifdef SMALL_TAIL_MAX_VAR
 	cmp		rdx, qword ptr [rip + SMALL_TAIL_MAX_VAR]
@@ -116,9 +181,20 @@
 	jmp		5f
 3:
 #endif
+#ifdef SMALL_TAIL_MID
+#ifdef SMALL_TAIL_MID_MAX_VAR
+	cmp		rdx, qword ptr [rip + SMALL_TAIL_MID_MAX_VAR]
+#else
+	cmp		rdx, SMALL_TAIL_MID_MAX
+#endif
+	ja		3f
+	mov		eax, 3
+	jmp		5f
+3:
+#endif
 	/* hash a copy in the stack buffer; lanes past count hash whatever is
 	 * there and are not stored. The copies are vector loops, not rep movsb:
-	 * at these sizes (64..448 bytes) rep movsb's startup costs more than
+	 * at these sizes (64..640 bytes) rep movsb's startup costs more than
 	 * the copy itself (Zen 3: ~20 ns per tail with rep movsb, ~5 with
 	 * ymm moves). */
 	mov		rax, rdx
@@ -147,8 +223,8 @@
 	jnz		8b
 4:	/* done */
 	xor		eax, eax
-5:	/* eax != 0: tail-call SMALL_TAIL (1) or SMALL_TAIL_X1 (2) for the
-	 * rest (rdx nodes) */
+5:	/* eax != 0: tail-call SMALL_TAIL (1), SMALL_TAIL_X1 (2) or
+	 * SMALL_TAIL_MID (3) for the rest (rdx nodes at BIN -> BOUT) */
 	vzeroupper
 #ifdef _WIN64
 	vmovdqu		xmm6,  xmmword ptr [rsp + SAVE + 0*16]
@@ -175,7 +251,7 @@
 	mov		rsp, rbp
 #endif
 	pop		rbp
-#if defined(SMALL_TAIL) || defined(SMALL_TAIL_X1)
+#if defined(SMALL_TAIL) || defined(SMALL_TAIL_X1) || defined(SMALL_TAIL_MID)
 	test		eax, eax
 	jz		6f
 	mov		ARG_COUNT, rdx
@@ -184,6 +260,10 @@
 #ifdef SMALL_TAIL_X1
 	cmp		eax, 2
 	je		SMALL_TAIL_X1
+#endif
+#ifdef SMALL_TAIL_MID
+	cmp		eax, 3
+	je		SMALL_TAIL_MID
 #endif
 #ifdef SMALL_TAIL
 	jmp		SMALL_TAIL
