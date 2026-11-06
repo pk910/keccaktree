@@ -87,6 +87,8 @@ when keccaktreeAsm and defined(amd64):
   # picks a supported one.
   func keccaktree_keccak256_avx2_x4*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
+  func keccaktree_keccak256_avx2_x8*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
   func keccaktree_keccak256_avx512vl_x4*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_avx512_x8*(output: pointer, input: pointer, count: uint64) {.

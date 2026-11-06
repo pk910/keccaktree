@@ -35,6 +35,7 @@ pub mod ffi {
     #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
     extern "C" {
         pub fn keccaktree_keccak256_avx2_x4(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_avx2_x8(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512vl_x4(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512_x8(output: *mut u8, input: *const u8, count: u64);
     }
@@ -105,6 +106,8 @@ pub enum Backend {
     Generic,
     /// x86-64 AVX2, 4 nodes per batch.
     Avx2X4,
+    /// x86-64 AVX2, two interleaved 4-node batches.
+    Avx2X8,
     /// x86-64 AVX-512VL on ymm registers, 4 nodes per batch.
     Avx512VlX4,
     /// x86-64 AVX-512 on zmm registers, 8 nodes per batch.
@@ -134,9 +137,10 @@ impl fmt::Display for Unsupported {
 
 impl Backend {
     /// Every backend, in no particular order.
-    pub const ALL: [Backend; 9] = [
+    pub const ALL: [Backend; 10] = [
         Backend::Generic,
         Backend::Avx2X4,
+        Backend::Avx2X8,
         Backend::Avx512VlX4,
         Backend::Avx512X8,
         Backend::NeonX2,
@@ -151,6 +155,7 @@ impl Backend {
         match self {
             Backend::Generic => "generic",
             Backend::Avx2X4 => "avx2_x4",
+            Backend::Avx2X8 => "avx2_x8",
             Backend::Avx512VlX4 => "avx512vl_x4",
             Backend::Avx512X8 => "avx512_x8",
             Backend::NeonX2 => "neon_x2",
@@ -168,6 +173,8 @@ impl Backend {
             Backend::Generic => Some(ffi::keccaktree_keccak256_generic),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx2X4 if x86::avx2() => Some(ffi::keccaktree_keccak256_avx2_x4),
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
+            Backend::Avx2X8 if x86::avx2() => Some(ffi::keccaktree_keccak256_avx2_x8),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx512VlX4 if x86::avx512() => Some(ffi::keccaktree_keccak256_avx512vl_x4),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
