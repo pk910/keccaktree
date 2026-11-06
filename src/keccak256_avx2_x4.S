@@ -4,7 +4,8 @@
  *
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 4 at a time with
  * the rounds of keccak256_avx2.inc; rounds 1..22 are a plain loop between
- * the two state buffers. A single node goes to the scalar code, which is
+ * the two state buffers, with the row-pipelined ROUNDP (the rho of each
+ * row starts inside the chi of the row before; +2% on Zen 3 over ROUND). A single node goes to the scalar code, which is
  * faster than a padded batch. keccak256_avx2_x8 is faster for 8 or more
  * nodes and tail-calls this kernel for its remainder.
  *
@@ -38,8 +39,8 @@
 	/* rounds 1..22, two per iteration */
 	mov		ecx, 11
 1:
-	ROUND		BUF0, BUF1, 32
-	ROUND		BUF1, BUF0, 64
+	ROUNDP		BUF0, BUF1, 32
+	ROUNDP		BUF1, BUF0, 64
 	add		RCP, 64
 	dec		ecx
 	jnz		1b

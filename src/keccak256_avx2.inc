@@ -160,14 +160,36 @@
 .endif
 .endm
 
-/* chi over B0..B4 into row y of the state at out; iota on lane 0 with
- * the constant at [RCP + rc] if y = 0 */
+/* chi over the row in b0..b4 into row y of the state at out; iota on lane
+ * 0 with the constant at [RCP + rc] if y = 0 */
+.macro CHI_ROW_B out, y, rc, b0, b1, b2, b3, b4
+	CHI		C0, \b0, \b1, \b2, \out, 5*\y + 0, \rc
+	CHI		C1, \b1, \b2, \b3, \out, 5*\y + 1, 0
+	CHI		C2, \b2, \b3, \b4, \out, 5*\y + 2, 0
+	CHI		C3, \b3, \b4, \b0, \out, 5*\y + 3, 0
+	CHI		C4, \b4, \b0, \b1, \out, 5*\y + 4, 0
+.endm
 .macro CHI_ROW out, y, rc=0
-	CHI		C0, B0, B1, B2, \out, 5*\y + 0, \rc
-	CHI		C1, B1, B2, B3, \out, 5*\y + 1, 0
-	CHI		C2, B2, B3, B4, \out, 5*\y + 2, 0
-	CHI		C3, B3, B4, B0, \out, 5*\y + 3, 0
-	CHI		C4, B4, B0, B1, \out, 5*\y + 4, 0
+	CHI_ROW_B	\out, \y, \rc, B0, B1, B2, B3, B4
+.endm
+
+/* chi over the row in b0..b4 (as CHI_ROW_B) interleaved with the rho of
+ * the next row from the state at in: lane x of the next row is register
+ * x+2 of this row (nd, ni, nr = its D register, lane index, rotation),
+ * which chi output x+2 has just released. Lanes 0 and 1 of the next row
+ * get issued while this row's chi still runs, so their loads and
+ * rotations overlap it instead of waiting at the start of the row. */
+.macro CHI_RHO_ROW out, y, rc, b0, b1, b2, b3, b4, in, nd0, ni0, nr0, nd1, ni1, nr1, nd2, ni2, nr2, nd3, ni3, nr3, nd4, ni4, nr4
+	CHI		C0, \b0, \b1, \b2, \out, 5*\y + 0, \rc
+	CHI		C1, \b1, \b2, \b3, \out, 5*\y + 1, 0
+	CHI		C2, \b2, \b3, \b4, \out, 5*\y + 2, 0
+	THETA_RHO	\b2, \nd0, \in, \ni0, \nr0
+	CHI		C3, \b3, \b4, \b0, \out, 5*\y + 3, 0
+	THETA_RHO	\b3, \nd1, \in, \ni1, \nr1
+	CHI		C4, \b4, \b0, \b1, \out, 5*\y + 4, 0
+	THETA_RHO	\b4, \nd2, \in, \ni2, \nr2
+	THETA_RHO	\b0, \nd3, \in, \ni3, \nr3
+	THETA_RHO	\b1, \nd4, \in, \ni4, \nr4
 .endm
 
 /* one round from the state at in to out, iota constant at [RCP + rc];
@@ -214,6 +236,26 @@
 	THETA		\c
 .endif
 	CHI_ROW		\out, 4
+.endm
+
+/* the same round with theta first, software-pipelined across the rows
+ * (CHI_RHO_ROW): the rho of row y+1 is issued inside the chi of row y as
+ * its registers free up, so the B registers of row y+1 are those of row y
+ * rotated by two, back to B0..B4 after the five rows. Used by the single-
+ * batch kernel, where nothing else hides the start of a row behind the
+ * chi of the one before. */
+.macro ROUNDP in, out, rc
+	THETA
+	THETA_RHO	B0, D0, \in, 0,  0
+	THETA_RHO	B1, D1, \in, 6,  R6
+	THETA_RHO	B2, D2, \in, 12, R12
+	THETA_RHO	B3, D3, \in, 18, R18
+	THETA_RHO	B4, D4, \in, 24, R24
+	CHI_RHO_ROW	\out, 0, \rc, B0, B1, B2, B3, B4, \in, D3, 3, R3, D4, 9, R9, D0, 10, R10, D1, 16, R16, D2, 22, R22
+	CHI_RHO_ROW	\out, 1, 0, B2, B3, B4, B0, B1, \in, D1, 1, R1, D2, 7, R7, D3, 13, R13, D4, 19, R19, D0, 20, R20
+	CHI_RHO_ROW	\out, 2, 0, B4, B0, B1, B2, B3, \in, D4, 4, R4, D0, 5, R5, D1, 11, R11, D2, 17, R17, D3, 23, R23
+	CHI_RHO_ROW	\out, 3, 0, B1, B2, B3, B4, B0, \in, D2, 2, R2, D3, 8, R8, D4, 14, R14, D0, 15, R15, D1, 21, R21
+	CHI_ROW_B	\out, 4, 0, B3, B4, B0, B1, B2
 .endm
 
 /* round 0 lanes: data lane from memory, zero lane (B = rotl(D)), and
