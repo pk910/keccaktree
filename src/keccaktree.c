@@ -20,9 +20,9 @@
  *
  * Some kernels differ only in how they suit the microarchitecture, a
  * property no feature bit reports: avx512vl_x4 beats avx512_x8 on cores
- * with a single 512-bit ALU port, avx2_x10, avx2_x9 and avx2_x5 (scalar
- * nodes interleaved into the AVX2 rounds) win only where the integer ALUs
- * are separate from the vector pipes, sha3_x3 (lazy rotations) needs EOR/BIC
+ * with a single 512-bit ALU port, avx512_x9, avx2_x10, avx2_x9 and
+ * avx2_x5 (scalar nodes interleaved into the vector rounds) win only
+ * where the integer ALUs are separate from the vector pipes, sha3_x3 (lazy rotations) needs EOR/BIC
  * with a rotated operand at full rate, sha3_x3r does not, and neon_x3 or
  * scalar_x1 beat neon_x2 where the integer side keeps up with the vector
  * side; on RISC-V
@@ -95,8 +95,9 @@ static inline uint64_t keccaktree_ticks(void) {
 #endif
 }
 
-/* A multiple of every calibrated kernel's batch (2, 3, 4, 5, 8, 10), so
- * no candidate pays a tail the others do not; 120 nodes per sample are
+/* A multiple of every calibrated kernel's batch (2, 3, 4, 5, 8, 10; the
+ * AVX-512 list with its 9-node kernel uses 144 = 16 x 9 = 18 x 8), so no
+ * candidate pays a tail the others do not; 120 nodes per sample are
  * long enough for the 24 MHz counter of Apple cores to resolve a few
  * percent (keccak's timing does not depend on the data). The buffer is
  * static: 7.5 KB on the stack would make Windows compilers emit a stack
@@ -106,22 +107,23 @@ static inline uint64_t keccaktree_ticks(void) {
  * 300 process starts on Zen 3 and Neoverse N1 (about 130 us on Zen 3 with
  * four candidates). */
 #define CALIB_NODES 120
+#define CALIB_NODES_MAX 144
 #define CALIB_REPS  3
 
-/* Times each candidate, interleaved so a frequency change hits all of them
- * alike, and returns the one with the lowest minimum. */
-static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
-    static unsigned char buf[CALIB_NODES * 64] __attribute__((aligned(64)));
+/* Times each candidate on `nodes` nodes, interleaved so a frequency change
+ * hits all of them alike, and returns the one with the lowest minimum. */
+static keccaktree_hash_fcn keccaktree_calibrate_n(const keccaktree_hash_fcn* fns, int n, int nodes) {
+    static unsigned char buf[CALIB_NODES_MAX * 64] __attribute__((aligned(64)));
     uint64_t best[8];
-    for (int i = 0; i < CALIB_NODES * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
+    for (int i = 0; i < nodes * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
     for (int i = 0; i < n; i++) {
-        fns[i](buf, buf, CALIB_NODES); /* warm code, data and vector units */
+        fns[i](buf, buf, nodes); /* warm code, data and vector units */
         best[i] = UINT64_MAX;
     }
     for (int r = 0; r < CALIB_REPS; r++) {
         for (int i = 0; i < n; i++) {
             uint64_t t0 = keccaktree_ticks();
-            fns[i](buf, buf, CALIB_NODES);
+            fns[i](buf, buf, nodes);
             uint64_t t = keccaktree_ticks() - t0;
             if (t < best[i]) best[i] = t;
         }
@@ -130,6 +132,9 @@ static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, 
     for (int i = 1; i < n; i++)
         if (best[i] < best[pick]) pick = i;
     return fns[pick];
+}
+static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
+    return keccaktree_calibrate_n(fns, n, CALIB_NODES);
 }
 #endif
 
@@ -200,9 +205,15 @@ keccaktree_hash_fcn keccaktree_detect(void) {
      * hide them) */
     int bmi = (b & bit_BMI) && (b & bit_BMI2);
     if (os_zmm && (b & bit_AVX512F) && (b & bit_AVX512VL) && bmi) {
-        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx512_x8,
+        /* avx512_x9 adds a scalar node to the zmm rounds: faster where
+         * the 512-bit units run at half rate and leave the integer side
+         * and the dispatch width idle (Zen 4: 1.055x), slower where the
+         * integer ALUs share the vector ports (Ice Lake, Granite Rapids
+         * 0.73x) or the front end is the bound (EPYC 9V45: 0.84x) */
+        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx512_x9,
+                                                &keccaktree_keccak256_avx512_x8,
                                                 &keccaktree_keccak256_avx512vl_x4};
-        return keccaktree_calibrate(c, 2);
+        return keccaktree_calibrate_n(c, 3, 144);
     }
     if (os_ymm && (b & bit_AVX2) && bmi) {
         /* avx2_x10 / avx2_x5 add scalar nodes (BMI1 andn, BMI2 rorx) to

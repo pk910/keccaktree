@@ -55,6 +55,10 @@ void keccaktree_keccak256_avx2_x6(unsigned char* output, const unsigned char* in
 void keccaktree_avx2_x10_mid_tail(uint64_t max);
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);
+/* avx512_x8 interleaved with one node in the general registers (AVX-512F
+ * + VL + BMI1 + BMI2): cores whose 512-bit units leave the integer side
+ * and the dispatch width idle (Zen 4) */
+void keccaktree_keccak256_avx512_x9(unsigned char* output, const unsigned char* input, uint64_t count);
 /* one node at a time in the general registers (BMI1 + BMI2); the AVX2
  * kernels hand their single remaining node to it */
 void keccaktree_keccak256_x86_x1(unsigned char* output, const unsigned char* input, uint64_t count);

@@ -98,6 +98,7 @@ int main(void) {
     if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x6", keccaktree_keccak256_avx2_x6);
     if (avx512) row("keccak256 avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
     if (avx512) row("keccak256 avx512_x8", keccaktree_keccak256_avx512_x8);
+    if (avx512) row("keccak256 avx512_x9", keccaktree_keccak256_avx512_x9);
 #ifdef HAVE_HASHTREE
     row("sha256 hashtree generic", hashtree_sha256_generic);
     row("sha256 hashtree avx_x1", hashtree_sha256_avx_x1);

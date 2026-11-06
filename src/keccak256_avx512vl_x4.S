@@ -22,6 +22,10 @@
 #define RC(r)		qword ptr [rip + .LKECCAK_RC + 8*(r)]{1to4}
 #define K1		qword ptr [rip + .LK1]{1to4}
 #define K63		qword ptr [rip + .LK63]{1to4}
+#define RCP		r8
+#define RCL(k)		qword ptr [RCP + 8*(k)]{1to4}
+#define LOOP_CNT	r9 + 10*32
+#define SLOTS		(10*32 + 64)
 #define ROT8		ymmword ptr [rip + .LROT8]
 #define ROT56		ymmword ptr [rip + .LROT56]
 #define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar */
@@ -78,7 +82,11 @@
 	vshufi64x2	ymm6, ymm24, ymm26, 0x3
 	vshufi64x2	ymm5, ymm25, ymm27, 0x0
 	vshufi64x2	ymm7, ymm25, ymm27, 0x3
+#ifdef KT_AVX512_UNROLLED
 	KECCAK_F
+#else
+	KECCAK_F_LOOP
+#endif
 	ret
 
 	FUNCTION keccaktree_keccak256_avx512vl_x4

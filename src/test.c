@@ -175,6 +175,7 @@ int main(void) {
     if ((b & bit_AVX512F) && (b & bit_AVX512VL)) {
         test_backend("avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
         test_backend("avx512_x8", keccaktree_keccak256_avx512_x8);
+        test_backend("avx512_x9", keccaktree_keccak256_avx512_x9);
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx512");
     }
