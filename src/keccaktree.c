@@ -48,10 +48,13 @@ int keccaktree_avx512_single_port(void) {
  * (implementer 0x41: Neoverse, Cortex-A7xx/X), false on Apple's. Without
  * FEAT_SHA3 the scalar kernel is only picked on Neoverse N1 (Graviton 2,
  * Ampere Altra), whose integer pipes take the rotated form at full rate;
- * older Cortex-A cores (A72, A57) run it on one pipe and keep neon_x2. */
-static void keccaktree_arm_select(unsigned implementer, unsigned part, int* arm_core, int* n1) {
+ * older Cortex-A cores (A72, A57) run it on one pipe and keep neon_x2.
+ * Apple cores (implementer 0x61, also under Linux) get sha3_x3r, the
+ * hybrid with explicit rotations. */
+static void keccaktree_arm_select(unsigned implementer, unsigned part, int* arm_core, int* n1, int* apple) {
     *arm_core = implementer == 0x41;
     *n1 = implementer == 0x41 && part == 0xd0c;
+    *apple = implementer == 0x61;
 }
 #endif
 
@@ -74,20 +77,22 @@ static keccaktree_hash_fcn keccaktree_detect(void) {
 #endif
 #ifdef __aarch64__
 #if defined(__APPLE__)
-    return &keccaktree_keccak256_sha3_x2; /* every Apple M-series core has FEAT_SHA3 */
+    return &keccaktree_keccak256_sha3_x3r; /* every Apple M-series core has FEAT_SHA3 */
 #elif defined(__linux__)
     unsigned long hwcaps = getauxval(AT_HWCAP);
-    int arm_core = 0, n1 = 0;
+    int arm_core = 0, n1 = 0, apple = 0;
 #ifdef HWCAP_CPUID
     if (hwcaps & HWCAP_CPUID) { /* the kernel emulates MIDR_EL1 reads */
         uint64_t midr;
         __asm__("mrs %0, MIDR_EL1" : "=r"(midr));
-        keccaktree_arm_select((unsigned)(midr >> 24) & 0xff, (unsigned)(midr >> 4) & 0xfff, &arm_core, &n1);
+        keccaktree_arm_select((unsigned)(midr >> 24) & 0xff, (unsigned)(midr >> 4) & 0xfff, &arm_core, &n1, &apple);
     }
 #endif
 #ifdef HWCAP_SHA3
     if (hwcaps & HWCAP_SHA3)
-        return arm_core ? &keccaktree_keccak256_sha3_x3 : &keccaktree_keccak256_sha3_x2;
+        return arm_core ? &keccaktree_keccak256_sha3_x3
+             : apple    ? &keccaktree_keccak256_sha3_x3r
+                        : &keccaktree_keccak256_sha3_x2;
 #endif
     if (n1) return &keccaktree_keccak256_scalar_x1;
     if (hwcaps & HWCAP_ASIMD) return &keccaktree_keccak256_neon_x2;

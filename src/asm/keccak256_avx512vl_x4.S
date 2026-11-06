@@ -20,6 +20,8 @@
 #define RC(r)		qword ptr [rip + .LKECCAK_RC + 8*(r)]{1to4}
 #define K1		qword ptr [rip + .LK1]{1to4}
 #define K63		qword ptr [rip + .LK63]{1to4}
+#define ROT8		ymmword ptr [rip + .LROT8]
+#define ROT56		ymmword ptr [rip + .LROT56]
 
 #include "keccak256_x86_frame.inc"
 #include "keccak256_avx512.inc"
@@ -44,27 +46,31 @@
 .p2align 6
 /* one batch: 4 nodes at [BIN] -> 4 digests at [BOUT] */
 .Lbatch:
-	/* two 4x4 qword transposes: VREG(j) = word j of nodes 0..3 */
-	vmovdqu64	ymm16, ymmword ptr [BIN + 0*64]
-	vmovdqu64	ymm17, ymmword ptr [BIN + 1*64]
-	vmovdqu64	ymm18, ymmword ptr [BIN + 2*64]
-	vmovdqu64	ymm19, ymmword ptr [BIN + 3*64]
-	vmovdqu64	ymm20, ymmword ptr [BIN + 0*64 + 32]
-	vmovdqu64	ymm21, ymmword ptr [BIN + 1*64 + 32]
-	vmovdqu64	ymm22, ymmword ptr [BIN + 2*64 + 32]
-	vmovdqu64	ymm23, ymmword ptr [BIN + 3*64 + 32]
-	vpunpcklqdq	ymm24, ymm16, ymm17
-	vpunpckhqdq	ymm25, ymm16, ymm17
-	vpunpcklqdq	ymm26, ymm18, ymm19
-	vpunpckhqdq	ymm27, ymm18, ymm19
+	/* two 4x4 qword transposes: VREG(j) = word j of nodes 0..3. The first
+	 * level is done in the load unit (see the zmm kernel): node 2i, then a
+	 * merge-masked load of node 2i+1 shifted by one qword into the odd
+	 * lanes (k1). */
+	kmovw		k1, word ptr [rip + .LODD]
+	vmovdqu64	ymm24, ymmword ptr [BIN + 0*64]		/* n0 w0 w2 */
+	vmovdqu64	ymm24{k1}, ymmword ptr [BIN + 1*64 - 8]	/* n1 w0 w2 */
+	vmovdqu64	ymm25, ymmword ptr [BIN + 0*64 + 8]	/* n0 w1 w3 */
+	vmovdqu64	ymm25{k1}, ymmword ptr [BIN + 1*64]	/* n1 w1 w3 */
+	vmovdqu64	ymm26, ymmword ptr [BIN + 2*64]
+	vmovdqu64	ymm26{k1}, ymmword ptr [BIN + 3*64 - 8]
+	vmovdqu64	ymm27, ymmword ptr [BIN + 2*64 + 8]
+	vmovdqu64	ymm27{k1}, ymmword ptr [BIN + 3*64]
 	vshufi64x2	ymm0, ymm24, ymm26, 0x0
 	vshufi64x2	ymm2, ymm24, ymm26, 0x3
 	vshufi64x2	ymm1, ymm25, ymm27, 0x0
 	vshufi64x2	ymm3, ymm25, ymm27, 0x3
-	vpunpcklqdq	ymm24, ymm20, ymm21
-	vpunpckhqdq	ymm25, ymm20, ymm21
-	vpunpcklqdq	ymm26, ymm22, ymm23
-	vpunpckhqdq	ymm27, ymm22, ymm23
+	vmovdqu64	ymm24, ymmword ptr [BIN + 0*64 + 32]	/* words 4..7 */
+	vmovdqu64	ymm24{k1}, ymmword ptr [BIN + 1*64 + 24]
+	vmovdqu64	ymm25, ymmword ptr [BIN + 0*64 + 40]
+	vmovdqu64	ymm25{k1}, ymmword ptr [BIN + 1*64 + 32]
+	vmovdqu64	ymm26, ymmword ptr [BIN + 2*64 + 32]
+	vmovdqu64	ymm26{k1}, ymmword ptr [BIN + 3*64 + 24]
+	vmovdqu64	ymm27, ymmword ptr [BIN + 2*64 + 40]
+	vmovdqu64	ymm27{k1}, ymmword ptr [BIN + 3*64 + 32]
 	vshufi64x2	ymm4, ymm24, ymm26, 0x0
 	vshufi64x2	ymm6, ymm24, ymm26, 0x3
 	vshufi64x2	ymm5, ymm25, ymm27, 0x0
@@ -75,6 +81,11 @@
 	FUNCTION keccaktree_keccak256_avx512vl_x4
 
 	KECCAK_RODATA
+.LROT8:		.byte 7, 0, 1, 2, 3, 4, 5, 6, 15, 8, 9, 10, 11, 12, 13, 14
+		.byte 7, 0, 1, 2, 3, 4, 5, 6, 15, 8, 9, 10, 11, 12, 13, 14
+.LROT56:	.byte 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 15, 8
+		.byte 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 15, 8
+.LODD:		.word 0xA
 
 #if defined(__ELF__)
 .section .note.GNU-stack,"",@progbits

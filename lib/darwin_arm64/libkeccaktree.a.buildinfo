@@ -1,1 +1,1 @@
-Apple clang version 15.0.0 (clang-1500.3.9.4)
+zig cc 0.17.1 -target aarch64-macos.11.0 (contributor build)

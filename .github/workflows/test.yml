@@ -56,7 +56,7 @@ jobs:
           '
 
   test-darwin:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -73,7 +73,7 @@ jobs:
         run: cp dl-darwin/libkeccaktree.a lib/darwin_arm64/
       - name: Test (Apple Silicon always has FEAT_SHA3)
         env:
-          KECCAKTREE_EXPECT_PATH: sha3_x2
+          KECCAKTREE_EXPECT_PATH: sha3_x3r
         run: go test -v -count=1 .
 
   test-windows:
