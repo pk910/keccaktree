@@ -500,6 +500,16 @@ theorem entry_inv (input : Int → BitVec 64) :
       [f'(absorbNode_lane{k} _)' for n in range(count) for k in range(8, 25)]) + f'''⟩
 
 set_option maxRecDepth 100000 in
+/-- The output word `4n+w` of a state satisfying `Inv24`, for any states `A`
+(proved apart from the kernel theorem: the kernel typechecker must never have
+to compare terms containing the concrete `Spec.rounds 24 …` states). -/
+theorem inv24_word (Sf : State (BitVec 64)) (A : Fin {count} → Spec.State) (h : Inv24 (envOf Sf) A)
+    (n w : Nat) (hn : n < {count}) (hw : w < 4) :
+    Sf.mem rOutput (Int.ofNat (4 * n + w)) = L (A ⟨n, hn⟩) w := by
+  simp only [Inv24, specQuantity, rotl0, envOf_mem] at h
+  rcases n with ''' + ' | '.join(['_'] * count + ['n']) + ''' <;> rcases w with _ | _ | _ | _ | w <;> (try omega)
+''' + ''.join(f'  · exact h{"".join(".2" for _ in range(4 * n + w))}{".1" if 4 * n + w + 1 < 4 * count else ""}\n' for n in range(count) for w in range(4)) + f'''
+set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 /-- **The kernel computes keccak256 of every node**: the kernel call on
 `count` nodes halts without a model fault, and byte `8w+i` of the digest of
@@ -514,15 +524,12 @@ theorem kernel_keccak256 (input : Int → BitVec 64) :
   generalize finalState input = Sf at hh he hout ⊢
   refine ⟨hh, he, ?_⟩
   intro n w i hn hw hi
-  simp only [Inv24, specQuantity, rotl0, envOf_mem] at hout
-''' + ''.join(f'  have f{k} : (({k} : Fin {count}) : Nat) = {k} := by decide\n' for k in range(count)) + f'''  simp only [''' + ', '.join(f'f{k}' for k in range(count)) + f'''] at hout
-  have key : Sf.mem rOutput (Int.ofNat (4 * n + w)) = L (Spec.rounds 24 (absorbNode (nodeWords input n))) w := by
-    rcases n with ''' + ' | '.join(['_'] * count + ['n']) + ''' <;> rcases w with _ | _ | _ | _ | w <;> (try omega)
-''' + ''.join(f'    · exact hout{"".join(".2" for _ in range(4 * n + w))}{".1" if 4 * n + w + 1 < 4 * count else ""}\n' for n in range(count) for w in range(4)) + f'''  rw [key, absorbNode_keccak, squeezeByte_eq]
+  have key := inv24_word Sf _ hout n w hn hw
+  rw [key, absorbNode_keccak, squeezeByte_eq]
   have h1 : (8 * w + i) / 8 = w := by omega
   have h2 : (8 * w + i) % 8 = i := by omega
   rw [h1, h2]
-  simp only [Spec.keccakF]
+  simp only [Spec.keccakF, Fin.val_mk]
 
 end Keccaktree.Kernels.{ns}
 ''')
