@@ -36,7 +36,8 @@
  *
  * The including file defines the registers SC0..SC4, SD0..SD4, ST, and
  * RCP (the broadcast round constants, whose first qword serves here).
- * Buffers are addressed as [r9 + offset].
+ * Buffers are at an offset from r9, or from the registers S_IN / S_OUT
+ * when the kernel swaps its state buffers by register (SROUND_BEGIN rel).
  */
 
 /* d = c1 ^ rotl(c2, 1) from the registers, or (SPAR_MEM, rounds 1..23)
@@ -59,9 +60,9 @@
 /* parity of column x of the data words at in (lanes 0..7, lane 8 = 1,
  * lane 16 = 1 << 63, the rest 0), for round 0 */
 .macro SPAR c, x, in
-	mov		\c, qword ptr [r9 + \in + 8*\x]
+	mov		\c, qword ptr [\in + 8*\x]
 .if \x < 3
-	xor		\c, qword ptr [r9 + \in + 8*(\x + 5)]
+	xor		\c, qword ptr [\in + 8*(\x + 5)]
 .endif
 .if \x == 1
 	xor		\c, qword ptr [rip + .LK63]
@@ -77,16 +78,16 @@
 .if (\i) == 8
 	mov		ST, \d
 	xor		ST, 1
-	mov		qword ptr [r9 + \in + 8*(\i)], ST
+	mov		qword ptr [\in + 8*(\i)], ST
 .elseif (\i) == 16
 	mov		ST, \d
 	xor		ST, qword ptr [rip + .LK63]
-	mov		qword ptr [r9 + \in + 8*(\i)], ST
+	mov		qword ptr [\in + 8*(\i)], ST
 .else
-	mov		qword ptr [r9 + \in + 8*(\i)], \d
+	mov		qword ptr [\in + 8*(\i)], \d
 .endif
 .elseif sround != 23 || (\i) % 6 == 0
-	xor		qword ptr [r9 + \in + 8*(\i)], \d
+	xor		qword ptr [\in + 8*(\i)], \d
 .endif
 .endm
 
@@ -102,9 +103,9 @@
 /* b = rotl(A[i], r) with A[i] at in */
 .macro SRHO b, i, r, in
 .if \r
-	rorx		\b, qword ptr [r9 + \in + 8*\i], 64 - \r
+	rorx		\b, qword ptr [\in + 8*(\i)], 64 - \r
 .else
-	mov		\b, qword ptr [r9 + \in + 8*\i]
+	mov		\b, qword ptr [\in + 8*(\i)]
 .endif
 .endm
 
@@ -112,23 +113,30 @@
  * round constant at [RCP + rc], and into the parity c of its column
  * (SPAR_MEM: the complete parities of the last row go to s_par) */
 .macro SCHI b0, b1, b2, i, out, rc, c
+.if \i < 5 && sround != 23
+	/* row 0 starts the parity: computed in its register (the D
+	 * registers are free once theta is done) */
+	andn		\c, \b1, \b2
+	xor		\c, \b0
+.if \i == 0
+	xor		\c, qword ptr [RCP + \rc]
+.endif
+	mov		qword ptr [\out + 8*(\i)], \c
+.else
 	andn		ST, \b1, \b2
 	xor		ST, \b0
 .if \i == 0
 	xor		ST, qword ptr [RCP + \rc]
 .endif
-	mov		qword ptr [r9 + \out + 8*\i], ST
+	mov		qword ptr [\out + 8*(\i)], ST
 .if sround != 23
-.if \i < 5
-	mov		\c, ST
-.else
 	xor		\c, ST
-.endif
 #if SPAR_MEM
 .if \i >= 20
 	mov		qword ptr [r9 + s_par + 8*(\i - 20)], \c
 .endif
 #endif
+.endif
 .endif
 .endm
 
@@ -278,26 +286,40 @@
 #define SCHUNKS		65
 
 /* the chunk sn of the current round with the register sets in the order
- * of this round (sswap) */
-.macro SCHUNK_CUR
+ * of this round (sswap); the buffers are at offset s_in / s_out from r9
+ * (s_rel = 0) or from the kernel's S_IN / S_OUT registers (s_rel = 1) */
+.macro SCHUNK_SW in, out
 .if sswap
-	SCHUNK		sn, s_in, s_out, s_rc, SD0, SD1, SD2, SD3, SD4, SC0, SC1, SC2, SC3, SC4
+	SCHUNK		sn, \in, \out, s_rc, SD0, SD1, SD2, SD3, SD4, SC0, SC1, SC2, SC3, SC4
 .else
-	SCHUNK		sn, s_in, s_out, s_rc, SC0, SC1, SC2, SC3, SC4, SD0, SD1, SD2, SD3, SD4
+	SCHUNK		sn, \in, \out, s_rc, SC0, SC1, SC2, SC3, SC4, SD0, SD1, SD2, SD3, SD4
+.endif
+.endm
+#ifndef S_IN
+#define S_IN		r9
+#define S_OUT		r9
+#endif
+.macro SCHUNK_CUR
+.if s_rel
+	SCHUNK_SW	S_IN+s_in, S_OUT+s_out
+.else
+	SCHUNK_SW	r9+s_in, r9+s_out
 .endif
 .endm
 
-/* start the scalar round r (0, 1 or 23) from in to out with the round
- * constant at [RCP + rc] and the parities in SC0..SC4 (swap = 0) or
- * SD0..SD4 (swap = 1), or at par with SPAR_MEM: the hooks emit its chunks
- * from here on */
-.macro SROUND_BEGIN r, in, out, rc, swap, par=0
+/* start the scalar round r (0, 1 or 23) from in to out (offsets from r9,
+ * or from S_IN / S_OUT with rel = 1) with the round constant at
+ * [RCP + rc] and the parities in SC0..SC4 (swap = 0) or SD0..SD4
+ * (swap = 1), or at par with SPAR_MEM: the hooks emit its chunks from
+ * here on */
+.macro SROUND_BEGIN r, in, out, rc, swap, par=0, rel=0
 	.set		sround, \r
 	.set		s_in, \in
 	.set		s_out, \out
 	.set		s_rc, \rc
 	.set		sswap, \swap
 	.set		s_par, \par
+	.set		s_rel, \rel
 	.set		sn, 0
 	.set		scredit, 0
 .endm

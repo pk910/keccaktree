@@ -82,10 +82,10 @@
 	mov		qword ptr [r9 + SCNT], 11
 1:
 	SROUND_BEGIN	1, SS1, SS0, 32, 1
-	ROUND		BUF0, BUF1, 32
+	ROUNDP		BUF0, BUF1, 32
 	SFLUSH
 	SROUND_BEGIN	1, SS0, SS1, 64, 0
-	ROUND		BUF1, BUF0, 64
+	ROUNDP		BUF1, BUF0, 64
 	SFLUSH
 	add		RCP, 64
 	dec		qword ptr [r9 + SCNT]
