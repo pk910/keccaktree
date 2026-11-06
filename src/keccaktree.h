@@ -44,10 +44,11 @@ void keccaktree_keccak256_avx2_x8(unsigned char* output, const unsigned char* in
 void keccaktree_keccak256_avx2_x2(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_avx2_small_tail(uint64_t max);
 /* avx2_x8 interleaved with one or two nodes in the general registers, and
- * avx2_x4 with one (AVX2 + BMI1 + BMI2) */
+ * avx2_x4 with one or two (AVX2 + BMI1 + BMI2) */
 void keccaktree_keccak256_avx2_x9(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x10(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x5(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_avx2_x6(unsigned char* output, const unsigned char* input, uint64_t count);
 /* after an avx2_x10 batch, 5..max remaining nodes go to avx2_x5 (max = 9,
  * or 5: just five; the default is 4, a padded x10 batch for all;
  * keccaktree_detect times 5 and 9) */

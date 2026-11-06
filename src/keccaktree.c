@@ -208,14 +208,17 @@ keccaktree_hash_fcn keccaktree_detect(void) {
          * the avx2_x8 / avx2_x4 rounds: faster where the integer ALUs are
          * separate from the vector pipes (Zen 3: x10; Gracemont: x5 and
          * x10 alike), slower where they share ports (Golden Cove), so the
-         * timing decides. avx2_x9 (one scalar node) never beat x10 or x8
-         * on the cores measured and is not timed. */
+         * timing decides; avx2_x6 (two scalar nodes on the x4 batch) is
+         * Gracemont's kernel, 2.5% over x5 at its 5-wide allocation.
+         * avx2_x9 (one scalar node) never beat x10 or x8 on the cores
+         * measured and is not timed. */
         static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x10,
                                                 &keccaktree_keccak256_avx2_x5,
+                                                &keccaktree_keccak256_avx2_x6,
                                                 &keccaktree_keccak256_avx2_x8,
                                                 &keccaktree_keccak256_avx2_x4};
         keccaktree_avx2_tail_calibrate();
-        keccaktree_hash_fcn fn = keccaktree_calibrate(c, 4);
+        keccaktree_hash_fcn fn = keccaktree_calibrate(c, 5);
         if (fn == &keccaktree_keccak256_avx2_x10) keccaktree_avx2_x10_tail_calibrate();
         return fn;
     }

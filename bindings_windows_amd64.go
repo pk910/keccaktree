@@ -18,7 +18,7 @@ var hasAVX2 = cpuid.CPU.Supports(cpuid.AVX2)
 
 // BMI1 andn and BMI2 rorx: the scalar kernel x86_x1, which every AVX2
 // kernel hands its last node to and which runs alone without AVX2, and the
-// extra nodes of the hybrid kernels (avx2_x10, avx2_x9, avx2_x5).
+// extra nodes of the hybrid kernels (avx2_x10, avx2_x9, avx2_x5, avx2_x6).
 var hasBMI = cpuid.CPU.Supports(cpuid.BMI1, cpuid.BMI2)
 
 // The kernels KeccaktreeHash can call: the values are the ones
@@ -35,6 +35,7 @@ const (
 	kernelX86X1
 	kernelAVX512VLX4
 	kernelAVX512X8
+	kernelAVX2X6
 )
 
 var kernelNames = [...]string{
@@ -46,6 +47,7 @@ var kernelNames = [...]string{
 	kernelX86X1:      "x86_x1",
 	kernelAVX512VLX4: "avx512vl_x4",
 	kernelAVX512X8:   "avx512_x8",
+	kernelAVX2X6:     "avx2_x6",
 }
 
 // kernel is the one KeccaktreeHash calls, read by the wrapper.

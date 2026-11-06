@@ -53,7 +53,7 @@ build riscv64 riscv64-linux-gnu-gcc
 SHA3='sha3_x3|sha3_x3r|sha3_x2'
 # the AVX2 kernels need BMI1/BMI2 for their x86_x1 tail; BMI without AVX2
 # runs x86_x1 alone
-AVX2='avx2_x10|avx2_x9|avx2_x5|avx2_x8|avx2_x4'
+AVX2='avx2_x10|avx2_x9|avx2_x6|avx2_x5|avx2_x8|avx2_x4'
 
 echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
