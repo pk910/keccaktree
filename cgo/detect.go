@@ -18,6 +18,7 @@ static const char* keccaktree_go_detect(void) {
 	if (f == keccaktree_keccak256_avx2_x5) return "avx2_x5";
 	if (f == keccaktree_keccak256_avx2_x8) return "avx2_x8";
 	if (f == keccaktree_keccak256_avx2_x4) return "avx2_x4";
+	if (f == keccaktree_keccak256_x86_x1) return "x86_x1";
 #endif
 #ifdef __aarch64__
 	if (f == keccaktree_keccak256_sha3_x3) return "sha3_x3";

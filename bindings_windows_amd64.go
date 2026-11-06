@@ -14,11 +14,11 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 
 // The AVX-512 path also uses the 256-bit (VL) encodings for short tails.
 var hasAVX512 = cpuid.CPU.Supports(cpuid.AVX512F, cpuid.AVX512VL)
-// The AVX2 kernels hand their last node to the scalar BMI1/BMI2 kernel.
-var hasAVX2 = cpuid.CPU.Supports(cpuid.AVX2, cpuid.BMI1, cpuid.BMI2)
+var hasAVX2 = cpuid.CPU.Supports(cpuid.AVX2)
 
-// The hybrid AVX2 kernels (avx2_x10, avx2_x9, avx2_x5) hash one or two
-// extra nodes in the integer registers with BMI1 andn and BMI2 rorx.
+// BMI1 andn and BMI2 rorx: the scalar kernel x86_x1, which every AVX2
+// kernel hands its last node to and which runs alone without AVX2, and the
+// extra nodes of the hybrid kernels (avx2_x10, avx2_x9, avx2_x5).
 var hasBMI = cpuid.CPU.Supports(cpuid.BMI1, cpuid.BMI2)
 
 // The kernels KeccaktreeHash can call: the values are the ones
@@ -32,6 +32,7 @@ const (
 	kernelAVX2X5
 	kernelAVX2X9
 	kernelAVX2X10
+	kernelX86X1
 	kernelAVX512VLX4
 	kernelAVX512X8
 )
@@ -42,6 +43,7 @@ var kernelNames = [...]string{
 	kernelAVX2X5:     "avx2_x5",
 	kernelAVX2X9:     "avx2_x9",
 	kernelAVX2X10:    "avx2_x10",
+	kernelX86X1:      "x86_x1",
 	kernelAVX512VLX4: "avx512vl_x4",
 	kernelAVX512X8:   "avx512_x8",
 }
@@ -58,14 +60,20 @@ func kernelByName(name string) uint8 {
 			return uint8(id)
 		}
 	}
-	if hasAVX512 {
+	switch {
+	case hasAVX512:
 		return kernelAVX512X8
+	case hasAVX2:
+		return kernelAVX2X8
+	default:
+		return kernelX86X1
 	}
-	return kernelAVX2X8
 }
 
 func init() {
-	supportedCPU = hasAVX2 || hasAVX512
+	// as keccaktree_detect: AVX-512, else the AVX2 kernels (BMI1/BMI2 for
+	// their x86_x1 tail), else x86_x1 alone, else the pure-Go code
+	supportedCPU = hasAVX512 || hasBMI
 	keccaktreeHash = KeccaktreeHash
 	if supportedCPU {
 		kernel = kernelByName(ktcgo.Detect())

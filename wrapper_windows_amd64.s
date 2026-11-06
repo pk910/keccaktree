@@ -11,8 +11,9 @@
 #define KERNEL_AVX2_X5     2
 #define KERNEL_AVX2_X9     3
 #define KERNEL_AVX2_X10    4
-#define KERNEL_AVX512VL_X4 5
-#define KERNEL_AVX512_X8   6
+#define KERNEL_X86_X1      5
+#define KERNEL_AVX512VL_X4 6
+#define KERNEL_AVX512_X8   7
 
 TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	MOVQ output+0(FP), CX
@@ -33,6 +34,8 @@ TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	JE   avx2x5
 	CMPB AX, $KERNEL_AVX2_X4
 	JE   avx2x4
+	CMPB AX, $KERNEL_X86_X1
+	JE   x86x1
 	CMPB AX, $KERNEL_AVX512_X8
 	JE   avx512x8
 	CMPB AX, $KERNEL_AVX512VL_X4
@@ -54,6 +57,10 @@ avx2x5:
 
 avx2x4:
 	CALL keccaktree_keccak256_avx2_x4(SB)
+	JMP  epilog
+
+x86x1:
+	CALL keccaktree_keccak256_x86_x1(SB)
 	JMP  epilog
 
 avx512x8:

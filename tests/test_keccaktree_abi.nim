@@ -12,6 +12,7 @@ static int kt_cpu(int f) {
   return f == 1 ? __builtin_cpu_supports("avx2")
        : f == 2 ? __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl")
        : f == 7 ? __builtin_cpu_supports("avx2") && __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2")
+       : f == 8 ? __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2")
        : 0;
 }
 #elif defined(__aarch64__) && defined(__APPLE__)
@@ -121,8 +122,10 @@ type Kernel = tuple[name: string, fn: KeccaktreeHashFcn, feature: int]
 proc kernels(): seq[Kernel] =
   result.add (name: "generic", fn: KeccaktreeHashFcn(keccaktree_keccak256_generic), feature: 0)
   when keccaktreeAsm and defined(amd64):
-    result.add (name: "avx2_x4", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x4), feature: 1)
-    result.add (name: "avx2_x8", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x8), feature: 1)
+    result.add (name: "x86_x1", fn: KeccaktreeHashFcn(keccaktree_keccak256_x86_x1), feature: 8)
+    result.add (name: "avx2_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x2), feature: 7)
+    result.add (name: "avx2_x4", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x4), feature: 7)
+    result.add (name: "avx2_x8", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x8), feature: 7)
     result.add (name: "avx2_x5", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x5), feature: 7)
     result.add (name: "avx2_x9", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x9), feature: 7)
     result.add (name: "avx2_x10", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx2_x10), feature: 7)
