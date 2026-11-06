@@ -17,7 +17,9 @@
  *                       the count in the quadword SMALL_TAIL_MAX_VAR, which
  *                       a kernel can expose for run-time calibration).
  *   SMALL_TAIL_MID      another kernel for r <= SMALL_TAIL_MID_MAX (or the
- *                       quadword SMALL_TAIL_MID_MAX_VAR), above SMALL_TAIL.
+ *                       quadword SMALL_TAIL_MID_MAX_VAR), above SMALL_TAIL;
+ *                       or, with SMALL_TAIL_MID_MASK, for the counts whose
+ *                       bit is set, checked before SMALL_TAIL.
  *   otherwise           a padded batch of this kernel: the r nodes are
  *                       copied to a stack buffer, the batch hashes NODES
  *                       lanes (the rest whatever is there) and r digests
@@ -170,6 +172,14 @@
 2:	/* 0 <= rdx < NODES, and above SMALL_TAIL_X1_MAX unless a batch ran */
 	test		rdx, rdx
 	jz		4f
+#ifdef SMALL_TAIL_MID_MASK
+	mov		eax, SMALL_TAIL_MID_MASK
+	bt		rax, rdx
+	jnc		3f
+	mov		eax, 3
+	jmp		5f
+3:
+#endif
 #ifdef SMALL_TAIL
 #ifdef SMALL_TAIL_MAX_VAR
 	cmp		rdx, qword ptr [rip + SMALL_TAIL_MAX_VAR]
@@ -181,7 +191,7 @@
 	jmp		5f
 3:
 #endif
-#ifdef SMALL_TAIL_MID
+#if defined(SMALL_TAIL_MID) && !defined(SMALL_TAIL_MID_MASK)
 #ifdef SMALL_TAIL_MID_MAX_VAR
 	cmp		rdx, qword ptr [rip + SMALL_TAIL_MID_MAX_VAR]
 #else
