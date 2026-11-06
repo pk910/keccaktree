@@ -10,12 +10,19 @@ on:
 
 jobs:
   bench:
-    name: ${{ matrix.runner }}
+    name: ${{ matrix.runner }}-${{ matrix.n }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, ubuntu-24.04-arm, ubuntu-24.04]
+        # three x86-64 jobs: the hosted runners are a mix of EPYC 7763 (Zen 3),
+        # EPYC 9V45 (Zen 4, AVX-512) and Xeon 8370C (Ice Lake, AVX-512)
+        include:
+          - {runner: macos-15, n: 1}
+          - {runner: ubuntu-24.04-arm, n: 1}
+          - {runner: ubuntu-24.04, n: 1}
+          - {runner: ubuntu-24.04, n: 2}
+          - {runner: ubuntu-24.04, n: 3}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,7 +49,7 @@ jobs:
         run: |
           CC=clang bench/ab/build.sh origin/main
           if [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo; then K=auto,sha3_x3,sha3_x3r,sha3_x2,generic,scalar_x1,neon_x3:sha3_x3,neon_x2
-          elif grep -qw avx512f /proc/cpuinfo; then K=auto,avx512_x8,avx512vl_x4,generic,x86_x1:generic,avx2_x8:avx512_x8,avx2_x10:avx512_x8,avx2_x4:avx512vl_x4,avx2_x5:avx512vl_x4,avx2_x2:avx512vl_x4,x86_x1:avx512vl_x4
+          elif grep -qw avx512f /proc/cpuinfo; then K=auto,avx512_x8,avx512_x9:avx512_x8,avx512vl_x4,generic,x86_x1:generic,avx2_x8:avx512_x8,avx2_x10:avx512_x8,avx2_x4:avx512vl_x4
           elif grep -qw avx2 /proc/cpuinfo; then K=auto,avx2_x8,avx2_x4,generic
           else K=auto,generic; fi
           for i in 1 2; do build/ab -n 9 -s 1,2,3,4,5,6,7,8,9,10,16,64,256,1024 $K; echo; done

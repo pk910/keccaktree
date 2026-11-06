@@ -272,11 +272,16 @@ int main(int argc, char** argv) {
     int nk = 0;
     char buf[256];
     strncpy(buf, klist, 255);
+    char names[256];
+    const char* klist_names[16];
+    strncpy(names, klist, 255);
+    int nn = 0;
+    for (char* p = strtok(names, ","); p; p = strtok(NULL, ",")) klist_names[nn++] = p;
     for (char* p = strtok(buf, ","); p; p = strtok(NULL, ",")) {
         const char* cn = p, *bn = p;
         char* vs = strchr(p, ':'); /* cand:base */
         if (vs) { *vs = 0; cn = p; bn = vs + 1; }
-        ks[nk].name = strdup(p);
+        ks[nk].name = strdup(klist_names[nk]);
         ks[nk].cand = lookup_cand(cn);
         ks[nk].base = lookup_base(bn);
         if (!ks[nk].cand) { fprintf(stderr, "unknown/absent candidate kernel %s\n", cn); return 2; }
@@ -287,7 +292,7 @@ int main(int argc, char** argv) {
     double cns;
     const char* cls0 = core_class(&cns);
     printf("core: %s (base auto @1024: %.1f ns/node), %d rounds, interleaved base/cand, min and median of rounds\n", cls0, cns, rounds);
-    printf("%-10s %7s | %9s %9s %7s | %9s %9s %7s\n", "kernel", "nodes", "base min", "cand min", "ratio", "base med", "cand med", "ratio");
+    printf("%-20s %7s | %9s %9s %7s | %9s %9s %7s\n", "kernel", "nodes", "base min", "cand min", "ratio", "base med", "cand med", "ratio");
     for (int ki = 0; ki < nk; ki++) {
         for (int si = 0; si < nsizes; si++) {
             uint64_t n = sizes[si];
@@ -300,7 +305,7 @@ int main(int argc, char** argv) {
             qsort(b, rounds, sizeof b[0], cmpd);
             qsort(c, rounds, sizeof c[0], cmpd);
             double bm = b[rounds / 2], cm = c[rounds / 2];
-            printf("%-10s %7llu | %9.2f %9.2f %6.3fx | %9.2f %9.2f %6.3fx\n", ks[ki].name, (unsigned long long)n,
+            printf("%-20s %7llu | %9.2f %9.2f %6.3fx | %9.2f %9.2f %6.3fx\n", ks[ki].name, (unsigned long long)n,
                    b[0], c[0], b[0] / c[0], bm, cm, bm / cm);
             fflush(stdout);
         }
