@@ -9,13 +9,19 @@ TEXT ·KeccaktreeHash(SB), 0, $2048-24
 
 	MOVBU ·hasSHA3(SB), R19
 	MOVBU ·armLazy(SB), R20
+	MOVBU ·armApple(SB), R21
 	CBZ   R19, nosha3
 	CBNZ  R20, sha3x3
+	CBNZ  R21, sha3x3r
 	BL    keccaktree_keccak256_sha3_x2(SB)
 	RET
 
 sha3x3:
 	BL keccaktree_keccak256_sha3_x3(SB)
+	RET
+
+sha3x3r:
+	BL keccaktree_keccak256_sha3_x3r(SB)
 	RET
 
 nosha3:

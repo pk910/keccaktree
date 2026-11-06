@@ -96,6 +96,7 @@ int main(void) {
     if (sha3) {
         row("keccak256 sha3_x2", keccaktree_keccak256_sha3_x2);
         row("keccak256 sha3_x3", keccaktree_keccak256_sha3_x3);
+        row("keccak256 sha3_x3r", keccaktree_keccak256_sha3_x3r);
     }
 #ifdef HAVE_HASHTREE
     row("sha256 hashtree generic", hashtree_sha256_generic);

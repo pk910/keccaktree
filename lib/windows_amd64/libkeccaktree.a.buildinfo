@@ -1,1 +1,1 @@
-gcc.exe (Rev4, Built by MSYS2 project) 16.2.0
+zig cc 0.17.1 -target x86_64-windows-gnu (contributor build)
