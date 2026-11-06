@@ -16,7 +16,7 @@
 #define NODES		4
 #define VBYTES		32
 #define SLOTS		(50*32)			/* the two state buffers */
-#define SMALL_TAIL	keccaktree_keccak256_generic	/* a single node: scalar is faster */
+#define SMALL_TAIL	keccaktree_keccak256_x86_x1	/* a single node: scalar is faster */
 #define SMALL_TAIL_MAX	1
 #include "keccak256_x86_frame.inc"
 

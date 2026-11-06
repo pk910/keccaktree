@@ -140,11 +140,15 @@ keccaktree_hash_fcn keccaktree_detect(void) {
                                                 &keccaktree_keccak256_avx512vl_x4};
         return keccaktree_calibrate(c, 2);
     }
-    if (os_ymm && (b & bit_AVX2)) {
+    /* the AVX2 kernels hand single nodes to x86_x1, which needs BMI1 and
+     * BMI2 (every AVX2 core has them; a hypervisor could hide them) */
+    int bmi = (b & bit_BMI) && (b & bit_BMI2);
+    if (os_ymm && (b & bit_AVX2) && bmi) {
         static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x8,
                                                 &keccaktree_keccak256_avx2_x4};
         return keccaktree_calibrate(c, 2);
     }
+    if (bmi) return &keccaktree_keccak256_x86_x1;
 #endif
 #ifdef __aarch64__
     static const keccaktree_hash_fcn sha3[] = {&keccaktree_keccak256_sha3_x3,

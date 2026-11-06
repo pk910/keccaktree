@@ -150,7 +150,12 @@ int main(void) {
 #ifdef __x86_64__
     uint32_t a = 0, b = 0, c = 0, d = 0;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
-    if (b & bit_AVX2) {
+    if ((b & bit_BMI) && (b & bit_BMI2)) {
+        test_backend("x86_x1", keccaktree_keccak256_x86_x1);
+    } else {
+        printf("  %-48s [ no CPU support ]\n", "x86_x1");
+    }
+    if ((b & bit_AVX2) && (b & bit_BMI) && (b & bit_BMI2)) {
         test_backend("avx2_x4", keccaktree_keccak256_avx2_x4);
         test_backend("avx2_x8", keccaktree_keccak256_avx2_x8);
     } else {
