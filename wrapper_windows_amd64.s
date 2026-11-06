@@ -2,7 +2,8 @@
 
 // Windows x64 ABI: arguments in CX, DX, R8. R8 is saved in R12, which the
 // callee preserves. The C kernels run on this frame's 8192 bytes of stack
-// (deepest: avx2_x8, about 4.5 KB).
+// (deepest: avx2_x8, about 4.5 KB). The top 32 bytes are the shadow space
+// the Windows ABI gives every callee, which compiled C code may write to.
 TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	MOVQ output+0(FP), CX
 	MOVQ input+8(FP), DX
@@ -10,7 +11,7 @@ TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	MOVQ count+16(FP), R8
 
 	MOVQ SP, BX
-	ADDQ $8192, SP
+	ADDQ $(8192-32), SP
 	ANDQ $~31, SP
 
 	CMPB ·hasAVX512(SB), $1
