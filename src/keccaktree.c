@@ -157,6 +157,33 @@ static void keccaktree_avx2_tail_calibrate(void) {
     }
     keccaktree_avx2_small_tail(best[0] < best[1] ? 2 : 1);
 }
+
+/* 5..9 nodes left after the avx2_x10 batches: a padded x10 batch, or
+ * avx2_x5 with its tail. The x10 loop body fills most of a 4K-op cache,
+ * so on Zen 3 the x5 code (like x4 and x8) decodes again after an x10
+ * batch and the padded batch wins (26 nodes: 2019 vs 2194 ns); where both
+ * kernels stay cached (Gracemont) x5 wins (5000 vs 5685). Timed like
+ * keccaktree_calibrate on 26 nodes (two batches, 6 left). */
+static void keccaktree_avx2_x10_tail_calibrate(void) {
+    static unsigned char buf[26 * 64] __attribute__((aligned(64)));
+    static const uint64_t mid[2] = {4, 9};
+    uint64_t best[2] = {UINT64_MAX, UINT64_MAX};
+    for (int i = 0; i < 26 * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
+    for (int i = 0; i < 2; i++) {
+        keccaktree_avx2_x10_mid_tail(mid[i]);
+        keccaktree_keccak256_avx2_x10(buf, buf, 26);
+    }
+    for (int r = 0; r < CALIB_REPS; r++) {
+        for (int i = 0; i < 2; i++) {
+            keccaktree_avx2_x10_mid_tail(mid[i]);
+            uint64_t t0 = keccaktree_ticks();
+            for (int k = 0; k < 4; k++) keccaktree_keccak256_avx2_x10(buf, buf, 26);
+            uint64_t t = keccaktree_ticks() - t0;
+            if (t < best[i]) best[i] = t;
+        }
+    }
+    keccaktree_avx2_x10_mid_tail(best[1] < best[0] ? 9 : 4);
+}
 #endif
 
 keccaktree_hash_fcn keccaktree_detect(void) {
@@ -188,7 +215,9 @@ keccaktree_hash_fcn keccaktree_detect(void) {
                                                 &keccaktree_keccak256_avx2_x8,
                                                 &keccaktree_keccak256_avx2_x4};
         keccaktree_avx2_tail_calibrate();
-        return keccaktree_calibrate(c, 4);
+        keccaktree_hash_fcn fn = keccaktree_calibrate(c, 4);
+        if (fn == &keccaktree_keccak256_avx2_x10) keccaktree_avx2_x10_tail_calibrate();
+        return fn;
     }
     if (bmi) return &keccaktree_keccak256_x86_x1;
 #endif

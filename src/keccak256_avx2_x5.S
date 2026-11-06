@@ -6,7 +6,8 @@
  * 4-node batch of keccak256_avx2_x4 in the vector registers plus one node
  * in the general registers (keccak256_x86_scalar.inc), its round spread
  * through the vector round as in keccak256_avx2_x9.S. Needs AVX2, BMI1
- * and BMI2. Fewer than 5 remaining nodes go to keccaktree_keccak256_avx2_x4.
+ * and BMI2. A single remaining node goes to keccaktree_keccak256_x86_x1,
+ * 2..4 to keccaktree_keccak256_avx2_x4.
  *
  * Registers: ymm0..15, rsi and the frame's r9..r11 for the vector stream;
  * rax, rbx, rcx, rdx, rdi, rbp, r8, r12..r15 for the scalar node.
@@ -17,7 +18,8 @@
 #define NODES		5
 #define VBYTES		32
 #define SLOTS		(50*32 + 448 + 64 + 48 + 80)
-#define SMALL_TAIL	keccaktree_keccak256_avx2_x4
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar directly */
+#define SMALL_TAIL	keccaktree_keccak256_avx2_x4	/* 2..4 nodes */
 #define SMALL_TAIL_MAX	4
 #define SAVE_GPRS
 #include "keccak256_x86_frame.inc"
