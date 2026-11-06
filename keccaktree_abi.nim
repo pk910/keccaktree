@@ -38,7 +38,7 @@ else:
   # The kernels are GNU assembler syntax, which gcc and clang (also its
   # integrated assembler, on ELF and Mach-O) accept and MSVC does not.
   const keccaktreeAsm* = (defined(gcc) or defined(clang)) and
-    (defined(amd64) or defined(arm64))
+    (defined(amd64) or defined(arm64) or defined(riscv64))
 
   when keccaktreeAsm:
     const asmDir = srcDir & "asm/"
@@ -53,6 +53,7 @@ else:
     when defined(amd64):
       {.compile(asmDir & "keccak256_avx512_x8.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx512vl_x4.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_x8.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
     elif defined(arm64):
       {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
@@ -60,6 +61,11 @@ else:
       {.compile(asmDir & "keccak256_scalar_x1.S", asmFlags).}
       {.compile(asmDir & "keccak256_sha3_x3.S", asmFlags).}
       {.compile(asmDir & "keccak256_sha3_x3r.S", asmFlags).}
+    elif defined(riscv64):
+      {.compile(asmDir & "keccak256_rv64_x1.S", asmFlags).}
+      {.compile(asmDir & "keccak256_zbb_x1.S", asmFlags).}
+      {.compile(asmDir & "keccak256_rvv.S", asmFlags).}
+      {.compile(asmDir & "keccak256_rvv_zvkb.S", asmFlags).}
 
 type KeccaktreeHashFcn* = proc(output: pointer, input: pointer, count: uint64) {.
   cdecl, noSideEffect, gcsafe, raises: [].}
