@@ -65,18 +65,8 @@ def entry_struct():
     return '''/-- The state with the flags of the closed control state `sc` (the flags a segment was recorded with). -/
 @[reducible] def norm (S sc : State (BitVec 64)) : State (BitVec 64) := S.withFlags sc.zf sc.cf sc.nf sc.vf
 
-/-- The entry state of a call `(out, in, count)` at node offset `off` (AAPCS64): `x0`/`x1` at node
-`off` of the output/input regions, `x2 = count`, `sp` at the top of the stack region, the input
-region holding the message, the control part of a fresh call except the flags (any).  The vector
-registers, the other general registers and every other memory word are arbitrary. -/
-structure Entry (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop where
-  ctrl : S.g = Vector.replicate 32 ⟨0, 0⟩ ∧ S.k = Vector.replicate 8 0 ∧ S.vl = 0 ∧ S.pc = 0 ∧ S.depth = 0
-  ok : S.err = false ∧ S.halted = false ∧ S.tail = none
-  x2 : S.getGD 2 = gprWord ⟨0, count⟩
-  sp : S.getGD 31 = gprWord ⟨rStack, 1048576⟩
-  x1 : S.getGD 1 = gprWord ⟨rInput, 64 * off⟩
-  x0 : S.getGD 0 = gprWord ⟨rOutput, 32 * off⟩
-  inp : ∀ q, S.mem rInput q = input q
+/-- The entry state of a call (AAPCS64, any flags): `Arm.Entry`. -/
+abbrev Entry := Arm.Entry
 
 theorem wf_num (c : Int) (h0 : 0 ≤ c) (h1 : c ≤ 18014398509481984) : (⟨0, c⟩ : Addr).wf := by
   show 0 ≤ c ∧ c < 2 ^ 55

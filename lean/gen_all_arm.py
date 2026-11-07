@@ -10,6 +10,12 @@ KERNELS = {
     # kernel: (kind, Ns, symbol, params)
     'sha3_x2': ('x2', 'Sha3X2', 'keccaktree_keccak256_sha3_x2', dict(SUBS=1597, RET=1603)),
     'neon_x2': ('x2', 'NeonX2', 'keccaktree_keccak256_neon_x2', dict(SUBS=3786, RET=3792)),
+    'sha3_x3': ('x3', 'Sha3X3', 'keccaktree_keccak256_sha3_x3',
+                dict(SUB=4538, RET=4553, TSYM='keccaktree_keccak256_scalar_x1', TNS='ScalarX1')),
+    'neon_x3': ('x3', 'NeonX3', 'keccaktree_keccak256_neon_x3',
+                dict(SUB=6222, RET=6237, TSYM='keccaktree_keccak256_scalar_x1', TNS='ScalarX1')),
+    'sha3_x3r': ('x3r', 'Sha3X3r', 'keccaktree_keccak256_sha3_x3r',
+                 dict(SUB=4629, RET=4646, TSYM='keccaktree_keccak256_sha3_x2', TNS='Sha3X2')),
 }
 
 FT = 'fT'
@@ -375,46 +381,25 @@ theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
 '''
 
 
+ENTRY = {'scalar_x1': '1', 'sha3_x2': '2.1', 'neon_x2': '2.2.1', 'sha3_x3': '2.2.2.1', 'sha3_x3r': '2.2.2.2.1', 'neon_x3': '2.2.2.2.2'}
+
+
 def lib(P):
-    XLEN, IT = P['XLEN'], P['IT']
-    steps = f'{XLEN + 6} + {IT} * ((c + 1) / 2)'
-    return f'''/-! ## In the library -/
-
-/-- The AArch64 calling convention of the library at node offset `off` (within the address bound). -/
-def EntryArm (name : String) (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop :=
-  Entry off count input {{ S with pc := 0 }} ∧ 64 * (off + count) ≤ 2 ^ 54
-
-/-- `{P['SYM']}` as a kernel of the library (rank 0: it hands nothing over). -/
-def kernel : Library.KernelThm Arm.isa EntryArm Digest where
-  name := "{P['SYM']}"
-  rank := 0
-  rodata := rodata
-  prog := prog
-  entry := 0
-  steps := fun _ c => {steps}
-  thm := fun off count input S h => by
-    obtain ⟨hh, he, ht, hp, hd⟩ := all off count input _ h.1 h.2
-    exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
-
-theorem ranks_ok : Library.RanksOk [kernel] := by
-  intro K hK off count input S hS next done htail _
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at hK
-  subst hK
-  have ht := (all off count input _ hS.1 hS.2).2.2.1
-  have h := ht.symm.trans htail
-  cases h
-
-/-- **The library theorem on the table `[{P['SYM']}]`**. -/
-theorem lib (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
-    (hS : EntryArm "{P['SYM']}" off count input S) : Library.LibOk [kernel] kernel off count input S :=
-  Library.lib_correct [kernel] 0 (by simp [kernel]) ranks_ok digest_local _ kernel (by simp) off count input S
-    (Nat.le_refl _) hS
-'''
+    steps = f"{P['XLEN'] + 6} + {P['IT']} * ((c + 1) / 2)"
+    t = open(os.path.join(HERE, 'templates', 'nontail_lib.txt')).read()
+    return t.replace('@SYM@', P['SYM']).replace('@STEPS@', steps).replace('@FLAG@', P['KER']).replace('@ENTRY@', ENTRY[P['KER']])
 
 
 def render(kernel):
     kind, ns, sym, P = KERNELS[kernel]
-    P = dict(P, SYM=sym, NS=ns)
+    P = dict(P, SYM=sym, NS=ns, KER=kernel, ENTRY=ENTRY[kernel])
+    if kind in ('x3', 'x3r'):
+        import importlib
+        mod = importlib.import_module('arm_' + kind)
+        out = os.path.join(HERE, 'Keccaktree', 'Kernels', ns, 'All.lean')
+        open(out, 'w').write(mod.render(P))
+        print(out)
+        return
     if kind == 'x2':
         P.update(CBZ=4, XS=P['SUBS'] + 2)
         P['XLEN'] = P['RET'] - P['XS']

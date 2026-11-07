@@ -1,4 +1,5 @@
 import Keccaktree.Asm.Library
+import Keccaktree.Asm.LibX86
 import Keccaktree.Asm.Iter
 import Keccaktree.Asm.Node
 import Keccaktree.Proof
@@ -9,12 +10,11 @@ set_option linter.unusedVariables false
 # Nodes: relocation by whole nodes and the digest predicate (shared by the all-count theorems)
 
 `rho m` moves the input pointer by `64·m` bytes and the output pointer by `32·m` bytes (`m`
-nodes); `Digest input S n` says the output words of node `n` hold the keccak256 digest of input
-node `n`.  The same definitions as in `Kernels/X86X1/All.lean` (where they were introduced), so
-that the per-kernel theorems of all ISAs share one digest predicate in the library table.
+nodes).  The digest predicate is the library's (`LibX86.Digest`, `LibX86.nodeWords`).
 -/
 namespace Keccaktree.Asm.Nodes
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak
+open Keccaktree.Asm.LibX86 (nodeWords Digest)
 
 /-! ## Relocation by whole nodes -/
 
@@ -88,26 +88,11 @@ theorem reloc_ptr_out (m : Nat) (o : Int) : E.reloc (rho m) (.ptr ⟨rOutput, o�
   show E.ptr ⟨rOutput, o + (rho m).δ rOutput⟩ = _
   rw [rho_δ, if_neg (by decide), if_pos rfl]
 
-/-- The words of node `n` of the message. -/
-def nodeWords (input : Int → BitVec 64) (n : Nat) (w : Nat) : BitVec 64 := input (Int.ofNat (8 * n + w))
-
-/-- Output words `4n..4n+3` hold the keccak256 digest of input node `n` (byte `8w+i` of the digest
-is byte `i` of word `4n+w`). -/
-def Digest (input : Int → BitVec 64) (S : State (BitVec 64)) (n : Nat) : Prop :=
-  ∀ w i : Nat, w < 4 → i < 8 →
-    (S.mem rOutput (Int.ofNat (4 * n + w))).extractLsb' (8 * i) 8 = Spec.keccak256 64 (nodeBytes (nodeWords input n)) (8 * w + i)
-
 theorem digest_congr (input : Int → BitVec 64) (S T : State (BitVec 64)) (n : Nat)
     (h : ∀ w : Nat, w < 4 → T.mem rOutput (Int.ofNat (4 * n + w)) = S.mem rOutput (Int.ofNat (4 * n + w)))
     (hd : Digest input S n) : Digest input T n := by
   intro w i hw hi
   rw [h w hw]
   exact hd w i hw hi
-
-theorem digest_local : Library.DigestLocal Digest := by
-  intro input S S' n h hd w i hw hi
-  rw [h (Int.ofNat (4 * n + w)) (by simp only [Int.ofNat_eq_coe]; omega) (by simp only [Int.ofNat_eq_coe]; omega)]
-  exact hd w i hw hi
-
 
 end Keccaktree.Asm.Nodes

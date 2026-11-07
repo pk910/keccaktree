@@ -47,6 +47,12 @@ for k, ns, cell, sub, ret in (('sha3_x3', 'Sha3X3', 2097411, 4538, 4553), ('neon
         ('GenSE1', 3, 2, 12, False, ['@GenSB'], STACK, '258:258', False, True),
     ])
 
+KERNELS['sha3_x3r'] = ('Sha3X3r', 2, '258,2097411', [
+    ('GenSX', 3, 4634, 4644, False, [256, 257, 287], NONE, '258:258', False, True),
+    ('GenSB', 3, 14, 4629, True, ['@GenSX', 256, 257, 287], OUTW(3), '258:258', True, True),
+    ('GenSE1', 3, 4, 14, False, ['@GenSB'], STACK, '258:258', False, True),
+])
+
 
 def ctl0_of(log):
     l = [l for l in open(log).read().splitlines() if l.startswith('control words')][0]

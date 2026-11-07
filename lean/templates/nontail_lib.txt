@@ -1,0 +1,21 @@
+/-! ## In the library -/
+
+/-- The kernel's theorem from the library's normalised entry state (`LibArm.NormThmArm`). -/
+theorem norm_thm : LibArm.NormThmArm rodata prog 0 (fun _ c => @STEPS@) [] := by
+  intro off c input S hE hb hpc
+  obtain ⟨hh, he, ht, hp, hd⟩ := all off c input S (Arm.entry_of_entryA hE hpc) hb
+  exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
+
+/-- `@SYM@` as a kernel of the library (rank 0: it hands nothing over; any flags at entry). -/
+def kernel : Library.KernelThm Arm.isa LibTable.EntryArm Digest :=
+  LibArm.mkKernelArm "@SYM@" 0 [] rodata prog 0 (fun _ c => @STEPS@) (Arm.flagAnn ArmFlags.@FLAG@)
+    ArmFlags.@FLAG@_ok ArmFlags.entries.@ENTRY@ norm_thm
+
+theorem ranks_ok : Library.RanksOk [kernel] := Library.ranksOk_of_shape _ (by decide +kernel)
+
+/-- **The library theorem on the table `[@SYM@]`**: from the library's AArch64 entry state (any
+flags), the run halts without a model fault with every node's digest in place. -/
+theorem lib (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
+    (hS : LibTable.EntryArm "@SYM@" off count input S) : Library.LibOk [kernel] kernel off count input S :=
+  Library.lib_correct [kernel] 0 (by simp [kernel, LibArm.mkKernelArm]) ranks_ok digest_local _ kernel (by simp) off count input S
+    (Nat.le_refl _) hS

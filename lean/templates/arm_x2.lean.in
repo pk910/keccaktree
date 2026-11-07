@@ -10,6 +10,8 @@ import Keccaktree.Asm.KernelGlue
 import Keccaktree.Asm.ArmSteps
 import Keccaktree.Asm.ArmFlags
 import Keccaktree.Asm.Nodes
+import Keccaktree.Asm.ArmEntry
+import Keccaktree.Kernels.ArmFlags
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -35,6 +37,7 @@ output words `4(off+n) ..`, for every `n < c`.
 -/
 namespace Keccaktree.Kernels.@NS@.All
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Asm.Nodes Keccaktree.Proof Keccak
+open Keccaktree.Asm.LibX86 (nodeWords Digest digest_local)
 open Keccaktree.Kernels.@NS@ (prog rodata)
 
 @COMMON@

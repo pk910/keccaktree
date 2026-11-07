@@ -5,6 +5,8 @@ import Keccaktree.Asm.KernelGlue
 import Keccaktree.Asm.ArmSteps
 import Keccaktree.Asm.ArmFlags
 import Keccaktree.Asm.Nodes
+import Keccaktree.Asm.ArmEntry
+import Keccaktree.Kernels.ArmFlags
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -27,24 +29,14 @@ without a tail call, keep the output words before node `off`, and leave in outpu
 -/
 namespace Keccaktree.Kernels.ScalarX1.All
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Asm.Nodes Keccaktree.Proof Keccak
+open Keccaktree.Asm.LibX86 (nodeWords Digest digest_local)
 open Keccaktree.Kernels.ScalarX1 (prog rodata)
 
 /-- The state with the flags of the closed control state `sc` (the flags a segment was recorded with). -/
 @[reducible] def norm (S sc : State (BitVec 64)) : State (BitVec 64) := S.withFlags sc.zf sc.cf sc.nf sc.vf
 
-/-- The entry state of a call `keccaktree_keccak256_scalar_x1(out, in, count)` at node offset `off`
-(AAPCS64): `x0`/`x1` at node `off` of the output/input regions, `x2 = count`, `sp` at the top of
-the stack region, the input region holding the message, the control part of a fresh call except
-the flags (any).  The vector registers, the other general registers and every other memory word
-are arbitrary. -/
-structure Entry (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop where
-  ctrl : S.g = Vector.replicate 32 ⟨0, 0⟩ ∧ S.k = Vector.replicate 8 0 ∧ S.vl = 0 ∧ S.pc = 0 ∧ S.depth = 0
-  ok : S.err = false ∧ S.halted = false ∧ S.tail = none
-  x2 : S.getGD 2 = gprWord ⟨0, count⟩
-  sp : S.getGD 31 = gprWord ⟨rStack, 1048576⟩
-  x1 : S.getGD 1 = gprWord ⟨rInput, 64 * off⟩
-  x0 : S.getGD 0 = gprWord ⟨rOutput, 32 * off⟩
-  inp : ∀ q, S.mem rInput q = input q
+/-- The entry state of a call (AAPCS64, any flags): `Arm.Entry`. -/
+abbrev Entry := Arm.Entry
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
@@ -435,35 +427,24 @@ theorem scalar_x1_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitV
 
 /-! ## In the library -/
 
-/-- The AArch64 calling convention of the library at node offset `off` (within the address bound). -/
-def EntryArm (name : String) (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop :=
-  Entry off count input { S with pc := 0 } ∧ 64 * (off + count) ≤ 2 ^ 54
+/-- The kernel's theorem from the library's normalised entry state (`LibArm.NormThmArm`). -/
+theorem norm_thm : LibArm.NormThmArm rodata prog 0 (fun _ c => 14 + 2437 * c) [] := by
+  intro off c input S hE hb hpc
+  obtain ⟨hh, he, ht, hp, hd⟩ := scalar_x1_all off c input S (Arm.entry_of_entryA hE hpc) hb
+  exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
 
-/-- `keccaktree_keccak256_scalar_x1` as a kernel of the library (rank 0: it hands nothing over). -/
-def kernel : Library.KernelThm Arm.isa EntryArm Digest where
-  name := "keccaktree_keccak256_scalar_x1"
-  rank := 0
-  rodata := rodata
-  prog := prog
-  entry := 0
-  steps := fun _ c => 14 + 2437 * c
-  thm := fun off count input S h => by
-    obtain ⟨hh, he, ht, hp, hd⟩ := scalar_x1_all off count input _ h.1 h.2
-    exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
+/-- `keccaktree_keccak256_scalar_x1` as a kernel of the library (rank 0: it hands nothing over; any flags at entry). -/
+def kernel : Library.KernelThm Arm.isa LibTable.EntryArm Digest :=
+  LibArm.mkKernelArm "keccaktree_keccak256_scalar_x1" 0 [] rodata prog 0 (fun _ c => 14 + 2437 * c) (Arm.flagAnn ArmFlags.scalar_x1)
+    ArmFlags.scalar_x1_ok ArmFlags.entries.1 norm_thm
 
-theorem ranks_ok : Library.RanksOk [kernel] := by
-  intro K hK off count input S hS next done htail _
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at hK
-  subst hK
-  have ht : (Arm.isa.run rodata prog (14 + 2437 * count) { S with pc := 0 }).tail = none :=
-    (scalar_x1_all off count input _ hS.1 hS.2).2.2.1
-  have h := ht.symm.trans htail
-  cases h
+theorem ranks_ok : Library.RanksOk [kernel] := Library.ranksOk_of_shape _ (by decide +kernel)
 
-/-- **The library theorem on the table `[scalar_x1]`**. -/
-theorem lib_scalar_x1 (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
-    (hS : EntryArm "keccaktree_keccak256_scalar_x1" off count input S) : Library.LibOk [kernel] kernel off count input S :=
-  Library.lib_correct [kernel] 0 (by simp [kernel]) ranks_ok digest_local _ kernel (by simp) off count input S
+/-- **The library theorem on the table `[keccaktree_keccak256_scalar_x1]`**: from the library's AArch64 entry state (any
+flags), the run halts without a model fault with every node's digest in place. -/
+theorem lib (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
+    (hS : LibTable.EntryArm "keccaktree_keccak256_scalar_x1" off count input S) : Library.LibOk [kernel] kernel off count input S :=
+  Library.lib_correct [kernel] 0 (by simp [kernel, LibArm.mkKernelArm]) ranks_ok digest_local _ kernel (by simp) off count input S
     (Nat.le_refl _) hS
 
 end Keccaktree.Kernels.ScalarX1.All
