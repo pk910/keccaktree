@@ -539,3 +539,199 @@ end exec_local
 
 end X86
 end Keccaktree.Asm
+
+/-! ## The aliased machine and the simulation -/
+namespace Keccaktree.Asm
+open X86
+namespace X86
+variable {α : Type} [LaneOps α]
+
+/-- The memory as an aliased machine sees it: region 2 (output) is a view of region 1 (input),
+offsets coinciding (`out == in`). -/
+def joinMem (m : Region → Int → α) : Region → Int → α :=
+  fun r q => if r = rOutput then m rInput q else m r q
+
+/-- **One step of the aliased machine** (`keccaktree_hash(buf, buf, n)`): the step runs on the joined
+view (loads through either pointer see the storage, region 1), and the words it stores through the
+output pointer land in the storage. -/
+def execAl (rodata : Array (BitVec 64)) (i : Instr) (t : State α) : State α :=
+  if t.halted then t else
+  let s := { t with mem := joinMem t.mem }
+  let s' := exec rodata i s
+  { s' with mem := fun r q => if r = rInput ∧ (rOutput, q) ∈ writes s i then s'.mem rOutput q else s'.mem r q }
+
+/-- The aliased machine's fetch-execute loop. -/
+def runAl (rodata : Array (BitVec 64)) (prog : Array Instr) : Nat → State α → State α
+  | 0, t => t
+  | n + 1, t => if t.halted then t else runAl rodata prog n (execAl rodata (prog.getD t.pc .nop) t)
+
+/-- The aliased state `t` corresponds to the separate-region state `s`: same registers and control,
+the storage (region 1 of `t`) holds what `s` has in its output region, the other regions agree
+(region 2 of `t` is never read: `execAl` reads through the joined view). -/
+def Sim (s t : State α) : Prop :=
+  t.v = s.v ∧ t.g = s.g ∧ t.gd = s.gd ∧ t.k = s.k ∧ t.zf = s.zf ∧ t.cf = s.cf ∧ t.nf = s.nf ∧ t.vf = s.vf ∧
+  t.vl = s.vl ∧ t.pc = s.pc ∧ t.depth = s.depth ∧ t.err = s.err ∧ t.halted = s.halted ∧ t.tail = s.tail ∧
+  (∀ q, t.mem rInput q = s.mem rOutput q) ∧ (∀ r q, r ≠ rInput → r ≠ rOutput → t.mem r q = s.mem r q)
+
+/-- Above `B` the output region of `s` still holds the input (nothing stored there yet). -/
+def Clean (B : Int) (s : State α) : Prop := ∀ q, B ≤ q → s.mem rOutput q = s.mem rInput q
+
+/-- What a step of the separate-region run must respect for the aliased run to follow it: it loads
+input words only at or above `B` (where the storage still holds the input), and stores no input word. -/
+def AccessOk (B : Int) (s : State α) (i : Instr) : Prop :=
+  (∀ c ∈ reads s i, c.1 = rInput → B ≤ c.2) ∧ (∀ c ∈ writes s i, c.1 ≠ rInput)
+
+/-- The bound after a step: above every output word stored so far. -/
+def bumpB (B : Int) (s : State α) (i : Instr) : Int :=
+  (writes s i).foldl (fun b c => if c.1 = rOutput then max b (c.2 + 1) else b) B
+
+theorem foldB_ge (l : List (Region × Int)) (B : Int) :
+    B ≤ l.foldl (fun b c => if c.1 = rOutput then max b (c.2 + 1) else b) B := by
+  induction l generalizing B with
+  | nil => exact Int.le_refl _
+  | cons c l ih =>
+    simp only [List.foldl_cons]
+    refine Int.le_trans ?_ (ih _)
+    split <;> omega
+
+theorem bumpB_ge (B : Int) (s : State α) (i : Instr) : B ≤ bumpB B s i := foldB_ge _ _
+
+theorem foldB_out (l : List (Region × Int)) (B q : Int) (hq : (rOutput, q) ∈ l) :
+    q < l.foldl (fun b c => if c.1 = rOutput then max b (c.2 + 1) else b) B := by
+  induction l generalizing B with
+  | nil => simp at hq
+  | cons c l ih =>
+    simp only [List.foldl_cons]
+    rcases List.mem_cons.mp hq with h | h
+    · subst h
+      have h1 := foldB_ge l (max B (q + 1))
+      have h2 : (if (rOutput, q).1 = rOutput then max B ((rOutput, q).2 + 1) else B) = max B (q + 1) := by simp
+      rw [h2]
+      omega
+    · exact ih _ h
+
+theorem bumpB_out (B : Int) (s : State α) (i : Instr) (q : Int) (hq : (rOutput, q) ∈ writes s i) : q < bumpB B s i :=
+  foldB_out _ _ _ hq
+
+theorem writes_wm (s : State α) (m' : Region → Int → α) (i : Instr) :
+    writes ({ s with mem := m' } : State α) i = writes s i := by
+  cases i <;> rfl
+
+theorem joined_eq (s t : State α) (h : Sim s t) :
+    ({ t with mem := joinMem t.mem } : State α) = { s with mem := joinMem t.mem } := by
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, -, -⟩ := h
+  cases t; cases s; simp_all
+
+theorem execAl_eq (rodata : Array (BitVec 64)) (i : Instr) (t : State α) (hth : t.halted = false) :
+    execAl rodata i t =
+      { exec rodata i ({ t with mem := joinMem t.mem } : State α) with
+        mem := fun r q => if r = rInput ∧ (rOutput, q) ∈ writes ({ t with mem := joinMem t.mem } : State α) i
+          then (exec rodata i ({ t with mem := joinMem t.mem } : State α)).mem rOutput q
+          else (exec rodata i ({ t with mem := joinMem t.mem } : State α)).mem r q } := by
+  simp only [execAl, hth, Bool.false_eq_true, ↓reduceIte]
+
+set_option maxHeartbeats 4000000 in
+/-- **One step of the simulation**: if the separate-region step loads input words only where the
+output region still holds the input, the aliased step follows it. -/
+theorem sim_step (rodata : Array (BitVec 64)) (i : Instr) (s t : State α) (B : Int)
+    (hS : Sim s t) (hC : Clean B s) (hA : AccessOk B s i) (hh : s.halted = false)
+    (hne : (exec rodata i s).err = false) :
+    Sim (exec rodata i s) (execAl rodata i t) ∧ Clean (bumpB B s i) (exec rodata i s) := by
+  have hth : t.halted = false := hS.2.2.2.2.2.2.2.2.2.2.2.2.1.trans hh
+  have hmIn := hS.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  have hmOt := hS.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2
+  have hag : Agree (joinMem t.mem) (reads s i) s := by
+    rintro ⟨r, q⟩ hc
+    simp only [joinMem]
+    by_cases h2 : r = rOutput
+    · subst h2; simp only [↓reduceIte]; exact hmIn q
+    · simp only [h2, ↓reduceIte]
+      by_cases h1 : r = rInput
+      · subst h1; rw [hmIn q]; exact hC q (hA.1 _ hc rfl)
+      · exact hmOt r q h1 h2
+  have hloc := exec_local rodata (joinMem t.mem) i s hh hne hag
+  have hfr := exec_frame rodata i s hne
+  rw [execAl_eq rodata i t hth, joined_eq s t hS, writes_wm, hloc]
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, -, -⟩ := hS
+  refine ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_⟩, ?_⟩
+  · intro q
+    simp only [rebase, true_and]
+    split
+    · rename_i hw; simp only [hw, ↓reduceIte]
+    · rename_i hw
+      have hw1 : (rInput, q) ∉ writes s i := fun h => hA.2 _ h rfl
+      simp only [hw1, ↓reduceIte, joinMem, show rInput ≠ rOutput by decide]
+      rw [hmIn q, hfr rOutput q hw]
+  · intro r q hr1 hr2
+    simp only [rebase, hr1, false_and, ↓reduceIte]
+    split
+    · rfl
+    · rename_i hw; simp only [joinMem, hr2, ↓reduceIte]; rw [hmOt r q hr1 hr2, hfr r q hw]
+  · intro q hq
+    have hw2 : (rOutput, q) ∉ writes s i := fun h => by have := bumpB_out B s i q h; omega
+    have hw1 : (rInput, q) ∉ writes s i := fun h => hA.2 _ h rfl
+    rw [hfr _ _ hw2, hfr _ _ hw1]
+    exact hC q (Int.le_trans (bumpB_ge B s i) hq)
+
+/-- The access condition along a separate-region run of `n` steps from `s`, starting at bound `B`. -/
+def AccessRun (rodata : Array (BitVec 64)) (prog : Array Instr) : Nat → Int → State α → Prop
+  | 0, _, _ => True
+  | n + 1, B, s => s.halted = true ∨
+      ((exec rodata (prog.getD s.pc .nop) s).err = false ∧ AccessOk B s (prog.getD s.pc .nop) ∧
+        AccessRun rodata prog n (bumpB B s (prog.getD s.pc .nop)) (exec rodata (prog.getD s.pc .nop) s))
+
+/-- **The simulation along a run.** -/
+theorem sim_run (rodata : Array (BitVec 64)) (prog : Array Instr) :
+    ∀ (n : Nat) (B : Int) (s t : State α), AccessRun rodata prog n B s → Sim s t → Clean B s →
+      Sim (X86.isa.run rodata prog n s) (runAl rodata prog n t) := by
+  intro n
+  induction n with
+  | zero => intro B s t _ hS _; exact hS
+  | succ n ih =>
+    intro B s t hA hS hC
+    have hth : t.halted = s.halted := hS.2.2.2.2.2.2.2.2.2.2.2.2.1
+    have htpc : t.pc = s.pc := hS.2.2.2.2.2.2.2.2.2.1
+    rcases hA with hh | ⟨hne, hok, hA⟩
+    · rw [Isa.run_halted _ _ _ _ _ hh]
+      simp only [runAl, hth, hh, ↓reduceIte]; exact hS
+    · cases hh : s.halted
+      · have hst := sim_step rodata (prog.getD s.pc .nop) s t B hS hC hok hh hne
+        show Sim (if s.halted then s else X86.isa.run rodata prog n (X86.exec rodata (prog.getD s.pc .nop) s))
+          (if t.halted then t else runAl rodata prog n (execAl rodata (prog.getD t.pc .nop) t))
+        rw [hth, hh, htpc]
+        simp only [Bool.false_eq_true, ↓reduceIte]
+        exact ih _ _ _ hA hst.1 hst.2
+      · rw [Isa.run_halted _ _ _ _ _ hh]
+        simp only [runAl, hth, hh, ↓reduceIte]; exact hS
+
+/-- The separate-region state an aliased state starts from: the output region holds the storage too. -/
+def dupState (t : State α) : State α :=
+  { t with mem := fun r q => if r = rOutput then t.mem rInput q else t.mem r q }
+
+theorem sim_dup (t : State α) : Sim (dupState t) t := by
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, fun q => ?_, fun r q h1 h2 => ?_⟩
+  · simp [dupState]
+  · simp [dupState, h2]
+
+theorem clean_dup (t : State α) (B : Int) : Clean B (dupState t) := by
+  intro q _; simp [dupState, show rInput ≠ rOutput by decide]
+
+theorem accessRun_mono (rodata : Array (BitVec 64)) (prog : Array Instr) :
+    ∀ (n : Nat) (B B' : Int) (s : State α), B' ≤ B → AccessRun rodata prog n B s → AccessRun rodata prog n B' s := by
+  intro n
+  induction n with
+  | zero => intros; trivial
+  | succ n ih =>
+    intro B B' s hB hA
+    rcases hA with hh | ⟨hne, hok, hA⟩
+    · exact Or.inl hh
+    · refine Or.inr ⟨hne, ⟨fun c hc hr => Int.le_trans hB (hok.1 c hc hr), hok.2⟩, ih _ _ _ ?_ hA⟩
+      unfold bumpB
+      generalize writes s (prog.getD s.pc .nop) = l
+      clear hA hok hne
+      induction l generalizing B B' with
+      | nil => exact hB
+      | cons c l ih2 => simp only [List.foldl_cons]; apply ih2; split <;> omega
+
+end X86
+end Keccaktree.Asm
