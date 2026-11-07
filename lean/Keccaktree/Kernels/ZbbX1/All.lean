@@ -2,6 +2,7 @@ import Keccaktree.Kernels.ZbbX1.GenSE.Seg
 import Keccaktree.Kernels.ZbbX1.GenSB.Seg
 import Keccaktree.Kernels.ZbbX1.GenSX.Seg
 import Keccaktree.Kernels.RiscvCommon
+import Keccaktree.Asm.RiscvChoice
 import Keccaktree.Kernels.RvVl
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
@@ -531,5 +532,19 @@ hands nothing over; any `vl` at entry). -/
 def kernel (vlmax : Nat) : Library.KernelThm (Riscv.isa vlmax) LibTable.EntryRv Digest :=
   LibRv.mkKernelRv vlmax (LibTable.sym "zbb_x1") 0 [] rodata prog 1 (fun _ c => 32 + 3443 * c)
     (Riscv.vlAnn RvVl.zbb_x1) RvVl.zbb_x1_ok RvVl.entries.2.1 (norm_thm vlmax)
+
+/-- Under any vector-length choice (`Riscv.isaCh`): the kernel has no `vsetvli`, the same run. -/
+theorem norm_thm_ch (vlmax : Nat) (ch : Nat → Nat) :
+    LibRv.NormThmRvCh vlmax ch rodata prog 1 (fun _ c => 32 + 3443 * c) [] := by
+  intro off count input S hE hb hpc
+  have h := norm_thm vlmax off count input S hE hb hpc
+  show Library.Outcome _ _ _ off count input S ((Riscv.isaCh vlmax ch).run rodata prog (32 + 3443 * count) S)
+  rw [Riscv.run_ch_scalar vlmax ch rodata prog scalar]
+  exact h
+
+/-- `keccaktree_keccak256_zbb_x1` in the RISC-V library under the vector-length choice `ch`. -/
+def kernel_ch (vlmax : Nat) (ch : Nat → Nat) : Library.KernelThm (Riscv.isaCh vlmax ch) LibTable.EntryRv Digest :=
+  LibRv.mkKernelRvCh vlmax ch (LibTable.sym "zbb_x1") 0 [] rodata prog 1 (fun _ c => 32 + 3443 * c)
+    (Riscv.vlAnn RvVl.zbb_x1) RvVl.zbb_x1_ok RvVl.entries.2.1 (norm_thm_ch vlmax ch)
 
 end Keccaktree.Kernels.ZbbX1.All
