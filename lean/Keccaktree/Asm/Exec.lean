@@ -21,8 +21,8 @@ def initMem (input : Int → α) (zero : α) : Region → Int → α :=
 def initState (input : Int → α) (zero : α) (count : Nat) (entry : Nat) [LaneOps α] : State α :=
   { v := Vector.replicate 32 (Vector.replicate 8 (LaneOps.const 0#64))
     g := ((((Vector.replicate 32 (⟨0, 0⟩ : Addr)).set 7 ⟨rOutput, 0⟩).set 6 ⟨rInput, 0⟩).set 2 ⟨0, count⟩).set 4 ⟨rStack, 1 <<< 20⟩
-    gd := Vector.ofFn fun n : Fin 32 => LaneOps.const (gprWord
-      (((((Vector.replicate 32 (⟨0, 0⟩ : Addr)).set 7 ⟨rOutput, 0⟩).set 6 ⟨rInput, 0⟩).set 2 ⟨0, count⟩).set 4 ⟨rStack, 1 <<< 20⟩)[n])
+    gd := Vector.ofFn fun n : Fin 32 => LaneOps.ptr
+      (((((Vector.replicate 32 (⟨0, 0⟩ : Addr)).set 7 ⟨rOutput, 0⟩).set 6 ⟨rInput, 0⟩).set 2 ⟨0, count⟩).set 4 ⟨rStack, 1 <<< 20⟩)[n]
     k := Vector.replicate 8 0
     zf := false, cf := false, nf := false, vf := false, vl := 0
     mem := initMem input zero

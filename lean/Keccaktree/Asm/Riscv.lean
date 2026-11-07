@@ -17,7 +17,7 @@ configurations are modelled; the byte-copy paths for unaligned buffers
 -/
 namespace Keccaktree.Asm.Riscv
 open Keccaktree.Asm
-open Keccaktree.Asm.X86 hiding gx setX withX next wordGpr
+open Keccaktree.Asm.X86 hiding gx setX withX next
 open Keccaktree.Asm.Arm (gx setX withX addr withAddr)
 open LaneOps
 
@@ -113,8 +113,9 @@ def setActive (s : State α) (d : Nat) (f : Nat → α) : State α :=
 
 def next (s : State α) : State α := { s with pc := s.pc + 1 }
 
-/-- Branch condition on two constant words. -/
-def brHolds : BCond → BitVec 64 → BitVec 64 → Bool
+/-- Branch condition on two offsets of the same region (counts, or pointers
+into the same region; both non-negative on the machine). -/
+def brHolds : BCond → Int → Int → Bool
   | .eq, x, y => x == y
   | .ne, x, y => x != y
   | .geu, x, y => y ≤ x
@@ -137,8 +138,8 @@ def exec (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α) :
     | some s' => next s'
     | none => s.fail
   | .br c a b t =>
-    match asConst (getR s a), asConst (getR s b) with
-    | some x, some y => { s with pc := if brHolds c x y then t else s.pc + 1 }
+    match asAddr (getR s a), asAddr (getR s b) with
+    | some x, some y => if x.region = y.region then { s with pc := if brHolds c x.off y.off then t else s.pc + 1 } else s.fail
     | _, _ => s.fail
   | .j t => { s with pc := t }
   | .ret => { s with halted := true }
@@ -193,7 +194,7 @@ def execTrace (vlmax : Nat) (rodata : Array (BitVec 64)) (l : List Instr) (s : S
 def initState (input : Int → α) (zero : α) (count : Nat) (entry : Nat) : State α :=
   let g := ((((Vector.replicate 32 (⟨0, 0⟩ : Addr)).set 10 ⟨rOutput, 0⟩).set 11 ⟨rInput, 0⟩).set 12 ⟨0, count⟩).set 2 ⟨rStack, 1 <<< 20⟩
   { v := Vector.replicate 32 (Vector.replicate 8 (const 0#64))
-    g := Vector.replicate 32 ⟨0, 0⟩, gd := Vector.ofFn fun n : Fin 32 => const (X86.gprWord g[n])
+    g := Vector.replicate 32 ⟨0, 0⟩, gd := Vector.ofFn fun n : Fin 32 => ptr g[n]
     k := Vector.replicate 8 0
     zf := false, cf := false, nf := false, vf := false, vl := 0
     mem := initMem input zero

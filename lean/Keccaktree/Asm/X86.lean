@@ -153,13 +153,9 @@ def State.getV (s : State α) (n : Nat) : List α := (s.v.getD n (Vector.replica
 def State.setV (s : State α) (n : Nat) (x : Vector α 8) : State α := { s with v := s.v.setIfInBounds n x }
 def State.getG (s : State α) (n : Nat) : Addr := s.g.getD n ⟨0, 0⟩
 
-/-- A general register as a stored word: a number as is, a pointer as (region << 56) | offset. -/
-def gprWord (a : Addr) : BitVec 64 :=
-  if a.region = 0 then BitVec.ofInt 64 a.off else BitVec.ofNat 64 (a.region.val * 2 ^ 56 + a.off.toNat)
-
 /-- Write a general register (both views). -/
 def State.setG (s : State α) (n : Nat) (a : Addr) : State α :=
-  { s with g := s.g.setIfInBounds n a, gd := s.gd.setIfInBounds n (const (gprWord a)) }
+  { s with g := s.g.setIfInBounds n a, gd := s.gd.setIfInBounds n (ptr a) }
 
 /-- The data view of a general register. -/
 def State.getGD (s : State α) (n : Nat) : α := s.gd.getD n (const 0)
@@ -188,16 +184,12 @@ def memStoreFrom (m : Region → Int → α) (r : Region) (q : Int) : List α �
 def State.storeWords (s : State α) (a : Addr) (vs : List α) : Option (State α) :=
   if a.off % 8 = 0 ∧ a.region ≠ rRodata then some { s with mem := memStoreFrom s.mem a.region (a.off / 8) vs } else none
 
-/-- A word as a register value: a number as is, a pointer as (region << 56) | offset. -/
-def wordGpr (v : BitVec 64) : Addr :=
-  let r := (v >>> 56).toNat
-  if r = 0 then ⟨0, v.toInt⟩ else ⟨⟨r % 8, Nat.mod_lt _ (by decide)⟩, ((v &&& 0x00ffffffffffffff#64).toNat : Int)⟩
-
-/-- The general registers live in `gd`; a pointer or count is a constant word
-in the `gprWord` encoding.  `gx` decodes it; it is `none` for a non-constant
-(symbolic) word, and every instruction that needs it fails then. -/
-def gx (s : State α) (n : Nat) : Option Addr := (asConst (s.getGD n)).map wordGpr
-def setX (s : State α) (n : Nat) (a : Addr) : State α := s.setGD n (const (gprWord a))
+/-- The general registers live in `gd`; a pointer or count is a `ptr` lane
+(a constant word in the `gprWord` encoding on the concrete machine).  `gx`
+decodes it; it is `none` for a data (symbolic) word, and every instruction
+that needs it fails then. -/
+def gx (s : State α) (n : Nat) : Option Addr := asAddr (s.getGD n)
+def setX (s : State α) (n : Nat) (a : Addr) : State α := s.setGD n (ptr a)
 def withX (s : State α) (n : Nat) (k : Addr → State α) : State α :=
   match gx s n with
   | some a => k a
@@ -436,12 +428,12 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   | .cmpi a imm => withX s a fun x => next (setFlagsSub s x (Addr.num imm))
   | .cmpr a b => withX s a fun x => withX s b fun y => next (setFlagsSub s x y)
   | .cmpm m b => withMem s m fun ad => withLoad rodata s ad 1 fun ws =>
-    match asConst (ws.headD (const 0)) with
-    | some v => withX s b fun y => next (setFlagsSub s (wordGpr v) y)
+    match asAddr (ws.headD (const 0)) with
+    | some v => withX s b fun y => next (setFlagsSub s v y)
     | none => s.fail
   | .cmprm a m => withMem s m fun ad => withLoad rodata s ad 1 fun ws =>
-    match asConst (ws.headD (const 0)) with
-    | some v => withX s a fun x => next (setFlagsSub s x (wordGpr v))
+    match asAddr (ws.headD (const 0)) with
+    | some v => withX s a fun x => next (setFlagsSub s x v)
     | none => s.fail
   | .test a b => withX s a fun x => withX s b fun y =>
     if x.region = 0 ∧ y.region = 0 then
@@ -462,8 +454,8 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   | .addm m imm => withMem s m fun a => withLoad rodata s a 1 fun ws =>
     withStore s a [add (ws.headD (const 0)) (const (BitVec.ofInt 64 imm))] next
   | .decm m => withMem s m fun a => withLoad rodata s a 1 fun ws =>
-    match asConst (ws.headD (const 0)) with
-    | some v => withStore s a [const (v - 1#64)] fun s' => next { s' with zf := v - 1#64 = 0#64 }
+    match asAddr (ws.headD (const 0)) with
+    | some v => withStore s a [ptr ⟨v.region, v.off - 1⟩] fun s' => next { s' with zf := v.off - 1 = 0 }
     | none => s.fail
   | .jcc c t => { s with pc := if condHolds s c then t else s.pc + 1 }
   | .jmp t => { s with pc := t }
@@ -471,12 +463,12 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   | .call t => withX s 4 fun sp =>
     let sp' : Addr := ⟨sp.region, sp.off - 8⟩
     -- the return address is modelled as the instruction index
-    withStore s sp' [const (BitVec.ofNat 64 (s.pc + 1))] fun s' => { setX s' 4 sp' with pc := t, depth := s.depth + 1 }
+    withStore s sp' [ptr (Addr.num (s.pc + 1))] fun s' => { setX s' 4 sp' with pc := t, depth := s.depth + 1 }
   | .ret =>
     if s.depth = 0 then { s with halted := true } else
     withX s 4 fun sp => withLoad rodata s sp 1 fun ws =>
-      match asConst (ws.headD (const 0)) with
-      | some ra => { setX s 4 ⟨sp.region, sp.off + 8⟩ with pc := ra.toNat, depth := s.depth - 1 }
+      match asAddr (ws.headD (const 0)) with
+      | some ra => if ra.region = 0 then { setX s 4 ⟨sp.region, sp.off + 8⟩ with pc := ra.off.toNat, depth := s.depth - 1 } else s.fail
       | none => s.fail
   | .push src => withX s 4 fun sp =>
     let sp' : Addr := ⟨sp.region, sp.off - 8⟩

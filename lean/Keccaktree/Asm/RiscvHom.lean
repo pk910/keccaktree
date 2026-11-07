@@ -9,7 +9,7 @@ failed state stays failed (`err_exec`): `Riscv.isa vlmax`.
 -/
 namespace Keccaktree.Asm.Riscv
 open Keccaktree.Asm
-open Keccaktree.Asm.X86 hiding gx setX withX next wordGpr getGD_map setGD_map setGD_map' gx_map_some setX_map next_map condHolds_map
+open Keccaktree.Asm.X86 hiding gx setX withX next getGD_map setGD_map setGD_map' gx_map_some setX_map next_map condHolds_map
 open Keccaktree.Asm.Arm (gx setX withX addr withAddr gx_map_some setX_map addr_map_some getGD_map setGD_map setGD_map')
 open LaneOps
 
@@ -116,11 +116,12 @@ theorem exec_map (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (st : St
         · simp only [Option.map_some, next_map]
     | br c a b t =>
       simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, getR_map hf] at hne ⊢
-      rcases hx : LaneOps.asConst (getR st a) with _ | x
+      rcases hx : LaneOps.asAddr (getR st a) with _ | x
       · simp only [hx, fail_err'] at hne; exact absurd hne (by decide)
-      · rcases hy : LaneOps.asConst (getR st b) with _ | y
+      · rcases hy : LaneOps.asAddr (getR st b) with _ | y
         · simp only [hx, hy, fail_err'] at hne; exact absurd hne (by decide)
-        · simp only [hx, hy, hf.asConst _ _ hx, hf.asConst _ _ hy]; rfl
+        · simp only [hx, hy, hf.asAddr _ _ hx, hf.asAddr _ _ hy]
+          split <;> (first | rfl | simp only [fail_map])
     | j t => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; rfl
     | ret => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; rfl
     | nop => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, next_map]

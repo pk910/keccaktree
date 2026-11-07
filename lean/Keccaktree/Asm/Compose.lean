@@ -32,7 +32,11 @@ def envOf (s : State (BitVec 64)) (i : Nat) : BitVec 64 :=
 words `ctl` (pointers and counts kept in data registers or on the stack, which
 the slice's address arithmetic needs to see), a fresh variable otherwise. -/
 def cutVar (ctl : List Nat) (s : State (BitVec 64)) (i : Nat) : E :=
-  if ctl.contains i then .const (envOf s i) else .var i
+  if ctl.contains i then
+    -- a pointer (region tag, faithfully encoded) is kept apart from data constants (relocation)
+    if (wordGpr (envOf s i)).region ≠ 0 ∧ gprWord (wordGpr (envOf s i)) = envOf s i then .ptr (wordGpr (envOf s i))
+    else .const (envOf s i)
+  else .var i
 
 /-- The symbolic state at a cut: the control part of `s`, variables elsewhere. -/
 def cutOf (ctl : List Nat) (s : State (BitVec 64)) : State E :=
@@ -44,7 +48,12 @@ def cutOf (ctl : List Nat) (s : State (BitVec 64)) : State E :=
 
 theorem eval_cutVar (ctl : List Nat) (s : State (BitVec 64)) (i : Nat) :
     E.eval (envOf s) (cutVar ctl s i) = envOf s i := by
-  unfold cutVar; split <;> simp only [E.eval]
+  unfold cutVar
+  split
+  · split
+    · rename_i h; exact h.2
+    · rfl
+  · rfl
 
 theorem envOf_reg (s : State (BitVec 64)) (r : Fin 32) (l : Fin 8) : envOf s (regVar r l) = s.v[r][l] := by
   simp only [envOf, regVar]

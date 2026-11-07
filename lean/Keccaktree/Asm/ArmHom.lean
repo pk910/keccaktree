@@ -63,12 +63,10 @@ theorem tblWord_map (lo hi : α) (cw : BitVec 64) : tblWord (f lo) (f hi) cw = f
 
 theorem gx_map_some (s : State α) (n : Nat) (a : Addr) (h : gx s n = some a) : gx (mapState f s) n = some a := by
   simp only [gx, getGD_map hf] at h ⊢
-  rcases hc : LaneOps.asConst (s.getGD n) with _ | w
-  · simp [hc] at h
-  · rw [hf.asConst _ _ hc]; simp only [hc, Option.map_some] at h; simp only [Option.map_some, h]
+  exact hf.asAddr _ _ h
 
 theorem setX_map (s : State α) (n : Nat) (a : Addr) : setX (mapState f s) n a = mapState f (setX s n a) := by
-  simp only [setX]; exact setGD_map' s n _ _ (hf.const _)
+  simp only [setX]; exact setGD_map' s n _ _ (hf.ptr _)
 
 theorem addr_map_some (s : State α) (base : Nat) (off : Int) (a : Addr) (h : addr s base off = some a) :
     addr (mapState f s) base off = some a := by
