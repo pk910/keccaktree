@@ -19,6 +19,10 @@ set_option linter.unusedVariables false
 proves the frame's concrete steps for every count: the entry (`entry_zero`, `entry_pos`), the
 head of an iteration (`run_head`: `vl = min(r, VLMAX)` for `r` nodes left), the back edge
 (`run_tail`) and the exit (`run_exit`), around the per-`vl` batch bodies of each kernel.
+
+**Assumption (vector length choice).** The model's `vsetvli` sets `vl = min(avl, VLMAX)` (`run_head`).
+RVV 1.0 also allows `⌈avl/2⌉ ≤ vl ≤ VLMAX` when `VLMAX < avl < 2·VLMAX`; that freedom is not covered here
+(the bodies are proved for every `vl ∈ 1..VLMAX`; only the frame fixes the choice).
 -/
 namespace Keccaktree.Kernels.RvvCommon
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak Keccaktree.Kernels.RiscvCommon

@@ -62,6 +62,20 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
   proofs) and (b) a body proof per `vl` value up to VLMAX (or a lane-generic body proof, which the symbolic
   per-node method does not give).  Covered exactly: VLEN ∈ {128, 256, 512}.
 
+## Model assumptions stated for the RISC-V theorems (from agent `diff`, merged 0fbdb01 → all-rv b031126)
+* **M11 (vl choice)**: the model's `vsetvli` sets `vl = min(avl, VLMAX)`.  RVV 1.0 also allows any
+  `vl ∈ [⌈avl/2⌉, VLMAX]` when `VLMAX < avl < 2·VLMAX`.  The RVV theorems assume the `min` choice (stated in
+  `RvvCommon` and each generated `All.lean`).  Note: the batch bodies are proved for *every* `vl = w ∈ 1..VLMAX`
+  and contain no `vsetvli`, so the extension only concerns the frame: an ISA variant whose `vsetvli` uses a legal
+  choice function, a transfer lemma for vsetvli-free paths, `run_head` for the chosen `w`, and a loop whose batch
+  count follows the choices — planned after the deterministic proofs are built.
+* **M9 (vector shift by register ≥ 64)**: left as the translator guard (count must be a `li` constant < 64; all
+  RVV shifts are).  The one-line model fix (`% 64` in `Riscv.vsh`) changes `Riscv.lean`, which every generated
+  RISC-V slice imports (via `RiscvFoot`): it would force a rebuild of all RISC-V proofs in flight; to be applied
+  together with any later model change, then a full rebuild.
+* `lakefile.toml` of the merge adds tool targets; not synced to `/root/kt-rv` while builds run (rsync
+  `--exclude lakefile.toml`), to avoid any reconfiguration of the running builds.
+
 ## Status (18:00 UTC)
 * rv64_x1: GenSE/GenSX built; GenSB slices 0–12 built, 13–24 building (P=1: 8–12 GB, ~8 min each).
 * zbb_x1: segments generated (`gen_segments_rv.sh zbb_x1 ZbbX1 18 3456 3460 3474 2097155`), `All.lean` from the

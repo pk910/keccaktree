@@ -279,7 +279,8 @@ every relocated position).  `{P}` steps per batch; the loop is an induction over
 **Result** (`all`): for every count `c` and node offset `off` with `64·(off+c) ≤ 2^54`, from an entry
 state (`RvvCommon.Entry`: node-aligned buffers), `8 + {P}·⌈c/{V}⌉` steps halt without a model fault
 and without a tail call, keep the output words before node `off`, and leave the keccak256 digest of
-input node `off+n` in output words `4(off+n) ..`, for every `n < c`.
+input node `off+n` in output words `4(off+n) ..`, for every `n < c`.  Assumes `vsetvli` picks
+`vl = min(avl, VLMAX)` (see `RvvCommon`).
 -/
 namespace Keccaktree.Kernels.{ns}.All
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak Keccaktree.Kernels.RiscvCommon Keccaktree.Kernels.RvvCommon
