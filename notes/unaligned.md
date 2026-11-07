@@ -50,8 +50,8 @@ machine alignment is, and the instructions used on regions 1/2 do not depend on 
 memory).  The two absolute-alignment-dependent things are
 1. aligned vector moves (`vmovdqa`, `vmovdqa64`): the model checks only 8-byte region-relative alignment
    (found by the differential tests, `notes/diff.md` M5) — they are used only on the stack frame (static
-   audit of the bases: r9/r11/r8 derived from the realigned rsp; SDE run of test.c with offsets 1..7 never
-   aborts);
+   audit by `alignaudit`: 3.7M executed aligned moves over all x86 kernels and counts 0..64+2N, none outside
+   the stack frame; SDE run of test.c with offsets 1..7 never aborts);
 2. `and rsp, -64`: the model assumes the stack region base is 64-byte aligned.  On the machine the frame
    lands at a different (consistent) relabelling of the stack cells; since every cell is accessed through
    one view only (the pre-alignment pushes via rsp/rbp, the frame via the realigned rsp), values agree.
