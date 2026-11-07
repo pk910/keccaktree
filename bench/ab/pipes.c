@@ -161,13 +161,16 @@ static double now(void) {
     } \
     static const int name##_ops = ops;
 
-DEF(clk, 32, "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t"
-    "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t"
-    "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t"
-    "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t"
-    "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t"
-    "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t" "addq $1, %%rax\n\t"
-    "addq $1, %%rax\n\t" "addq $1, %%rax\n\t")
+/* clock: a dependent imul chain is 3 cycles per imul on Zen 3/4/5 and on
+ * Intel (a dependent add-immediate chain is collapsed by recent cores) */
+DEF(clk, 32, "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t"
+    "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t"
+    "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t"
+    "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t"
+    "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t"
+    "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t"
+    "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t"
+    "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t" "imulq %%rax, %%rax\n\t")
 DEF(tl_z, 24, X24(M_TL, "zmm"))
 DEF(tl_y, 24, X24(M_TL, "ymm"))
 DEF(tld_z, 24, X24(M_TLD, "zmm"))
@@ -264,10 +267,10 @@ int main(int argc, char** argv) {
     /* clock: a dependent add chain runs one add per cycle */
     double ghz = 0;
     for (int i = 0; i < 3; i++) {
-        double ns = ns_per_iter(clk_f, buf) / clk_ops;
+        double ns = ns_per_iter(clk_f, buf) / clk_ops / 3.0;
         if (1.0 / ns > ghz) ghz = 1.0 / ns;
     }
-    printf("clock (dependent add chain): %.3f GHz\n", ghz);
+    printf("clock (dependent imul chain, 3 cycles each): %.3f GHz\n", ghz);
     printf("%-10s %6s %10s %10s %12s\n", "test", "ops", "ns/op", "cyc/op", "cyc/block");
     for (size_t i = 0; i < sizeof tests / sizeof tests[0]; i++) {
         if (verbose) fprintf(stderr, "running %s\n", tests[i].name);
@@ -294,7 +297,7 @@ int main(int argc, char** argv) {
         double nsr = ns * ks[i].batch / 24.0;
         printf("%-12s %10.2f %12.2f %14.1f\n", ks[i].name, ns, nsr, nsr * ghz);
     }
-    double ghz2 = 1.0 / (ns_per_iter(clk_f, buf) / clk_ops);
+    double ghz2 = 1.0 / (ns_per_iter(clk_f, buf) / clk_ops / 3.0);
     printf("clock at end: %.3f GHz\n", ghz2);
     return 0;
 }
