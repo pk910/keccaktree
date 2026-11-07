@@ -16,6 +16,7 @@ void keccaktree_keccak256_sha3_x2_v16(unsigned char*, const unsigned char*, uint
 void keccaktree_keccak256_sha3_x3r_sp(unsigned char*, const unsigned char*, uint64_t);
 void keccaktree_keccak256_sha3_x3rp(unsigned char*, const unsigned char*, uint64_t);
 void keccaktree_keccak256_sha3_x2_v66(unsigned char*, const unsigned char*, uint64_t);
+void keccaktree_keccak256_sha3_x3r_t4(unsigned char*, const unsigned char*, uint64_t);
 #endif
 
 static const uint64_t RC[24] = {
@@ -228,6 +229,7 @@ int main(void) {
         test_backend("sha3_x3r_sp", keccaktree_keccak256_sha3_x3r_sp);
         test_backend("sha3_x3rp", keccaktree_keccak256_sha3_x3rp);
         test_backend("sha3_x2_v66", keccaktree_keccak256_sha3_x2_v66);
+        test_backend("sha3_x3r_t4", keccaktree_keccak256_sha3_x3r_t4);
     } else {
         printf("  %-48s [ skipped, set KT_TEST_SHA3=1 on FEAT_SHA3 CPUs ]\n", "sha3_*");
     }

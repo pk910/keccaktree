@@ -52,4 +52,5 @@ jobs:
           for i in 1 2; do build/ab -n ${ROUNDS:-9} -s ${SIZES:-1,2,3,8,64,256,1024} $K; echo; done
           build/clock
         env:
-          KERNELS: auto,sha3_x3r,sha3_x2,sha3_x3r_sp:sha3_x3r,sha3_x3rp:sha3_x3r,sha3_x2_v66:sha3_x2,sha3_x2_v16:sha3_x2,sha3_x3r_n16:sha3_x3r,sha3_x3r_s16:sha3_x3r
+          KERNELS: auto,sha3_x3r,sha3_x3r_t4:sha3_x3r,sha3_x3r_sp:sha3_x3r,sha3_x3rp:sha3_x3r
+          SIZES: 1,2,3,4,5,7,8,10,16,64,256,1024
