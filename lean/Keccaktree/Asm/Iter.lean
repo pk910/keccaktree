@@ -134,17 +134,22 @@ def ctlTreeOk (B : Int) : E → Bool
   | .const _ => true
   | _ => false
 
-/-- A pointer plus a constant, folded into the pointer (a counter pointer stepped by `add`: the
-next cut holds the folded pointer). -/
+/-- A pointer plus a closed number, folded into the pointer (a counter pointer stepped by `add`:
+the next cut holds the folded pointer).  The number is signed (`toInt`: RISC-V moves the stack
+pointer down with `addi sp, sp, -n`) and may be any closed expression (RVV advances its pointers by
+`vl << 6`, `vl` a control constant).  A number held as a pointer of region 0 (an x86 count loaded
+into a control register) folds to its constant word. -/
 def E.fold : E → E
-  | .add (.ptr a) (.const k) => .ptr ⟨a.region, a.off + (k.toNat : Int)⟩
+  | .add (.ptr a) e => match e.closed with
+    | some k => .ptr ⟨a.region, a.off + k.toInt⟩
+    | none => .add (.ptr a) e
   | .ptr a => if a.region = 0 then .const (gprWord a) else .ptr a
   | e => e
 
 theorem gprWord_add_const (a : Addr) (k : BitVec 64) :
-    gprWord a + k = gprWord ⟨a.region, a.off + (k.toNat : Int)⟩ := by
-  have h : BitVec.ofInt 64 (a.off + (k.toNat : Int)) = BitVec.ofInt 64 a.off + k := by
-    rw [BitVec.ofInt_add, BitVec.ofInt_natCast, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+    gprWord a + k = gprWord ⟨a.region, a.off + k.toInt⟩ := by
+  have h : BitVec.ofInt 64 (a.off + k.toInt) = BitVec.ofInt 64 a.off + k := by
+    rw [BitVec.ofInt_add, BitVec.ofInt_toInt]
   unfold gprWord
   simp only
   split
@@ -155,12 +160,15 @@ theorem E.eval_reloc_fold (ρ : Reloc) (hρ : ρ.ok) (env : Nat → BitVec 64) (
     E.eval env (E.reloc ρ (E.fold e)) = E.eval env (E.reloc ρ e) := by
   unfold E.fold
   split
-  · rename_i a k
-    simp only [E.reloc, E.eval, Reloc.addr]
-    rw [gprWord_add_const]
-    show gprWord ⟨a.region, a.off + (k.toNat : Int) + ρ.δ a.region⟩ = gprWord ⟨a.region, a.off + ρ.δ a.region + (k.toNat : Int)⟩
-    congr 2
-    omega
+  · rename_i a e'
+    split
+    · rename_i k hk
+      have hk' : (e'.reloc ρ).closed = some k := by rw [E.closed_reloc ρ hρ]; exact hk
+      simp only [E.reloc, E.eval, Reloc.addr]
+      rw [E.closed_eval env _ k hk', gprWord_add_const]
+      show gprWord ⟨a.region, a.off + k.toInt + ρ.δ a.region⟩ = gprWord ⟨a.region, a.off + ρ.δ a.region + k.toInt⟩
+      exact congrArg (fun z : Int => gprWord ⟨a.region, z⟩) (by omega)
+    · rfl
   · -- a number as a pointer of region 0: the constant word (relocation leaves numbers)
     rename_i a
     split
