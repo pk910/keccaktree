@@ -17,6 +17,7 @@ import x86_all as X
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIG = 10 ** 6
+THRESH = bool(os.environ.get('THRESH'))
 SYM = lambda k: f'keccaktree_keccak256_{k}'
 
 
@@ -50,6 +51,8 @@ class FrChain:
         self.steps = 0
 
     def cur(self):
+        if getattr(self, 'f0', None) and self.i == 0:
+            return self.f0
         return f'{self.f}{self.i}'
 
     def emit(self, s):
@@ -174,6 +177,14 @@ def sc_gd(seg_path, idx):
     return [int(x.split('#')[0], 16) for x in gds[0].split(', ')]
 
 
+def sc_pc(seg_path, idx):
+    """the pc of the closed state `sc<idx>`"""
+    txt = open(seg_path).read()
+    m = re.search(rf'^def sc{idx} : State \(BitVec 64\) := (.*)$', txt, re.M)
+    mm = re.search(r'\(memLit \[.*?\]\) (\d+) (\d+) (?:true|false) (?:true|false) ', m.group(1))
+    return int(mm.group(1))
+
+
 def ptr_off(word):
     return word & 0x00ffffffffffffff
 
@@ -255,6 +266,66 @@ theorem digest_{name} (input : Int → BitVec 64) (T : State (BitVec 64)) (m : N
     return t
 
 
+def thresh_transform(text, lib, d, segnames):
+    """the glue for every value `v` of the threshold word 112 (`setWord rodata 112 v`)"""
+    W = '(setWord rodata 112 v)'
+    t = text
+    t = t.replace(f'namespace Keccaktree.Kernels.{d}.All', f'namespace Keccaktree.Kernels.{d}.AllV')
+    t = t.replace(f'end Keccaktree.Kernels.{d}.All', f'end Keccaktree.Kernels.{d}.AllV')
+    t = re.sub(r'import Keccaktree\.Kernels\.(\w+)\.(Gen\w+)\.Seg', r'import Keccaktree.Kernels.\1.\2.PathW', t)
+    t = t.replace('abbrev DoneK := Done rodata prog targets', f'abbrev DoneK (v : Nat) := Done {W} prog targets')
+    t = t.replace('DoneK off', 'DoneK v off')
+    t = t.replace(' rodata prog', f' {W} prog')
+    # segment runs under the image (`factsV`); their results are restated with the default bundle's closed
+    # fields (so every closed check stays decidable)
+    t = re.sub(r'(Gen\w+)\.facts_rdx', r'\1.factsV_rdx v', t)
+    out_ = []
+    for ln in t.split('\n'):
+        m = re.match(r'^(\s*)obtain ⟨(\w+), (\w+)⟩ := (Gen\w+)\.facts\.run (.*)$', ln)
+        if m:
+            ind_, a_, b_, g_, rest_ = m.groups()
+            out_.append(f'{ind_}obtain ⟨{a_}, {b_}⟩ := ({g_}.factsV v).run {rest_}')
+            out_.append(f'{ind_}simp only [{g_}.factsV_ctlK, {g_}.factsV_scK, {g_}.factsV_len] at {a_} {b_}')
+            continue
+        m = re.match(r"^(\s*)have ([\w']+) := (.*)\.seg('?) (Gen\w+)\.facts (.*)\(by wok_out (Gen\w+)\.facts\)$", ln)
+        if m:
+            ind_, h_, base_, pr_, g_, rest_, g2_ = m.groups()
+            out_.append(f'{ind_}have {h_} := {base_}.seg{pr_} ({g_}.factsV v) {rest_}(by wok_out2 {g_}.factsV {g_}.facts)')
+            out_.append(f'{ind_}simp only [{g_}.factsV_len] at {h_}')
+            continue
+        out_.append(ln)
+    t = '\n'.join(out_)
+    # data lemmas: the default-image segment facts, moved to the image by `run_agree`
+    t = t.replace('  rw [← sr1.1] at da\n', '  rw [← sr1.1] at da\n  rw [← GBA.run_agree _ (agree_setWord rodata 112 v) _ hρ hw S hcut hI.ok] at da\n')
+    t = t.replace('  rw [← sr2.1] at db\n', '  rw [← sr2.1] at db\n  rw [← GenBb.run_agree _ (agree_setWord rodata 112 v) _ hρ hw _ cut2 ok1] at db\n')
+    t = t.replace('  rw [← sr.1] at dx\n', '  rw [← sr.1] at dx\n  rw [← GX.run_agree _ (agree_setWord rodata 112 v) (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok] at dx\n')
+    # fill in the segment names of the inserted lines from the nearest `have sr*` above
+    out = []
+    lastG = None
+    for ln in t.split('\n'):
+        m = re.search(r'have sr1? := (Gen\w+)\.seg_run', ln)
+        if m:
+            lastG = m.group(1)
+        ln = ln.replace('GBA.run_agree', f'{lastG}.run_agree').replace('GX.run_agree', f'{lastG}.run_agree')
+        out.append(ln)
+    t = '\n'.join(out)
+    # every lemma of the control flow takes the threshold value
+    for nm in ['exit_\\w+', 'body_\\w+', 'afterB_step', 'afterB', 'afterP_\\w+']:
+        t = re.sub(rf'theorem ({nm}) \(', r'theorem \1 (v : Nat) (hv64 : v < 2 ^ 64) (', t)
+        t = re.sub(rf'(?<![\w.])({nm}) off ', r'\1 v hv64 off ', t)
+    t = t.replace('theorem norm_thm :', 'theorem norm_thm (v : Nat) (hv64 : v < 2 ^ 64) :')
+
+    t = t.replace('macro "wok_in"', 'macro "wok_out2 " g:ident h:ident : tactic => `(tactic| (intro q hq; simp only [$g:ident, $h:ident]; first | rfl | (simp [rOutput, rInput, rStack] <;> omega)))\nmacro "wok_in"')
+    t = t.replace('import Keccaktree.Asm.X86Kernel', 'import Keccaktree.Asm.X86Thresh')
+    lib = lib.replace(f'import Keccaktree.Kernels.{d}.All', f'import Keccaktree.Kernels.{d}.AllV')
+    lib = lib.replace(f'namespace Keccaktree.Kernels.{d}.Lib', f'namespace Keccaktree.Kernels.{d}.LibV')
+    lib = lib.replace(f'end Keccaktree.Kernels.{d}.Lib', f'end Keccaktree.Kernels.{d}.LibV')
+    lib = lib.replace('def kernel :', '/-- The kernel under the threshold value `v` (word 112). -/\ndef kernel (v : Nat) (hv64 : v < 2 ^ 64) :')
+    lib = lib.replace('All.targets rodata prog', 'AllV.targets (setWord rodata 112 v) prog')
+    lib = lib.replace('All.steps', 'AllV.steps').replace('All.norm_thm', '(AllV.norm_thm v hv64)')
+    return t, lib
+
+
 def main():
     kernel = sys.argv[1]
     A = json.load(open(os.path.join(HERE, f'plans/{kernel}_all.json')))
@@ -326,7 +397,7 @@ abbrev DoneK := Done rodata prog targets
             data = f"""  have sr := {G}.seg_run (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok
   have dx := {G}.seg_data (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok _ (inv0_{nm} input U m hI.inp)
   rw [← sr.1] at dx
-  have dg := digest_{nm} input _ m _ (fun _ => rfl) dx
+  have dg := digest_{nm} input _ m (fun n => absorbNode (nodeWords input (m + n.val))) (fun _ => rfl) (by exact dx)
   have hI' := hI.seg' {G}.facts m {b0} (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
   have hdig : ∀ n, n < done + {h} → Digest input (X86.isa.run rodata prog {G}.facts.len U) (off + n) := by
     intro n hn
@@ -337,7 +408,7 @@ abbrev DoneK := Done rodata prog targets
       exact this
 """
         else:
-            data = f"""  have hI' := hI.seg {G}.facts m (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
+            data = f"""  have hI' := hI.seg' {G}.facts m {b0} (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
   have hdig : ∀ n, n < done + 0 → Digest input (X86.isa.run rodata prog {G}.facts.len U) (off + n) :=
     fun n hn => hI'.dig n (by omega)
 """
@@ -374,7 +445,10 @@ theorem exit_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVe
             if kind == 'tailcall':
                 term = f"run_tail rodata prog _ hok.2.1 \"{sym}\" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)"
             else:
-                term = (f"run_jcct rodata prog _ hok.2.1 _ \"{sym}\" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel) "
+                tpc = sc_pc(segp, kx)
+                top, ta = X.parse(prog[tpc])
+                assert top == 'jcct', (nm, tpc, prog[tpc])
+                term = (f"run_jcct rodata prog _ hok.2.1 .{ta[0]} \"{sym}\" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel) "
                         f"(by rw [fK.2.2.1, fK.2.2.2.1]; decide +kernel)")
             w(f"""set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -534,6 +608,38 @@ def XM : Nat := {XM}
                 return pcs + ['tail']
         return pcs + [ch.pc]
 
+    def run_br(out, ind, ch, finish):
+        """count steps until the loop head or a non-count instruction, then `finish`; under THRESH, the policy
+        compare against the threshold word splits into the three orders of the count and the threshold"""
+        import copy
+        while True:
+            if ch.pc == H:
+                return finish(out, ind, ch, 'stop')
+            if X.fr_step(prog, rodata, ch.pc, {k: v.rep for k, v in ch.vals.items()}, bool(ch.zf), bool(ch.cf)) is None:
+                return finish(out, ind, ch, 'exit')
+            op, a = X.parse(prog[ch.pc])
+            if THRESH and op == 'cmprm':
+                r = ch.vals[a[0]]
+                assert r.py is not None, 'threshold compare on a symbolic count'
+                ch.out = out; ch.ind = ind
+                ch.step()
+                fl = f'(setWord_flags rodata {r.lean} v (by fr_lo) (by fr_hi) hv64 (by decide))'
+                out.append(' ' * ind + f'rw [{fl}.1, {fl}.2] at {ch.cur()}')
+                out.append(' ' * ind + f'rcases Nat.lt_trichotomy v {r.py} with hvr | hvr | hvr')
+                for (vr, nm) in ((r.py - 1, 'v < r'), (r.py, 'v = r'), (r.py + 1, 'v > r')):
+                    b = copy.copy(ch); b.vals = dict(ch.vals)
+                    b.zf, b.cf = (r.py == vr), (r.py < vr); b.flags_known = True
+                    sub = []
+                    b.out = sub; b.ind = ind + 2
+                    run_br(sub, ind + 2, b, finish)
+                    sub[0] = ' ' * ind + '· ' + sub[0].lstrip()
+                    out.extend(sub)
+                return
+            ch.out = out; ch.ind = ind
+            kind, info = ch.step()
+            if kind == 'tail':
+                return finish(out, ind, ch, 'tail')
+
     def emit_dispatch(ind, f0, E0, delta, yvar, ylo, pc0, prev_m, prev_base, done_expr, on_H, msuf=''):
         """count steps from `f0` (at pc0, rdx = E0 = yvar + delta) to the loop head or an exit, for every value of
         the Nat `yvar` ≥ ylo: literal cases below the uniform bound M, then `M ≤ yvar`"""
@@ -549,6 +655,29 @@ def XM : Nat := {XM}
             oo(f"have hcs : {' ∨ '.join([f'{yvar} = {y}' for y in range(ylo, M)] + [f'{M} ≤ {yvar}'])} := by omega")
             oo(f"rcases hcs with {' | '.join(['hy'] * (M - ylo) + ['hy'])}")
         groups = list(range(ylo, M)) + ['sym']
+
+        def finish(o, ind2, ch, kind):
+            q = lambda t: o.append(' ' * ind2 + t)
+            if kind == 'stop':
+                both = ('Bat' + msuf) in ba_names and ('Baf' + msuf) in ba_names
+                if not ch.flags_known and both:
+                    q(f"by_cases hz : {ch.zf_lean}")
+                    for nm in ('Bat' + msuf, 'Baf' + msuf):
+                        ch.zf = nm.startswith('Bat')
+                        hl = []
+                        on_H(hl, ind2 + 2, ch, nm)
+                        hl[0] = ' ' * ind2 + '· ' + hl[0].lstrip()
+                        o.extend(hl)
+                else:
+                    nm = ('Bat' if ch.zf else 'Baf') + msuf
+                    if nm not in ba_names:
+                        nm = [n_ for n_ in ba_names if n_.endswith(msuf) or not msuf][0]
+                    on_H(o, ind2, ch, nm)
+            elif kind == 'exit':
+                emit_exit_call(o, ind2, ch, 'hcut', prev_m, prev_base, done_expr, 'T', bool(msuf))
+            else:
+                raise AssertionError(('dispatch ends in', kind))
+
         for y in groups:
             d0 = 2 if M > ylo else 0
             if M > ylo:
@@ -556,37 +685,16 @@ def XM : Nat := {XM}
             sub = []
             if y == 'sym':
                 vals = {2: Val(E0, None, BIG + delta)}
-                ch, kind, info = run_chain(sub, ind + d0, f0 + 'x', vals, pc0, None, None, {H})
             else:
                 sub.append(' ' * (ind + d0) + f'have hv : {E0} = {lit(y + delta)} := by omega')
                 sub.append(' ' * (ind + d0) + f'rw [hv] at {f0}')
                 vals = {2: Val(lit(y + delta), y + delta)}
-                ch, kind, info = run_chain(sub, ind + d0, f0 + 'x', vals, pc0, None, None, {H})
-            # the chain starts at f0: rename its 0th hypothesis
-            sub = [l.replace(f'{f0}x0', f0) for l in sub]
-            if ch.i == 0:
-                ch.f, ch.i = f0, None
-                ch.cur = (lambda nm=f0: nm)
+            ch = FrChain(prog, rodata, f0 + 'x', sub, ind + d0)
+            ch.vals = dict(vals); ch.pc = pc0; ch.zf = ch.cf = None
+            ch.i = 0
+            ch.f0 = f0   # the 0th hypothesis is f0 itself
+            run_br(sub, ind + d0, ch, finish)
             out.extend(sub)
-            if kind == 'stop':
-                both = ('Bat' + msuf) in ba_names and ('Baf' + msuf) in ba_names
-                if not ch.flags_known and both:
-                    oo(f"by_cases hz : {ch.zf_lean}", d0)
-                    for nm in ('Bat' + msuf, 'Baf' + msuf):
-                        ch.zf = nm.startswith('Bat')
-                        hl = []
-                        on_H(hl, ind + d0 + 2, ch, nm)
-                        hl[0] = ' ' * (ind + d0) + '· ' + hl[0].lstrip()
-                        out.extend(hl)
-                else:
-                    nm = ('Bat' if ch.zf else 'Baf') + msuf
-                    if nm not in ba_names:
-                        nm = [n_ for n_ in ba_names if n_.endswith(msuf) or not msuf][0]
-                    on_H(out, ind + d0, ch, nm)
-            elif kind == 'exit':
-                emit_exit_call(out, ind + d0, ch, 'hcut', prev_m, prev_base, done_expr, 'T', bool(msuf))
-            else:
-                raise AssertionError(('dispatch ends in', kind, y))
         return out
 
     # afterB_step: the loop control, with the continuation as a hypothesis
@@ -749,7 +857,8 @@ theorem norm_thm : NormThm rodata prog {ENT} steps targets := by
             cnd, name, hi = info
             sym = name if name.startswith('keccaktree_') else SYM(name)
             oo(f'have hr := {f}.jcct_taken .{cnd} "{sym}" {hi} (by fr_cond)')
-            oo(f'rw [show steps off c = ({ch.i} + 1) + (steps off c - ({ch.i} + 1)) by unfold steps; omega, Isa.run_add, hr,')
+            cc = 'c' if cv == 'sym' else str(cv)
+            oo(f'rw [show steps off {cc} = ({ch.i} + 1) + (steps off {cc} - ({ch.i} + 1)) by unfold steps; omega, Isa.run_add, hr,')
             oo(f'  Isa.run_halted _ _ _ _ _ rfl]')
             oo(f'refine ⟨rfl, {f}.err, fun q _ => by rw [{f}.near.2.2.2.2.2.2.1], Or.inr ⟨"{sym}", 0, rfl, by decide, by omega,')
             oo(f'  fun n hn => absurd hn (Nat.not_lt_zero _), ?_⟩⟩')
@@ -775,7 +884,7 @@ have hd := afterP_{pv} off c input S _ hb cut1 I1 (by
   rw [e2, {f}.vals (2, {vals[2].lean if cv == 'sym' else f'((({cv} : Nat)) : Int)'}) (by simp [setVal])]
   try rfl) (by omega)
 rw [len_{pv}] at hd
-exact (Done.run rfl (Done.run rfl hd)) (steps off c) (by unfold steps; omega)""".split('\n'):
+exact (Done.run rfl (Done.run rfl hd)) (steps off {'c' if cv == 'sym' else cv}) (by unfold steps; omega)""".split('\n'):
             oo(t)
         return out
     if Mp == 0:
@@ -810,7 +919,8 @@ exact (Done.run rfl (Done.run rfl hd)) (steps off c) (by unfold steps; omega)"""
         mk = (f'mkKernel "{SYM(kernel)}" {rank} All.targets rodata prog {entry} All.steps {prefix_m} (by decide +kernel) (by decide +kernel)\n'
               f'    (fun _ _ => by unfold All.steps; omega) All.norm_thm')
         imp = 'import Keccaktree.Asm.LibX86'
-    open(os.path.join(kdir, 'Lib.lean'), 'w').write(f"""import Keccaktree.Kernels.{d}.All
+    text = '\n'.join(L) + f'\nend Keccaktree.Kernels.{d}.All\n'
+    lib = f"""import Keccaktree.Kernels.{d}.All
 {imp}
 set_option linter.unusedSectionVars false
 set_option linter.unusedVariables false
@@ -824,8 +934,14 @@ def kernel : Library.KernelThm X86.isa EntryX86 Digest :=
   {mk}
 
 end Keccaktree.Kernels.{d}.Lib
-""")
-    open(os.path.join(kdir, 'All.lean'), 'w').write('\n'.join(L) + f'\nend Keccaktree.Kernels.{d}.All\n')
+"""
+    if THRESH:
+        text, lib = thresh_transform(text, lib, d, sorted(segs))
+        open(os.path.join(kdir, 'AllV.lean'), 'w').write(text)
+        open(os.path.join(kdir, 'LibV.lean'), 'w').write(lib)
+    else:
+        open(os.path.join(kdir, 'Lib.lean'), 'w').write(lib)
+        open(os.path.join(kdir, 'All.lean'), 'w').write(text)
     print('written (exits, body)')
 
 
