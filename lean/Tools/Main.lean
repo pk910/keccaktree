@@ -11,6 +11,9 @@ import Keccaktree.Kernels.Avx2X2.Program
 import Keccaktree.Kernels.Avx2X8.Program
 import Keccaktree.Kernels.Avx512vlX4.Program
 import Keccaktree.Kernels.Avx512X8.Program
+import Keccaktree.Kernels.Avx512vlX4d.Program
+import Keccaktree.Kernels.Avx512X9d.Program
+import Keccaktree.Kernels.Avx512X8d.Program
 import Keccaktree.Kernels.NeonX2.Program
 import Keccaktree.Kernels.Sha3X2.Program
 import Keccaktree.Kernels.Sha3X3.Program
@@ -46,6 +49,9 @@ def kernels : List (String × Kernel) :=
    ("avx2_x4", ⟨x86Tool, Keccaktree.Kernels.Avx2X4.prog, Keccaktree.Kernels.Avx2X4.rodata, Keccaktree.Kernels.Avx2X4.entry⟩),
    ("avx2_x8", ⟨x86Tool, Keccaktree.Kernels.Avx2X8.prog, Keccaktree.Kernels.Avx2X8.rodata, Keccaktree.Kernels.Avx2X8.entry⟩),
    ("avx512vl_x4", ⟨x86Tool, Keccaktree.Kernels.Avx512vlX4.prog, Keccaktree.Kernels.Avx512vlX4.rodata, Keccaktree.Kernels.Avx512vlX4.entry⟩),
+   ("avx512_x8d", ⟨x86Tool, Keccaktree.Kernels.Avx512X8d.prog, Keccaktree.Kernels.Avx512X8d.rodata, Keccaktree.Kernels.Avx512X8d.entry⟩),
+   ("avx512_x9d", ⟨x86Tool, Keccaktree.Kernels.Avx512X9d.prog, Keccaktree.Kernels.Avx512X9d.rodata, Keccaktree.Kernels.Avx512X9d.entry⟩),
+   ("avx512vl_x4d", ⟨x86Tool, Keccaktree.Kernels.Avx512vlX4d.prog, Keccaktree.Kernels.Avx512vlX4d.rodata, Keccaktree.Kernels.Avx512vlX4d.entry⟩),
    ("avx512_x8", ⟨x86Tool, Keccaktree.Kernels.Avx512X8.prog, Keccaktree.Kernels.Avx512X8.rodata, Keccaktree.Kernels.Avx512X8.entry⟩),
    ("neon_x2", ⟨armTool, Keccaktree.Kernels.NeonX2.prog, Keccaktree.Kernels.NeonX2.rodata, Keccaktree.Kernels.NeonX2.entry⟩),
    ("sha3_x2", ⟨armTool, Keccaktree.Kernels.Sha3X2.prog, Keccaktree.Kernels.Sha3X2.rodata, Keccaktree.Kernels.Sha3X2.entry⟩),

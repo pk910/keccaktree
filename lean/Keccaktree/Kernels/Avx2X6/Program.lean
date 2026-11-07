@@ -1821,7 +1821,7 @@ def prog : Array Instr := #[
   .nop,  -- 1812
   .nop,  -- 1813
   .nop,  -- 1814
-  .cmpi 2 (1),  -- 1815
+  .cmpi 2 (3),  -- 1815
   .jcct .be "keccaktree_keccak256_x86_x1",  -- 1816
   .cmpi 2 (63),  -- 1817
   .jcc .a 1822,  -- 1818
@@ -1855,7 +1855,7 @@ def prog : Array Instr := #[
   .sub 2 (6),  -- 1846
   .cmpi 2 (6),  -- 1847
   .jcc .ae 1836,  -- 1848
-  .cmpi 2 (1),  -- 1849
+  .cmpi 2 (3),  -- 1849
   .jcc .a 1855,  -- 1850
   .test 2 2,  -- 1851
   .jcc .e 1890,  -- 1852
