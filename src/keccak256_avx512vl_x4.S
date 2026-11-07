@@ -31,7 +31,11 @@
 #define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar */
 
 #include "keccak256_x86_frame.inc"
+#ifdef KT_DFORM
+#include "keccak256_avx512d.inc"
+#else
 #include "keccak256_avx512.inc"
+#endif
 
 /* digest words o0..o3 (4 nodes each) -> 4 x 32 bytes at [BOUT] */
 .macro OUTPUT o0, o1, o2, o3
@@ -82,14 +86,19 @@
 	vshufi64x2	ymm6, ymm24, ymm26, 0x3
 	vshufi64x2	ymm5, ymm25, ymm27, 0x0
 	vshufi64x2	ymm7, ymm25, ymm27, 0x3
-#ifdef KT_AVX512_UNROLLED
+#if defined(KT_DFORM)
+	KECCAK_F_D_LOOP
+#elif defined(KT_AVX512_UNROLLED)
 	KECCAK_F
 #else
 	KECCAK_F_LOOP
 #endif
 	ret
 
-	FUNCTION keccaktree_keccak256_avx512vl_x4
+#ifndef KERNEL_NAME
+#define KERNEL_NAME	keccaktree_keccak256_avx512vl_x4
+#endif
+	FUNCTION KERNEL_NAME
 
 	KECCAK_RODATA
 .LROT8:		.byte 7, 0, 1, 2, 3, 4, 5, 6, 15, 8, 9, 10, 11, 12, 13, 14

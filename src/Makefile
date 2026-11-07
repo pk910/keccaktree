@@ -17,7 +17,7 @@ ifneq ($(findstring mingw,$(ARCH)),)
 override CFLAGS += -Wa,-muse-unaligned-vector-move
 endif
 ifneq ($(findstring x86_64,$(ARCH)),)
-X86_KERNELS = avx512_x8 avx512_x9 avx512vl_x4 avx512_x8b5 avx512_x8b10 avx512_x8al avx512_x9b avx512_x9c avx512_x8d avx512_x8du avx512_x9d avx2_x4 avx2_x8 avx2_x9 avx2_x10 avx2_x5 avx2_x6 avx2_x2 x86_x1
+X86_KERNELS = avx512_x8 avx512_x9 avx512vl_x4 avx512_x8b5 avx512_x8b10 avx512_x8al avx512_x9b avx512_x9c avx512_x8d avx512_x8du avx512_x9d avx512_x8d_p avx512_x8d_a avx512_x8d_ax2 avx512_x8d_ax5 avx512_x8d_pax5 avx512vl_x4d avx2_x4 avx2_x8 avx2_x9 avx2_x10 avx2_x5 avx2_x6 avx2_x2 x86_x1
 OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(X86_KERNELS))
 else ifneq ($(findstring aarch64,$(ARCH))$(findstring arm64,$(ARCH)),)
 ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r neon_x3
@@ -39,7 +39,8 @@ ARM_INC = keccak256_arm_frame.inc keccak256_neon.inc keccak256_asimd.inc keccak2
 $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(X86_KERNELS)): $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(X86_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
 $(OBJ_DIR)/keccak256_avx2_x10.o: keccak256_avx2_x9.S
-$(OBJ_DIR)/keccak256_avx512_x9.o $(OBJ_DIR)/keccak256_avx512_x8b5.o $(OBJ_DIR)/keccak256_avx512_x8b10.o $(OBJ_DIR)/keccak256_avx512_x8al.o $(OBJ_DIR)/keccak256_avx512_x9b.o $(OBJ_DIR)/keccak256_avx512_x9c.o $(OBJ_DIR)/keccak256_avx512_x8d.o $(OBJ_DIR)/keccak256_avx512_x8du.o $(OBJ_DIR)/keccak256_avx512_x9d.o: keccak256_avx512_x8.S keccak256_avx512d.inc
+$(OBJ_DIR)/keccak256_avx512_x9.o $(OBJ_DIR)/keccak256_avx512_x8b5.o $(OBJ_DIR)/keccak256_avx512_x8b10.o $(OBJ_DIR)/keccak256_avx512_x8al.o $(OBJ_DIR)/keccak256_avx512_x9b.o $(OBJ_DIR)/keccak256_avx512_x9c.o $(OBJ_DIR)/keccak256_avx512_x8d.o $(OBJ_DIR)/keccak256_avx512_x8du.o $(OBJ_DIR)/keccak256_avx512_x9d.o $(OBJ_DIR)/keccak256_avx512_x8d_p.o $(OBJ_DIR)/keccak256_avx512_x8d_a.o $(OBJ_DIR)/keccak256_avx512_x8d_ax2.o $(OBJ_DIR)/keccak256_avx512_x8d_ax5.o $(OBJ_DIR)/keccak256_avx512_x8d_pax5.o: keccak256_avx512_x8.S keccak256_avx512d.inc keccak256_avx512d_p.inc keccak256_avx512d_a.inc keccak256_avx512d_ax2.inc keccak256_avx512d_ax5.inc keccak256_avx512d_pax5.inc
+$(OBJ_DIR)/keccak256_avx512vl_x4d.o: keccak256_avx512vl_x4.S keccak256_avx512d.inc
 $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS)): $(OBJ_DIR)/keccak256_%.o: keccak256_%.S $(ARM_INC)
 	$(CC) $(ASFLAGS) -c $< -o $@
 RISCV_INC = keccak256_riscv_frame.inc keccak256_rv64.inc keccak256_rvv.inc

@@ -25,6 +25,11 @@ usage: gen_avx512d.py > keccak256_avx512d.inc
 """
 import sys
 
+OPT = {"parity_il": 0, "apply_first": 0, "chi_ax": 0}
+for a in sys.argv[1:]:
+    k, v = a.split("=")
+    OPT[k] = int(v)
+
 RHO = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14]
 RC_LANES = lambda y: [((x + 3 * y) % 5) + 5 * x for x in range(5)]  # B[x] of row y comes from lane
 
@@ -51,11 +56,20 @@ def theta(pos, free):
     """C[x] into free[0..4], D[0..4] derived in place; returns (D regs, free temps)"""
     c = free[:5]
     t0, t1 = free[5], free[6]
-    for x in range(5):
-        ins("vmovdqa64", V(c[x]), V(pos[x]))
-        ins("vpternlogq", V(c[x]), V(pos[x + 5]), V(pos[x + 10]), "0x96")
-        ins("vpternlogq", V(c[x]), V(pos[x + 15]), V(pos[x + 20]), "0x96")
-        e("\tVHOOK\t\tt")
+    if OPT["parity_il"]:
+        for x in range(5):
+            ins("vmovdqa64", V(c[x]), V(pos[x]))
+        for x in range(5):
+            ins("vpternlogq", V(c[x]), V(pos[x + 5]), V(pos[x + 10]), "0x96")
+        for x in range(5):
+            ins("vpternlogq", V(c[x]), V(pos[x + 15]), V(pos[x + 20]), "0x96")
+            e("\tVHOOK\t\tt")
+    else:
+        for x in range(5):
+            ins("vmovdqa64", V(c[x]), V(pos[x]))
+            ins("vpternlogq", V(c[x]), V(pos[x + 5]), V(pos[x + 10]), "0x96")
+            ins("vpternlogq", V(c[x]), V(pos[x + 15]), V(pos[x + 20]), "0x96")
+            e("\tVHOOK\t\tt")
     # D0 = C4 ^ rotl(C1)  -> t0
     ins("vprolq", V(t0), V(c[1]), "1")
     ins("vpxorq", V(t0), V(t0), V(c[4]))
@@ -77,13 +91,18 @@ def theta(pos, free):
     D = [t0, t1, c[3], c[4], c[0]]
     return D, [c[1], c[2]]
 
-def chi(pos, newpos, y, temps, rc):
+def chi(pos, newpos, y, temps, rc, scratch=None):
     """chi of row y; B[x] in pos[L(y,x)]; outputs to lanes 5y+x; returns the new temps"""
     L = RC_LANES(y)
     b = [pos[i] for i in L]
     t0, t1 = temps
-    ins("vmovdqa64", V(t0), V(b[0]))
-    ins("vpternlogq", V(t0), V(b[1]), V(b[2]), "0xD2")
+    ax = OPT["chi_ax"]
+    if ax:
+        ins("vpandnq", V(t0), V(b[1]), V(b[2]))
+        ins("vpxorq", V(t0), V(t0), V(b[0]))
+    else:
+        ins("vmovdqa64", V(t0), V(b[0]))
+        ins("vpternlogq", V(t0), V(b[1]), V(b[2]), "0xD2")
     if y == 0:
         e(".if LOOP_RC")
         ins("vpxorq", V(t0), V(t0), "RCL(%s - 1)" % rc)
@@ -91,15 +110,30 @@ def chi(pos, newpos, y, temps, rc):
         ins("vpxorq", V(t0), V(t0), "RC(%s)" % rc)
         e(".endif")
     e("\tVHOOK\t\tc")
-    ins("vmovdqa64", V(t1), V(b[1]))
-    ins("vpternlogq", V(t1), V(b[2]), V(b[3]), "0xD2")
+    if ax:
+        ins("vpandnq", V(t1), V(b[2]), V(b[3]))
+        ins("vpxorq", V(t1), V(t1), V(b[1]))
+    else:
+        ins("vmovdqa64", V(t1), V(b[1]))
+        ins("vpternlogq", V(t1), V(b[2]), V(b[3]), "0xD2")
     e("\tVHOOK\t\tc")
-    ins("vpternlogq", V(b[2]), V(b[3]), V(b[4]), "0xD2")
-    e("\tVHOOK\t\tc")
-    ins("vpternlogq", V(b[3]), V(b[4]), V(b[0]), "0xD2")
-    e("\tVHOOK\t\tc")
-    ins("vpternlogq", V(b[4]), V(b[0]), V(b[1]), "0xD2")
-    e("\tVHOOK\t\tc")
+    if ax >= 5 and scratch is not None:
+        ins("vpandnq", V(scratch), V(b[3]), V(b[4]))
+        ins("vpxorq", V(b[2]), V(b[2]), V(scratch))
+        e("\tVHOOK\t\tc")
+        ins("vpandnq", V(scratch), V(b[4]), V(b[0]))
+        ins("vpxorq", V(b[3]), V(b[3]), V(scratch))
+        e("\tVHOOK\t\tc")
+        ins("vpandnq", V(scratch), V(b[0]), V(b[1]))
+        ins("vpxorq", V(b[4]), V(b[4]), V(scratch))
+        e("\tVHOOK\t\tc")
+    else:
+        ins("vpternlogq", V(b[2]), V(b[3]), V(b[4]), "0xD2")
+        e("\tVHOOK\t\tc")
+        ins("vpternlogq", V(b[3]), V(b[4]), V(b[0]), "0xD2")
+        e("\tVHOOK\t\tc")
+        ins("vpternlogq", V(b[4]), V(b[0]), V(b[1]), "0xD2")
+        e("\tVHOOK\t\tc")
     newpos[5 * y + 0] = t0
     newpos[5 * y + 1] = t1
     newpos[5 * y + 2] = b[2]
@@ -112,6 +146,17 @@ def round_(r, pos, free):
     e("\t/* round %d: lanes in %s, free %s */" % (r, " ".join(map(str, pos)), " ".join(map(str, free))))
     D, temps = theta(pos, free)
     newpos = [None] * 25
+    if OPT["apply_first"]:
+        for y in range(5):
+            for i in RC_LANES(y):
+                ins("vpxorq", V(pos[i]), V(pos[i]), V(D[i % 5]))
+                rot(pos[i], pos[i], RHO[i])
+                e("\tVHOOK\t\tr")
+        pool = temps + D  # D is dead now: 7 free registers
+        for y in range(5):
+            back = chi(pos, newpos, y, pool[:2], "%d" % r, scratch=pool[2])
+            pool = back + pool[2:]
+        return newpos, pool
     for y in range(5):
         L = RC_LANES(y)
         for i in L:
@@ -170,7 +215,7 @@ def round0():
                     rot(f, D[x], RHO[i])
             e("\tVHOOK\t\tr")
         temps = [free.pop(0), free.pop(0)]
-        back = chi(pos, newpos, y, temps, "0")
+        back = chi(pos, newpos, y, temps, "0", scratch=free[0] if free else None)
         free += back
     assert len(free) == 2, free
     return newpos, free + D

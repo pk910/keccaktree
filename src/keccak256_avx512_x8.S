@@ -117,7 +117,9 @@
 #define LOOP_CNT	r9 + 10*64
 #endif
 
-#ifdef KT_DFORM
+#if defined(KT_DFORM) && defined(KT_DFORM_FILE)
+#include KT_DFORM_FILE
+#elif defined(KT_DFORM)
 #include "keccak256_avx512d.inc"
 #else
 #include "keccak256_avx512.inc"
