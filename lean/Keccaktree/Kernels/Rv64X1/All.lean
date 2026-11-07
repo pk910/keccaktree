@@ -1,8 +1,7 @@
 import Keccaktree.Kernels.Rv64X1.GenSE.Seg
 import Keccaktree.Kernels.Rv64X1.GenSB.Seg
 import Keccaktree.Kernels.Rv64X1.GenSX.Seg
-import Keccaktree.Asm.RiscvSteps
-import Keccaktree.Asm.Library
+import Keccaktree.Kernels.RiscvCommon
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -27,87 +26,16 @@ aligned (region bases are 8-byte aligned).  This is the precondition of the theo
 byte-copy path for misaligned buffers (`lbu`/`sb`) is not modelled (`unsupported`) and not taken.
 -/
 namespace Keccaktree.Kernels.Rv64X1.All
-open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak
+open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak Keccaktree.Kernels.RiscvCommon
 open Keccaktree.Asm.Riscv (setR getR brHolds run_one exec_ld_word exec_sd_word exec_opi_eq exec_br_num exec_j_eq
   exec_ret_eq getR_zero getR_pos gprWord_dec envOf_setR_other setR_getGD_same setR_getGD_other setR_mem' setR_pc
   setR_halted setR_err setR_tail setR_k setR_flags setR_g next_getGD next_halted next_err next_tail next_pc next_mem
-  next_g next_k next_zf next_cf next_nf next_vf next_vl next_depth setR_zf setR_cf setR_nf setR_vf setR_vl setR_depth)
+  next_g next_k next_zf next_cf next_nf next_vf next_vl next_depth setR_zf setR_cf setR_nf setR_vf setR_vl setR_depth
+  getGD_withMem getGD_withPc envOf_next envOf_withPc)
 open Keccaktree.Kernels.Rv64X1 (prog rodata)
 
 /-- The instruction set (VLEN-independent scalar kernel: any `vlmax`; the library uses 2). -/
 abbrev RV : Isa := Riscv.isa 2
-
-/-! ## Relocation by whole nodes -/
-
-/-- `m` nodes further: 64 input bytes and 32 output bytes per node. -/
-def rho (m : Nat) : Reloc :=
-  ⟨fun r => if r = rInput then 64 * (m : Int) else if r = rOutput then 32 * (m : Int) else 0⟩
-
-theorem rho_δ (m : Nat) (r : Region) :
-    (rho m).δ r = if r = rInput then 64 * (m : Int) else if r = rOutput then 32 * (m : Int) else 0 := rfl
-
-theorem rho_ok (m : Nat) : (rho m).ok := by
-  refine ⟨rfl, rfl, rfl, fun r => ?_⟩
-  rw [rho_δ]
-  by_cases h1 : r = rInput
-  · subst h1; simp only [↓reduceIte]; exact ⟨by omega, 8 * (m : Int), by omega⟩
-  · by_cases h2 : r = rOutput
-    · subst h2; simp only [show rOutput ≠ rInput by decide, ↓reduceIte]; exact ⟨by omega, 4 * (m : Int), by omega⟩
-    · simp only [h1, h2, ↓reduceIte]; exact ⟨by omega, 0, by omega⟩
-
-theorem rho_within (m : Nat) (h : 64 * m ≤ 2 ^ 54) : (rho m).within (2 ^ 54) := by
-  intro r
-  have h' : 64 * (m : Int) ≤ 18014398509481984 := by
-    have : (2 : Nat) ^ 54 = 18014398509481984 := rfl
-    omega
-  rw [rho_δ, show (2 : Int) ^ 54 = 18014398509481984 from rfl, show (2 : Int) ^ 55 = 36028797018963968 from rfl]
-  by_cases h1 : r = rInput
-  · subst h1; simp only [↓reduceIte]; omega
-  · by_cases h2 : r = rOutput
-    · subst h2; simp only [show rOutput ≠ rInput by decide, ↓reduceIte]; omega
-    · simp only [h1, h2, ↓reduceIte]; omega
-
-theorem rho_wshift_in (m : Nat) : (rho m).wshift rInput = 8 * (m : Int) := by
-  simp only [Reloc.wshift, rho_δ, ↓reduceIte]; omega
-
-theorem rho_wshift_out (m : Nat) : (rho m).wshift rOutput = 4 * (m : Int) := by
-  simp only [Reloc.wshift, rho_δ, show rOutput ≠ rInput by decide, ↓reduceIte]; omega
-
-theorem rho_wshift_stack (m : Nat) : (rho m).wshift rStack = 0 := SliceCert.stack_wshift _ (rho_ok m)
-
-theorem rho_add (a b : Nat) : (rho a).add (rho b) = rho (a + b) := by
-  show Reloc.mk _ = Reloc.mk _
-  congr 1; funext r
-  show (rho a).δ r + (rho b).δ r = (rho (a + b)).δ r
-  simp only [rho_δ]
-  by_cases h1 : r = rInput
-  · subst h1; simp only [↓reduceIte]; omega
-  · by_cases h2 : r = rOutput
-    · subst h2; simp only [show rOutput ≠ rInput by decide, ↓reduceIte]; omega
-    · simp only [h1, h2, ↓reduceIte]; omega
-
-theorem rho_var_stack (m i : Nat) (h : 288 ≤ i) (hr : memVarRegion i = rStack) : (rho m).var i = i := by
-  unfold Reloc.var
-  rw [if_neg (by omega), hr, rho_wshift_stack, Int.add_zero, ← hr]
-  exact memVar_region_index i h
-
-theorem rho_var_in (m : Nat) (q : Int) : (rho m).var (memVar rInput q) = memVar rInput (q + 8 * (m : Int)) := by
-  rw [Reloc.var_memVar, rho_wshift_in]
-
-theorem rho_var_out (m : Nat) (q : Int) : (rho m).var (memVar rOutput q) = memVar rOutput (q + 4 * (m : Int)) := by
-  rw [Reloc.var_memVar, rho_wshift_out]
-
-theorem reloc_ptr_stack (m : Nat) (o : Int) : E.reloc (rho m) (.ptr ⟨rStack, o⟩) = .ptr ⟨rStack, o⟩ := by
-  show E.ptr ⟨rStack, o + (rho m).δ rStack⟩ = _
-  rw [rho_δ, if_neg (by decide), if_neg (by decide), Int.add_zero]
-
-theorem reloc_ptr_in (m : Nat) (o : Int) : E.reloc (rho m) (.ptr ⟨rInput, o⟩) = .ptr ⟨rInput, o + 64 * (m : Int)⟩ := by
-  show E.ptr ⟨rInput, o + (rho m).δ rInput⟩ = _
-  rw [rho_δ, if_pos rfl]
-
-theorem reloc_ptr_out (m : Nat) (o : Int) : E.reloc (rho m) (.ptr ⟨rOutput, o⟩) = .ptr ⟨rOutput, o + 32 * (m : Int)⟩ := by
-  show E.ptr ⟨rOutput, o + (rho m).δ rOutput⟩ = _
-  rw [rho_δ, if_neg (by decide), if_pos rfl]
 
 /-! ## The calling convention and the digests -/
 
@@ -126,22 +54,6 @@ structure Entry (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec
   a1 : S.getGD 11 = gprWord ⟨rInput, 64 * off⟩
   a0 : S.getGD 10 = gprWord ⟨rOutput, 32 * off⟩
   inp : ∀ q, S.mem rInput q = input q
-
-/-- The words of node `n` of the message. -/
-def nodeWords (input : Int → BitVec 64) (n : Nat) (w : Nat) : BitVec 64 := input (Int.ofNat (8 * n + w))
-
-/-- Output words `4n..4n+3` hold the keccak256 digest of input node `n` (byte `8w+i` of the digest
-is byte `i` of word `4n+w`). -/
-def Digest (input : Int → BitVec 64) (S : State (BitVec 64)) (n : Nat) : Prop :=
-  ∀ w i : Nat, w < 4 → i < 8 →
-    (S.mem rOutput (Int.ofNat (4 * n + w))).extractLsb' (8 * i) 8 = Spec.keccak256 64 (nodeBytes (nodeWords input n)) (8 * w + i)
-
-theorem digest_congr (input : Int → BitVec 64) (S T : State (BitVec 64)) (n : Nat)
-    (h : ∀ w : Nat, w < 4 → T.mem rOutput (Int.ofNat (4 * n + w)) = S.mem rOutput (Int.ofNat (4 * n + w)))
-    (hd : Digest input S n) : Digest input T n := by
-  intro w i hw hi
-  rw [h w hw]
-  exact hd w i hw hi
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
@@ -228,51 +140,46 @@ theorem run_back (Sb : State (BitVec 64)) (n : Int) (hh : Sb.halted = false) (hp
     hcnt] at hld
   have e1 : RV.run rodata prog 1 Sb = B1 Sb n := by
     rw [run_one 2 rodata prog Sb hh, hpc, prog_5410, hld]; rfl
-  have hh1 : (B1 Sb n).halted = false := by simp only [B1, Riscv.next, setR_halted, hh]
-  have hpc1 : (B1 Sb n).pc = 5411 := by simp only [B1, Riscv.next, setR_pc, hpc]
+  have hh1 : (B1 Sb n).halted = false := by simp only [B1, next_halted, setR_halted, hh]
+  have hpc1 : (B1 Sb n).pc = 5411 := by simp only [B1, next_pc, setR_pc, hpc]
   have hg1 : getR (B1 Sb n) 5 = gprWord ⟨0, n⟩ := by
-    rw [getR_pos _ 5 (by decide)]; exact setR_getGD_same Sb 5 (by decide) (by decide) _
+    rw [getR_pos _ 5 (by decide), B1, next_getGD, setR_getGD_same Sb 5 (by decide) (by decide)]
   have e2 : RV.run rodata prog 1 (B1 Sb n) = B2 Sb n := by
     rw [run_one 2 rodata prog _ hh1, hpc1, prog_5411, exec_opi_eq 2 rodata _ 5 5 .addi _ hh1]
+    rw [B2]
     show Riscv.next (setR (B1 Sb n) 5 (getR (B1 Sb n) 5 + 0xffffffffffffffff#64)) = _
-    rw [hg1, gprWord_dec]; rfl
-  have hh2 : (B2 Sb n).halted = false := by simp only [B2, Riscv.next, setR_halted, hh1]
-  have hpc2 : (B2 Sb n).pc = 5412 := by simp only [B2, Riscv.next, setR_pc, hpc1]
+    rw [hg1, gprWord_dec]
+  have hh2 : (B2 Sb n).halted = false := by simp only [B2, next_halted, setR_halted, hh1]
+  have hpc2 : (B2 Sb n).pc = 5412 := by simp only [B2, next_pc, setR_pc, hpc1]
   have hsp2 : (B2 Sb n).getGD 2 = gprWord ⟨rStack, 1048352⟩ := by
-    show (setR (B1 Sb n) 5 _).getGD 2 = _
-    rw [setR_getGD_other _ 5 2 (by decide)]
-    show (setR Sb 5 _).getGD 2 = _
-    rw [setR_getGD_other _ 5 2 (by decide), hsp]
+    rw [B2, next_getGD, setR_getGD_other _ 5 2 (by decide), B1, next_getGD, setR_getGD_other _ 5 2 (by decide), hsp]
   have hg2 : getR (B2 Sb n) 5 = gprWord ⟨0, n - 1⟩ := by
-    rw [getR_pos _ 5 (by decide)]; exact setR_getGD_same _ 5 (by decide) (by decide) _
+    rw [getR_pos _ 5 (by decide), B2, next_getGD, setR_getGD_same _ 5 (by decide) (by decide)]
   have hsd := exec_sd_word 2 rodata (B2 Sb n) 5 2 80 ⟨rStack, 1048352⟩ hh2 hsp2 sp_wf (by decide) (by decide)
   rw [show ((⟨rStack, 1048352⟩ : Addr).off + 80) / 8 = 131054 by decide, show (⟨rStack, 1048352⟩ : Addr).region = rStack from rfl,
     hg2] at hsd
   have e3 : RV.run rodata prog 1 (B2 Sb n) = B3 Sb n := by
-    rw [run_one 2 rodata prog _ hh2, hpc2, prog_5412, hsd]; rfl
-  have hh3 : (B3 Sb n).halted = false := hh2
-  have hpc3 : (B3 Sb n).pc = 5413 := by show (B2 Sb n).pc + 1 = 5413; rw [hpc2]
-  have hg3 : getR (B3 Sb n) 5 = gprWord ⟨0, n - 1⟩ := hg2
+    rw [run_one 2 rodata prog _ hh2, hpc2, prog_5412, hsd, B3]
+  have hh3 : (B3 Sb n).halted = false := by simp only [B3, next_halted]; exact hh2
+  have hpc3 : (B3 Sb n).pc = 5413 := by simp only [B3, next_pc, hpc2]
+  have hg3 : getR (B3 Sb n) 5 = gprWord ⟨0, n - 1⟩ := by
+    rw [getR_pos _ 5 (by decide), B3, next_getGD, getGD_withMem]; rw [getR_pos _ 5 (by decide)] at hg2; exact hg2
   have e4 : RV.run rodata prog 1 (B3 Sb n) = B4 Sb n := by
     rw [run_one 2 rodata prog _ hh3, hpc3, prog_5413,
       exec_br_num 2 rodata _ .eq 5 0 5415 (n - 1) 0 hh3 hg3 (getR_zero _)
-        (by show 0 ≤ n - 1 ∧ n - 1 < 2 ^ 55; constructor <;> omega) (by decide)]
-    rfl
+        (by show 0 ≤ n - 1 ∧ n - 1 < 2 ^ 55; constructor <;> omega) (by decide), B4]
   rw [show 4 = 1 + 1 + 1 + 1 from rfl, Isa.run_add, Isa.run_add, Isa.run_add, e1, e2, e3, e4]
 
 theorem B4_mem (Sb : State (BitVec 64)) (n : Int) :
     (B4 Sb n).mem = memStore Sb.mem rStack 131054 (gprWord ⟨0, n - 1⟩) := by
-  show memStore (B2 Sb n).mem rStack 131054 (gprWord ⟨0, n - 1⟩) = _
-  simp only [B2, B1, Riscv.next, setR_mem']
+  simp only [B4, B3, B2, B1, next_mem, setR_mem']
 
 theorem B4_env (Sb : State (BitVec 64)) (n : Int) (i : Nat) (h5 : i ≠ 261) (hc : i ≠ memVar rStack 131054) :
     envOf (B4 Sb n) i = envOf Sb i := by
-  show envOf { B2 Sb n with mem := memStore (B2 Sb n).mem rStack 131054 (gprWord ⟨0, n - 1⟩) } i = _
-  rw [envOf_memStore_other _ rStack 131054 _ i hc]
-  show envOf (setR (B1 Sb n) 5 _) i = _
-  rw [envOf_setR_other _ 5 (by decide) _ i h5]
-  show envOf (setR Sb 5 _) i = _
-  rw [envOf_setR_other _ 5 (by decide) _ i h5]
+  rw [B4, envOf_withPc, B3, envOf_next]
+  have hm : (B2 Sb n).mem = Sb.mem := by simp only [B2, B1, next_mem, setR_mem']
+  rw [← hm, envOf_memStore_other _ rStack 131054 _ i hc, B2, envOf_next, envOf_setR_other _ 5 (by decide) _ i h5, B1,
+    envOf_next, envOf_setR_other _ 5 (by decide) _ i h5]
 
 theorem B4_ctrl (Sb : State (BitVec 64)) (n : Int) :
     (B4 Sb n).g = (Sb.g.setIfInBounds 5 ⟨0, 0⟩).setIfInBounds 5 ⟨0, 0⟩ ∧ (B4 Sb n).k = Sb.k ∧
@@ -286,8 +193,9 @@ theorem B4_ctrl (Sb : State (BitVec 64)) (n : Int) :
 
 theorem B4_pc (Sb : State (BitVec 64)) (n : Int) (hpc : Sb.pc = 5410) :
     (B4 Sb n).pc = if n - 1 = 0 then 5415 else 5414 := by
+  rw [B4]
+  have : (B3 Sb n).pc = 5413 := by simp only [B3, B2, B1, next_pc, setR_pc, hpc]
   show (if brHolds .eq (n - 1) 0 then 5415 else (B3 Sb n).pc + 1) = _
-  have : (B3 Sb n).pc = 5413 := by simp only [B3, B2, B1, Riscv.next, setR_pc, hpc]
   rw [this]
   by_cases h : n - 1 = 0 <;> simp [brHolds, h]
 
@@ -406,7 +314,7 @@ theorem iter (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) 
     · rw [show off + (k + 1) = (off + k) + 1 by omega, ← rho_add]
       apply cut_transfer (rho (off + k)) _ hρ (Reloc.add_ok _ _ hρ (rho_ok 1)) GenSB.ctl25 GenSB.ctl0 GenSB.sc25 GenSB.sc0 Sb
         { U with pc := 20 } hcutb
-        (hL_dec _ _ (by decide +kernel)) (fun i hi => hL _ (by decide +kernel) (by decide +kernel) i hi)
+        (hL_dec _ _ (by decide +kernel)) (fun i hi => (envOf_withPc U 20 i).trans (hL _ (by decide +kernel) (by decide +kernel) i hi))
         (hval_succ _ _ hρ (rho_ok 1) _ _ _ _ (by decide +kernel))
       obtain ⟨g1, k1, z1, c1, n1, v1, l1, _, d1⟩ := fb
       obtain ⟨g2, k2, z2, c2, n2, v2, l2, d2, _⟩ := hUc
@@ -618,11 +526,6 @@ def kernel : Library.KernelThm RV EntryRV Digest where
   thm := fun off count input S h => by
     obtain ⟨hh, he, ht, hp, hd⟩ := rv64_x1_all off count input _ h.1 h.2
     exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
-
-theorem digest_local : Library.DigestLocal Digest := by
-  intro input S S' n h hd w i hw hi
-  rw [h (Int.ofNat (4 * n + w)) (by simp only [Int.ofNat_eq_coe]; omega) (by simp only [Int.ofNat_eq_coe]; omega)]
-  exact hd w i hw hi
 
 theorem ranks_ok : Library.RanksOk [kernel] := by
   intro K hK off count input S hS next done htail _

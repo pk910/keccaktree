@@ -34,5 +34,18 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
   slice import `SEG_IMPORT`; new `START_CTL` (words forced to be control words at the first cut).
 * `gen_segments_rv.sh` (new): segments of the 1-node RISC-V kernels.
 
+## Lessons
+* **Never close a goal by `exact`/`show`/`rw`-then-`rfl` through `next (setR …)` / record updates when the
+  goal is true by computation** (e.g. `(next (setR S 30 1#64)).getGD 30 = 1#64` by `exact setR_getGD_same …`):
+  the elaborator's defeq check evaluates the register file and blew past 8 GB.  Use the rewrite lemmas
+  `next_getGD`, `next_pc`, `getGD_withMem`, `envOf_next`, `envOf_withPc`, `setR_getGD_same/other` and
+  `subst` instead of `rw [← hX]` (whose trailing `rfl` attempt is the same trap).  Found by bisecting with
+  `sorry` cut-offs (`lake env lean` on scratch copies under a 3–4 GB scope: a blow-up shows as rc 143).
+* `simp only [(lemma _ _ _).1, …]` silently does nothing inside `try`/`first` when the placeholders can't be
+  elaborated: use named projection lemmas (`setR_zf`, `next_zf`, …).
+* Memory: rv64_x1 body slices peak at 8–12 GB (the late rounds); RVV slices ≈ 2 GB (1 node, ~50 s).
+  `systemd-run --scope` defaults to `OOMPolicy=stop` (one OOM kill stops the whole scope): pass
+  `-p OOMPolicy=continue`.
+
 ## Status
 * rv64_x1: segments generated; GenSE/GenSX built; GenSB (25 slices) building; `Kernels/Rv64X1/All.lean` written.

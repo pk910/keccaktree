@@ -234,3 +234,16 @@ open Keccaktree.Asm.X86 hiding gx setX withX next
   (setR_flags S n x).2.2.2.2.2.1
 
 end Keccaktree.Asm.Riscv
+
+namespace Keccaktree.Asm.Riscv
+open Keccaktree.Asm
+open Keccaktree.Asm.X86 hiding gx setX withX next
+
+/-! Record updates of `mem` / `pc`, read back (rewrite lemmas, see `next_getGD`). -/
+@[simp] theorem getGD_withMem (s : State (BitVec 64)) (m : Region → Int → BitVec 64) (n : Nat) :
+    ({ s with mem := m } : State (BitVec 64)).getGD n = s.getGD n := rfl
+@[simp] theorem getGD_withPc (s : State (BitVec 64)) (p n : Nat) : ({ s with pc := p } : State (BitVec 64)).getGD n = s.getGD n := rfl
+theorem envOf_next (s : State (BitVec 64)) (i : Nat) : envOf (next s) i = envOf s i := rfl
+theorem envOf_withPc (s : State (BitVec 64)) (p i : Nat) : envOf ({ s with pc := p } : State (BitVec 64)) i = envOf s i := rfl
+
+end Keccaktree.Asm.Riscv
