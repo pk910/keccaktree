@@ -326,7 +326,7 @@ abbrev DoneK := Done rodata prog targets
             data = f"""  have sr := {G}.seg_run (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok
   have dx := {G}.seg_data (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok _ (inv0_{nm} input U m hI.inp)
   rw [← sr.1] at dx
-  have dg := digest_{nm} input _ m _ (fun _ => rfl) dx
+  have dg := digest_{nm} input _ m (fun n => absorbNode (nodeWords input (m + n.val))) (fun _ => rfl) (by exact dx)
   have hI' := hI.seg' {G}.facts m {b0} (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
   have hdig : ∀ n, n < done + {h} → Digest input (X86.isa.run rodata prog {G}.facts.len U) (off + n) := by
     intro n hn
