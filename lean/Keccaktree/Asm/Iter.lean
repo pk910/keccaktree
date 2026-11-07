@@ -134,32 +134,39 @@ def ctlTreeOk (B : Int) : E → Bool
   | .const _ => true
   | _ => false
 
-/-- A pointer plus a constant, folded into the pointer (a counter pointer stepped by `add`: the
-next cut holds the folded pointer). -/
+/-- A pointer plus a closed number, folded into the pointer (a counter pointer stepped by `add`:
+the next cut holds the folded pointer).  The number is signed (`toInt`: RISC-V moves the stack
+pointer down with `addi sp, sp, -n`) and may be any closed expression (RVV advances its pointers by
+`vl << 6`, `vl` a control constant). -/
 def E.fold : E → E
-  | .add (.ptr a) (.const k) => .ptr ⟨a.region, a.off + (k.toNat : Int)⟩
+  | .add (.ptr a) e => match e.closed with
+    | some k => .ptr ⟨a.region, a.off + k.toInt⟩
+    | none => .add (.ptr a) e
   | e => e
 
 theorem gprWord_add_const (a : Addr) (k : BitVec 64) :
-    gprWord a + k = gprWord ⟨a.region, a.off + (k.toNat : Int)⟩ := by
-  have h : BitVec.ofInt 64 (a.off + (k.toNat : Int)) = BitVec.ofInt 64 a.off + k := by
-    rw [BitVec.ofInt_add, BitVec.ofInt_natCast, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+    gprWord a + k = gprWord ⟨a.region, a.off + k.toInt⟩ := by
+  have h : BitVec.ofInt 64 (a.off + k.toInt) = BitVec.ofInt 64 a.off + k := by
+    rw [BitVec.ofInt_add, BitVec.ofInt_toInt]
   unfold gprWord
   simp only
   split
   · rw [h]
   · rw [h, BitVec.add_assoc]
 
-theorem E.eval_reloc_fold (ρ : Reloc) (env : Nat → BitVec 64) (e : E) :
+theorem E.eval_reloc_fold (ρ : Reloc) (hρ : ρ.ok) (env : Nat → BitVec 64) (e : E) :
     E.eval env (E.reloc ρ (E.fold e)) = E.eval env (E.reloc ρ e) := by
   unfold E.fold
   split
-  · rename_i a k
-    simp only [E.reloc, E.eval, Reloc.addr]
-    rw [gprWord_add_const]
-    show gprWord ⟨a.region, a.off + (k.toNat : Int) + ρ.δ a.region⟩ = gprWord ⟨a.region, a.off + ρ.δ a.region + (k.toNat : Int)⟩
-    congr 2
-    omega
+  · rename_i a e'
+    split
+    · rename_i k hk
+      have hk' : (e'.reloc ρ).closed = some k := by rw [E.closed_reloc ρ hρ]; exact hk
+      simp only [E.reloc, E.eval, Reloc.addr]
+      rw [E.closed_eval env _ k hk', gprWord_add_const]
+      show gprWord ⟨a.region, a.off + k.toInt + ρ.δ a.region⟩ = gprWord ⟨a.region, a.off + ρ.δ a.region + k.toInt⟩
+      exact congrArg (fun z : Int => gprWord ⟨a.region, z⟩) (by omega)
+    · rfl
   · rfl
 
 /-- The closed facts about one slice at its base position. -/
@@ -269,7 +276,7 @@ theorem step (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S : State (BitVec 64
           E.eval (envOf S) (E.reloc ρ (cutVar C.ctl' C.sc' i)) := by
         rw [hconc, envOf_mapState, ← hvar, readVar_relocState_var, hvar]
         show E.eval (envOf S) (E.reloc ρ (readVar C.res i)) = _
-        rw [← E.eval_reloc_fold, show E.fold (readVar C.res i) = cutVar C.ctl' C.sc' i from hgl]
+        rw [← E.eval_reloc_fold ρ hρ, show E.fold (readVar C.res i) = cutVar C.ctl' C.sc' i from hgl]
       exact cutVar_reloc_closed C.ctl' C.sc' _ i hi ρ hρ B hw htree _ henv
     · intro i hi hge
       have hcell := List.all_eq_true.mp C.cells i hi
