@@ -44,7 +44,23 @@
  *     rho/pi/chi (29 ops)
  *
  * vpternlogq immediates: 0x96 = a^b^c, 0xD2 = a^(~b&c) (result in a).
+ *
+ * The lane macros end with VHOOK (argument: t for a theta E, r for a rho
+ * lane, c for a chi lane), empty here; a kernel that interleaves other
+ * work into the rounds (keccak256_avx512_x9.S) defines it first.
  */
+#ifndef VHOOK_DEFINED
+.macro VHOOK kind
+.endm
+#endif
+/* KECCAK_F_LOOP brackets every round with RHOOK_BEGIN k (k = 0, the body
+ * rounds 1..4, 21, 22, 23) and RHOOK_END, empty here, for the same purpose */
+#ifndef RHOOK_DEFINED
+.macro RHOOK_BEGIN k
+.endm
+.macro RHOOK_END
+.endm
+#endif
 
 /* rho rotation offsets per lane */
 #define R1  1
@@ -84,6 +100,10 @@
 #define E3 30
 #define E4 31
 
+/* iota's constant: RC(r) (rip-relative, by round) or, inside the loop
+ * body of KECCAK_F_LOOP, RCL(k) (relative to the RCP register) */
+.set LOOP_RC, 0
+
 /* memory row of round r: lanes 0..4 are read from row r&1 and the new
  * lanes 0..4 written to row (r+1)&1 */
 #define LIN(r, x)	VMEM(5*((r)&1) + (x))
@@ -99,6 +119,7 @@
 .elseif \rot
 	vprolq		VR\a, VR\a, \rot
 .endif
+	VHOOK		r
 .endm
 
 /* chi over one row b0..b4. b_x can take its own output once the later
@@ -107,28 +128,42 @@
 .macro CHI_ROW b0, b1, b2, b3, b4, t0, t1
 	vmovdqa64	VR\t0, VR\b0
 	vpternlogq	VR\t0, VR\b1, VR\b2, 0xD2
+	VHOOK		c
 	vmovdqa64	VR\t1, VR\b1
 	vpternlogq	VR\t1, VR\b2, VR\b3, 0xD2
+	VHOOK		c
 	vpternlogq	VR\b2, VR\b3, VR\b4, 0xD2
+	VHOOK		c
 	vpternlogq	VR\b3, VR\b4, VR\b0, 0xD2
+	VHOOK		c
 	vpternlogq	VR\b4, VR\b0, VR\b1, 0xD2
+	VHOOK		c
 .endm
 
 /* chi over row 0, with iota, straight to memory row LOUT(r); t is free */
 .macro CHI_ROW0 r, b0, b1, b2, b3, b4, t
 	vmovdqa64	VR\t, VR\b0
 	vpternlogq	VR\t, VR\b1, VR\b2, 0xD2
+.if LOOP_RC
+	vpxorq		VR\t, VR\t, RCL(\r - 1)
+.else
 	vpxorq		VR\t, VR\t, RC(\r)
+.endif
 	vmovdqa64	LOUT(\r, 0), VR\t
+	VHOOK		c
 	vmovdqa64	VR\t, VR\b1
 	vpternlogq	VR\t, VR\b2, VR\b3, 0xD2
 	vmovdqa64	LOUT(\r, 1), VR\t
+	VHOOK		c
 	vpternlogq	VR\b2, VR\b3, VR\b4, 0xD2
 	vmovdqa64	LOUT(\r, 2), VR\b2
+	VHOOK		c
 	vpternlogq	VR\b3, VR\b4, VR\b0, 0xD2
 	vmovdqa64	LOUT(\r, 3), VR\b3
+	VHOOK		c
 	vpternlogq	VR\b4, VR\b0, VR\b1, 0xD2
 	vmovdqa64	LOUT(\r, 4), VR\b4
+	VHOOK		c
 .endm
 
 /* theta step 1: C[x] = lane x (memory) ^ the four lanes x+5..x+20,
@@ -139,22 +174,27 @@
 	vpternlogq	VREG(C0), VR\a5, VR\a10, 0x96
 	vpternlogq	VREG(C0), VR\a15, VR\a20, 0x96
 	vprolq		VREG(E0), VREG(C0), 1
+	VHOOK		t
 	vmovdqa64	VREG(C1), LIN(\r, 1)
 	vpternlogq	VREG(C1), VR\a6, VR\a11, 0x96
 	vpternlogq	VREG(C1), VR\a16, VR\a21, 0x96
 	vprolq		VREG(E1), VREG(C1), 1
+	VHOOK		t
 	vmovdqa64	VREG(C2), LIN(\r, 2)
 	vpternlogq	VREG(C2), VR\a7, VR\a12, 0x96
 	vpternlogq	VREG(C2), VR\a17, VR\a22, 0x96
 	vprolq		VREG(E2), VREG(C2), 1
+	VHOOK		t
 	vmovdqa64	VREG(C3), LIN(\r, 3)
 	vpternlogq	VREG(C3), VR\a8, VR\a13, 0x96
 	vpternlogq	VREG(C3), VR\a18, VR\a23, 0x96
 	vprolq		VREG(E3), VREG(C3), 1
+	VHOOK		t
 	vmovdqa64	VREG(C4), LIN(\r, 4)
 	vpternlogq	VREG(C4), VR\a9, VR\a14, 0x96
 	vpternlogq	VREG(C4), VR\a19, VR\a24, 0x96
 	vprolq		VREG(E4), VREG(C4), 1
+	VHOOK		t
 .endm
 
 /*
@@ -256,21 +296,25 @@
  * registers) and a zero lane's B is just rotl(D, r), written to any free
  * register.
  */
-.macro KECCAK_F
+.macro KECCAK_ROUND0
 	vpxorq		VREG(C0), VREG(0), VREG(5)
 	vpxorq		VREG(C1), VREG(1), VREG(6)
 	vpxorq		VREG(C1), VREG(C1), K63
 	vpxorq		VREG(C2), VREG(2), VREG(7)
 	vpxorq		VREG(C3), VREG(3), K1		/* C4 is lane 4 itself */
 	vprolq		VREG(E0), VREG(C1), 1
+	VHOOK		t
 	vpxorq		VREG(E0), VREG(E0), VREG(4)	/* D0 = C4 ^ rotl(C1) */
 	vprolq		VREG(E1), VREG(C2), 1
+	VHOOK		t
 	vpxorq		VREG(E1), VREG(E1), VREG(C0)	/* D1 = C0 ^ rotl(C2) */
 	vprolq		VREG(E2), VREG(C3), 1
+	VHOOK		t
 	vpxorq		VREG(E2), VREG(E2), VREG(C1)	/* D2 = C1 ^ rotl(C3) */
 	vprolq		VREG(E3), VREG(4), 1
 	vpxorq		VREG(E3), VREG(E3), VREG(C2)	/* D3 = C2 ^ rotl(C4) */
 	vprolq		VREG(E4), VREG(C0), 1
+	VHOOK		t
 	vpxorq		VREG(E4), VREG(E4), VREG(C3)	/* D4 = C3 ^ rotl(C0) */
 	/* row 0: lanes 0, 6, 12, 18, 24 -> memory */
 	THETA_RHO0	0,  E0, 0
@@ -309,9 +353,13 @@
 	RHO0		20, E0, R15
 	RHO0		21, E1, R21
 	CHI_ROW		2, 18, 19, 20, 21, 4, 5
+.endm
 
-	/* rounds 1..23: each line is the previous round's placement of lanes
-	 * 5..24, then the two free registers (see ROUND) */
+/* The whole permutation, unrolled: each ROUND line is the previous
+ * round's placement of lanes 5..24, then the two free registers (see
+ * ROUND); the constants are rip-relative. */
+.macro KECCAK_F
+	KECCAK_ROUND0
 	ROUND	1, 10, 11, 6, 8, 9, 3, 0, 12, 13, 14, 1, 7, 15, 16, 17, 4, 5, 19, 20, 21, 2, 18
 	ROUND	2, 2, 18, 3, 7, 19, 16, 21, 13, 17, 4, 9, 12, 0, 15, 20, 11, 10, 14, 1, 5, 6, 8
 	ROUND	3, 6, 8, 16, 12, 14, 15, 5, 17, 20, 11, 19, 13, 21, 0, 1, 18, 2, 4, 9, 10, 3, 7
@@ -335,4 +383,79 @@
 	ROUND	21, 6, 20, 16, 9, 7, 15, 5, 14, 4, 13, 8, 19, 21, 0, 11, 17, 2, 12, 18, 10, 3, 1
 	ROUND	22, 3, 1, 15, 19, 12, 0, 10, 4, 11, 17, 7, 14, 5, 21, 18, 20, 6, 13, 8, 2, 16, 9
 	LAST_ROUND 16, 9, 0, 14, 13, 21, 2, 11, 18, 20, 12, 4, 10, 5, 8, 1, 3, 17, 7, 6, 15, 19
+.endm
+
+/* The same permutation with rounds 1..20 as five iterations of a
+ * four-round loop: the unrolled version is about 2900 instructions, more
+ * than the decoded-instruction caches hold (Ice Lake: 2.25K uops), and
+ * runs from the legacy decoder, which delivers 16 bytes per cycle, two to
+ * three 7-byte EVEX instructions, below what the ports take. After four
+ * rounds the lane placement differs from the loop's entry placement by a
+ * fixed permutation (two cycles, of 9 and 13 registers, each with one of
+ * the two free registers in it, whose content does not matter): 20
+ * register copies restore it, 4 percent of the round's instructions. The round constant comes from [RCP + 8*k] for
+ * round k of the body (RCL in the including file); RCP is clobbered and
+ * the iteration count lives in the stack slot LOOP_CNT (the hybrid kernel
+ * has no register to spare).
+ */
+/* the 20 copies that take the lane placement after the loop body's four
+ * rounds back to the one at its start */
+.macro LOOP_RESTORE
+	vmovdqa64	VREG(15), VREG(10)
+	vmovdqa64	VREG(10), VREG(16)
+	vmovdqa64	VREG(16), VREG(5)
+	vmovdqa64	VREG(5), VREG(3)
+	vmovdqa64	VREG(3), VREG(21)
+	vmovdqa64	VREG(21), VREG(6)
+	vmovdqa64	VREG(6), VREG(0)
+	vmovdqa64	VREG(0), VREG(2)
+	vmovdqa64	VREG(13), VREG(9)
+	vmovdqa64	VREG(9), VREG(11)
+	vmovdqa64	VREG(11), VREG(12)
+	vmovdqa64	VREG(12), VREG(1)
+	vmovdqa64	VREG(1), VREG(4)
+	vmovdqa64	VREG(4), VREG(7)
+	vmovdqa64	VREG(7), VREG(20)
+	vmovdqa64	VREG(20), VREG(14)
+	vmovdqa64	VREG(14), VREG(8)
+	vmovdqa64	VREG(8), VREG(17)
+	vmovdqa64	VREG(17), VREG(19)
+	vmovdqa64	VREG(19), VREG(18)
+.endm
+
+.macro KECCAK_F_LOOP
+	lea		RCP, [rip + .LKECCAK_RC]
+	RHOOK_BEGIN	0
+	KECCAK_ROUND0
+	RHOOK_END
+	add		RCP, 8
+	mov		qword ptr [LOOP_CNT], 5
+	.set		LOOP_RC, 1
+1:
+	RHOOK_BEGIN	1
+	ROUND	1, 10, 11, 6, 8, 9, 3, 0, 12, 13, 14, 1, 7, 15, 16, 17, 4, 5, 19, 20, 21, 2, 18
+	RHOOK_END
+	RHOOK_BEGIN	2
+	ROUND	2, 2, 18, 3, 7, 19, 16, 21, 13, 17, 4, 9, 12, 0, 15, 20, 11, 10, 14, 1, 5, 6, 8
+	RHOOK_END
+	RHOOK_BEGIN	3
+	ROUND	3, 6, 8, 16, 12, 14, 15, 5, 17, 20, 11, 19, 13, 21, 0, 1, 18, 2, 4, 9, 10, 3, 7
+	RHOOK_END
+	RHOOK_BEGIN	4
+	ROUND	4, 3, 7, 15, 13, 4, 0, 10, 20, 1, 18, 14, 17, 5, 21, 9, 8, 6, 11, 19, 2, 16, 12
+	RHOOK_END
+	LOOP_RESTORE
+	add		RCP, 32
+	dec		qword ptr [LOOP_CNT]
+	jnz		1b
+	.set		LOOP_RC, 0
+	RHOOK_BEGIN	21
+	ROUND	21, 10, 11, 6, 8, 9, 3, 0, 12, 13, 14, 1, 7, 15, 16, 17, 4, 5, 19, 20, 21, 2, 18
+	RHOOK_END
+	RHOOK_BEGIN	22
+	ROUND	22, 2, 18, 3, 7, 19, 16, 21, 13, 17, 4, 9, 12, 0, 15, 20, 11, 10, 14, 1, 5, 6, 8
+	RHOOK_END
+	RHOOK_BEGIN	23
+	LAST_ROUND 6, 8, 16, 12, 14, 15, 5, 17, 20, 11, 19, 13, 21, 0, 1, 18, 2, 4, 9, 10, 3, 7
+	RHOOK_END
 .endm

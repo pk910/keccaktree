@@ -7,7 +7,8 @@
 # models, so every runtime-detected path (and the pure-Go fallback) runs on one
 # host. KECCAKTREE_EXPECT_PATH makes the binary assert which path(s) it may select.
 #
-# NOTE: qemu-user (TCG) cannot emulate AVX-512; that path runs natively.
+# NOTE: qemu-user (TCG) cannot emulate AVX-512; that tier (avx512_x9,
+# avx512_x8, avx512vl_x4) only runs natively, in TestForcedPaths.
 # RISC-V selection reads riscv_hwprobe, which qemu-user answers from -cpu.
 
 set -u
@@ -51,13 +52,18 @@ build riscv64 riscv64-linux-gnu-gcc
 # Where several kernels run, detection times them and keeps the fastest, so
 # under TCG any of them may win: the matrix checks the feature tier.
 SHA3='sha3_x3|sha3_x3r|sha3_x2'
+# the AVX2 kernels need BMI1/BMI2 for their x86_x1 tail; BMI without AVX2
+# runs x86_x1 alone
+AVX2='avx2_x10|avx2_x9|avx2_x6|avx2_x5|avx2_x8|avx2_x4'
 
 echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
-run amd64 qemu-x86_64  'Haswell'    'avx2_x8|avx2_x4'
-run arm64 qemu-aarch64 'cortex-a57' 'neon_x2|scalar_x1'
+run amd64 qemu-x86_64  'Haswell'    "$AVX2"
+run amd64 qemu-x86_64  'Haswell,avx2=off' x86_x1
+run amd64 qemu-x86_64  'Haswell,bmi1=off,bmi2=off' generic
+run arm64 qemu-aarch64 'cortex-a57' 'neon_x3|neon_x2|scalar_x1'
 run arm64 qemu-aarch64 'max'        "$SHA3"
-run arm64 qemu-aarch64 'neoverse-n1' 'neon_x2|scalar_x1'
+run arm64 qemu-aarch64 'neoverse-n1' 'neon_x3|neon_x2|scalar_x1'
 run arm64 qemu-aarch64 'neoverse-n2' "$SHA3"
 run riscv64 qemu-riscv64 'rv64,zbb=false'                 rv64_x1
 run riscv64 qemu-riscv64 'rv64'                           'rv64_x1|zbb_x1'

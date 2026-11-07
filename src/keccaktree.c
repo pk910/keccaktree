@@ -20,13 +20,16 @@
  *
  * Some kernels differ only in how they suit the microarchitecture, a
  * property no feature bit reports: avx512vl_x4 beats avx512_x8 on cores
- * with a single 512-bit ALU port, sha3_x3 (lazy rotations) needs EOR/BIC
- * with a rotated operand at full rate, sha3_x3r does not, and scalar_x1
- * beats neon_x2 where the integer side outruns the vector side; on RISC-V
+ * with a single 512-bit ALU port, avx512_x9, avx2_x10, avx2_x9 and
+ * avx2_x5 (scalar nodes interleaved into the vector rounds) win only
+ * where the integer ALUs are separate from the vector pipes, sha3_x3 (lazy rotations) needs EOR/BIC
+ * with a rotated operand at full rate, sha3_x3r does not, and neon_x3 or
+ * scalar_x1 beat neon_x2 where the integer side keeps up with the vector
+ * side; on RISC-V
  * the scalar and vector kernels trade places with VLEN and the core. For these,
  * detection runs every feature-qualified candidate once on a small warm
  * batch and keeps the fastest (keccaktree_calibrate): tens of microseconds
- * up to ~0.5 ms, once per process. keccaktree_init(fn) skips it. */
+ * up to ~0.25 ms, once per process. keccaktree_init(fn) skips it. */
 
 #if defined(__riscv) && __riscv_xlen == 64
 #ifdef __linux__
@@ -92,29 +95,35 @@ static inline uint64_t keccaktree_ticks(void) {
 #endif
 }
 
-/* A multiple of every kernel's batch (2, 3, 4, 8). Each sample hashes the
- * buffer in place twice (96 nodes, long enough for the 24 MHz counter of
- * Apple cores to resolve a few percent; keccak's timing does not depend on
- * the data); one 3 KB buffer keeps the frame below the 4 KB at which
- * Windows compilers emit a stack probe call. */
-#define CALIB_NODES 48
-#define CALIB_REPS  7
+/* A multiple of every calibrated kernel's batch (2, 3, 4, 5, 8, 10; the
+ * AVX-512 list with its 9-node kernel uses 144 = 16 x 9 = 18 x 8), so no
+ * candidate pays a tail the others do not; 120 nodes per sample are
+ * long enough for the 24 MHz counter of Apple cores to resolve a few
+ * percent (keccak's timing does not depend on the data). The buffer is
+ * static: 7.5 KB on the stack would make Windows compilers emit a stack
+ * probe call, and a concurrent first call from another thread only
+ * scribbles over scratch data. Three samples per kernel: the minimum of
+ * three already picks the same kernel as the minimum of seven in 300 of
+ * 300 process starts on Zen 3 and Neoverse N1 (about 130 us on Zen 3 with
+ * four candidates). */
+#define CALIB_NODES 120
+#define CALIB_NODES_MAX 144
+#define CALIB_REPS  3
 
-/* Times each candidate, interleaved so a frequency change hits all of them
- * alike, and returns the one with the lowest minimum. */
-static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
-    unsigned char buf[CALIB_NODES * 64] __attribute__((aligned(64)));
-    uint64_t best[4];
-    for (int i = 0; i < CALIB_NODES * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
+/* Times each candidate on `nodes` nodes, interleaved so a frequency change
+ * hits all of them alike, and returns the one with the lowest minimum. */
+static keccaktree_hash_fcn keccaktree_calibrate_n(const keccaktree_hash_fcn* fns, int n, int nodes) {
+    static unsigned char buf[CALIB_NODES_MAX * 64] __attribute__((aligned(64)));
+    uint64_t best[8];
+    for (int i = 0; i < nodes * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
     for (int i = 0; i < n; i++) {
-        fns[i](buf, buf, CALIB_NODES); /* warm code, data and vector units */
+        fns[i](buf, buf, nodes); /* warm code, data and vector units */
         best[i] = UINT64_MAX;
     }
     for (int r = 0; r < CALIB_REPS; r++) {
         for (int i = 0; i < n; i++) {
             uint64_t t0 = keccaktree_ticks();
-            fns[i](buf, buf, CALIB_NODES);
-            fns[i](buf, buf, CALIB_NODES);
+            fns[i](buf, buf, nodes);
             uint64_t t = keccaktree_ticks() - t0;
             if (t < best[i]) best[i] = t;
         }
@@ -123,6 +132,64 @@ static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, 
     for (int i = 1; i < n; i++)
         if (best[i] < best[pick]) pick = i;
     return fns[pick];
+}
+static keccaktree_hash_fcn keccaktree_calibrate(const keccaktree_hash_fcn* fns, int n) {
+    return keccaktree_calibrate_n(fns, n, CALIB_NODES);
+}
+#endif
+
+#ifdef __x86_64__
+/* Two nodes left after the 4-node batches: the lane-pair kernel or a
+ * padded batch, whichever is faster here (the pairs win on Zen 3 and
+ * Gracemont, a padded batch on Golden Cove, where the pair round's
+ * dependency chain costs more than the extra lanes). Timed like
+ * keccaktree_calibrate, on 2 nodes. */
+static void keccaktree_avx2_tail_calibrate(void) {
+    unsigned char buf[2 * 64] __attribute__((aligned(64)));
+    static const keccaktree_hash_fcn fns[2] = {&keccaktree_keccak256_avx2_x2,
+                                               &keccaktree_keccak256_avx2_x4};
+    uint64_t best[2] = {UINT64_MAX, UINT64_MAX};
+    for (int i = 0; i < 2 * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
+    keccaktree_avx2_small_tail(1); /* x4 pads the 2 nodes */
+    for (int i = 0; i < 2; i++) fns[i](buf, buf, 2);
+    for (int r = 0; r < CALIB_REPS; r++) {
+        for (int i = 0; i < 2; i++) {
+            uint64_t t0 = keccaktree_ticks();
+            for (int k = 0; k < 8; k++) fns[i](buf, buf, 2);
+            uint64_t t = keccaktree_ticks() - t0;
+            if (t < best[i]) best[i] = t;
+        }
+    }
+    keccaktree_avx2_small_tail(best[0] < best[1] ? 2 : 1);
+}
+
+/* 5..9 nodes left after the avx2_x10 batches (keccaktree_avx2_x10_mid_tail;
+ * the kernel's default, 4, pads all of them, for an explicit
+ * keccaktree_init without this timing): 5 go to avx2_x5 with either
+ * setting timed here (1126 vs 1330 ns on Zen 3 for 15 nodes), 6..9 to a
+ * padded x10 batch (5) or to avx2_x5 and its tail (9). On Zen 3 the padded batch wins for 6 (x5 and then the
+ * scalar kernel: 1443 vs 1301 ns for 16 nodes), where the x5 chain stays
+ * ahead (Gracemont, 5000 vs 5685 for 26 nodes) x5 wins. Timed like
+ * keccaktree_calibrate on 26 nodes (two batches, 6 left). */
+static void keccaktree_avx2_x10_tail_calibrate(void) {
+    static unsigned char buf[26 * 64] __attribute__((aligned(64)));
+    static const uint64_t mid[2] = {5, 9};
+    uint64_t best[2] = {UINT64_MAX, UINT64_MAX};
+    for (int i = 0; i < 26 * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
+    for (int i = 0; i < 2; i++) {
+        keccaktree_avx2_x10_mid_tail(mid[i]);
+        keccaktree_keccak256_avx2_x10(buf, buf, 26);
+    }
+    for (int r = 0; r < CALIB_REPS; r++) {
+        for (int i = 0; i < 2; i++) {
+            keccaktree_avx2_x10_mid_tail(mid[i]);
+            uint64_t t0 = keccaktree_ticks();
+            for (int k = 0; k < 4; k++) keccaktree_keccak256_avx2_x10(buf, buf, 26);
+            uint64_t t = keccaktree_ticks() - t0;
+            if (t < best[i]) best[i] = t;
+        }
+    }
+    keccaktree_avx2_x10_mid_tail(best[1] < best[0] ? 9 : 5);
 }
 #endif
 
@@ -135,33 +202,59 @@ keccaktree_hash_fcn keccaktree_detect(void) {
     int os_ymm = (xcr0 & 0x6) == 0x6;
     int os_zmm = (xcr0 & 0xe6) == 0xe6;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
-    if (os_zmm && (b & bit_AVX512F) && (b & bit_AVX512VL)) {
-        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx512_x8,
+    /* the AVX-512 and AVX2 kernels hand single nodes to x86_x1, which
+     * needs BMI1 and BMI2 (every AVX2 core has them; a hypervisor could
+     * hide them) */
+    int bmi = (b & bit_BMI) && (b & bit_BMI2);
+    if (os_zmm && (b & bit_AVX512F) && (b & bit_AVX512VL) && bmi) {
+        /* avx512_x9 adds a scalar node to the zmm rounds: faster where
+         * the 512-bit units run at half rate and leave the integer side
+         * and the dispatch width idle (Zen 4: 1.055x), slower where the
+         * integer ALUs share the vector ports (Ice Lake, Granite Rapids
+         * 0.73x) or the front end is the bound (EPYC 9V45: 0.84x) */
+        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx512_x9,
+                                                &keccaktree_keccak256_avx512_x8,
                                                 &keccaktree_keccak256_avx512vl_x4};
-        return keccaktree_calibrate(c, 2);
+        return keccaktree_calibrate_n(c, 3, 144);
     }
-    if (os_ymm && (b & bit_AVX2)) {
-        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x8,
+    if (os_ymm && (b & bit_AVX2) && bmi) {
+        /* avx2_x10 / avx2_x5 add scalar nodes (BMI1 andn, BMI2 rorx) to
+         * the avx2_x8 / avx2_x4 rounds: faster where the integer ALUs are
+         * separate from the vector pipes (Zen 3: x10; Gracemont: x5 and
+         * x10 alike), slower where they share ports (Golden Cove), so the
+         * timing decides; avx2_x6 (two scalar nodes on the x4 batch) is
+         * Gracemont's kernel, 2.5% over x5 at its 5-wide allocation.
+         * avx2_x9 (one scalar node) never beat x10 or x8 on the cores
+         * measured and is not timed. */
+        static const keccaktree_hash_fcn c[] = {&keccaktree_keccak256_avx2_x10,
+                                                &keccaktree_keccak256_avx2_x5,
+                                                &keccaktree_keccak256_avx2_x6,
+                                                &keccaktree_keccak256_avx2_x8,
                                                 &keccaktree_keccak256_avx2_x4};
-        return keccaktree_calibrate(c, 2);
+        keccaktree_avx2_tail_calibrate();
+        keccaktree_hash_fcn fn = keccaktree_calibrate(c, 5);
+        if (fn == &keccaktree_keccak256_avx2_x10) keccaktree_avx2_x10_tail_calibrate();
+        return fn;
     }
+    if (bmi) return &keccaktree_keccak256_x86_x1;
 #endif
 #ifdef __aarch64__
     static const keccaktree_hash_fcn sha3[] = {&keccaktree_keccak256_sha3_x3,
                                                &keccaktree_keccak256_sha3_x3r,
                                                &keccaktree_keccak256_sha3_x2};
-    static const keccaktree_hash_fcn simd[] = {&keccaktree_keccak256_neon_x2,
-                                               &keccaktree_keccak256_scalar_x1};
+    static const keccaktree_hash_fcn simd[] = {&keccaktree_keccak256_neon_x3,
+                                               &keccaktree_keccak256_scalar_x1,
+                                               &keccaktree_keccak256_neon_x2};
 #if defined(__APPLE__)
     if (keccaktree_sysctl_flag("hw.optional.arm.FEAT_SHA3") || keccaktree_sysctl_flag("hw.optional.armv8_2_sha3"))
         return keccaktree_calibrate(sha3, 3);
-    return keccaktree_calibrate(simd, 2); /* Advanced SIMD is mandatory on AArch64 */
+    return keccaktree_calibrate(simd, 3); /* Advanced SIMD is mandatory on AArch64 */
 #elif defined(__linux__)
     unsigned long hwcaps = getauxval(AT_HWCAP);
 #ifdef HWCAP_SHA3
     if (hwcaps & HWCAP_SHA3) return keccaktree_calibrate(sha3, 3);
 #endif
-    if (hwcaps & HWCAP_ASIMD) return keccaktree_calibrate(simd, 2);
+    if (hwcaps & HWCAP_ASIMD) return keccaktree_calibrate(simd, 3);
 #endif
 #endif
 #if defined(__riscv) && __riscv_xlen == 64
