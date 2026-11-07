@@ -205,6 +205,9 @@ theorem path{c} : {ISA_EXPR}.pathOk rodata prog idx{c} cut{c} = true := by decid
     # conjunction of hundreds of large equations is too big to synthesize)
     CHUNK = 16
     out.write('-- The symbolic lanes at the output locations (kernel evaluations of the slice).\n')
+    missing = [v for (_, _, v, _, _) in outs if var_id(v) not in trees]
+    if missing:
+        raise SystemExit(f'slice {c}: output locations not written by the slice (cut too late?): {missing[:5]}')
     for p in range(0, len(outs), CHUNK):
         part = outs[p:p + CHUNK]
         out.write('set_option maxRecDepth 100000 in\nset_option synthInstance.maxHeartbeats 2000000 in\n')

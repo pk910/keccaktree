@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Find the cut steps of a kernel's batch from a `kttool scan`: for every round r = 1..23 the
-midpoint of the first window of steps at which every node's complete round-r state (25 lanes)
+first step at which every node's complete round-r state (25 lanes)
 is present somewhere (registers / stack / memory), and the step count to the final `ret`.
 Usage: find_cuts.py <kernel> <count> <lanes> [fuel]   → prints "<entry=0> <end_t> <23 cuts>"."""
 import re, subprocess, sys, os
@@ -32,6 +32,8 @@ for r in range(1, 24):
     for t in ts[1:]:
         if t == hi + 1: hi = t
         else: break
-    cuts.append((lo + hi) // 2)
+    # cut at the START of the window: the round has just completed and the next one has not yet
+    # stored any of its lanes (kernels with two state buffers keep round r present throughout round r+1)
+    cuts.append(lo)
     print(f'round {r}: window [{lo}, {hi}] -> cut {cuts[-1]}', file=sys.stderr)
 print(' '.join(str(x) for x in [0, end_t] + cuts))
