@@ -13,7 +13,7 @@ Each segment: (gen dir, plan count, entry, end, body?, end-control spec, write-o
   body       : the segment hashes (cuts from the plan inside [entry, end), every node advancing)
   end ctl    : list of literal ids and names of other segments ('@GenSX' = that segment's start control words)
 """
-import ast, json, os, subprocess, sys
+import ast, json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUTW = lambda n: f'fun p => (p.1 == 3) || (p.1 == 2 && decide (0 ≤ p.2) && decide (p.2 < {4 * n}))'
@@ -54,6 +54,49 @@ KERNELS['sha3_x3r'] = ('Sha3X3r', 2, '258,2097411', [
 ])
 
 
+# the common round cuts of the three-node kernels (gen_all.sh: round r of every node complete at step t_r)
+COMMON_CUTS = {
+    'sha3_x3': [210, 403, 596, 789, 982, 1175, 1368, 1561, 1754, 1947, 2140, 2333, 2526, 2719, 2912, 3105, 3298, 3491,
+                3684, 3877, 4070, 4263, 4456],
+    'neon_x3': [254, 520, 786, 1052, 1318, 1584, 1850, 2116, 2382, 2648, 2914, 3180, 3446, 3712, 3978, 4244, 4510, 4776,
+                5042, 5308, 5574, 5840, 6106],
+    'sha3_x3r': [213 + 197 * r for r in range(23)],
+}
+
+
+def digest_kinds(kernel, count, lanes, steps):
+    """node -> the round-24 kinds 0..3 (digest words) present after `steps` steps"""
+    kt = os.path.join(HERE, '.lake/build/bin/kttool')
+    out = subprocess.run([kt, 'matches', kernel, str(count), str(steps), str(lanes)], capture_output=True, text=True, check=True).stdout
+    have = {}
+    for ln in out.splitlines():
+        m = re.match(r'^\((?:\.reg|\.mem|\.gd).*?\) (\d+) (\d+) (\d+) (\d+)$', ln)
+        if m:
+            node, rnd, kind = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if rnd == 24 and kind < 4:
+                have.setdefault(node, set()).add(kind)
+    return have
+
+
+def settle_digest_cuts(kernel, count, lanes, cuts, rounds, end):
+    """a node's round-24 cut must hold its four digest words (find_plan counts any four round-24 lanes; the
+    iota of lane 0 may come later): delay such a cut until the digest words are all there"""
+    out_c, out_r = [], [rounds[0]]
+    for i, t in enumerate(cuts):
+        r_prev, r_new = out_r[-1], rounds[i + 1]
+        fin = [n for n in range(count) if r_new[n] == 24 and r_prev[n] != 24]
+        if fin:
+            while t + 1 < end - 1 and not all(digest_kinds(kernel, count, lanes, t + 1).get(n, set()) >= {0, 1, 2, 3} for n in fin):
+                t += 1
+            print(f'  digest cut for nodes {fin}: {cuts[i]} -> {t}', flush=True)
+        if out_c and t <= out_c[-1]:
+            out_r[-1] = r_new        # merged into the previous cut
+            continue
+        out_c.append(t); out_r.append(r_new)
+    out_r.append(rounds[-1])
+    return out_c, out_r
+
+
 def ctl0_of(log):
     l = [l for l in open(log).read().splitlines() if l.startswith('control words')][0]
     return ast.literal_eval(l.split(':', 1)[1].strip())[0]
@@ -71,9 +114,16 @@ def main():
             out = subprocess.run(['python3', 'find_plan.py', kernel, str(count), str(lanes)], capture_output=True, text=True, check=True).stdout
             plans[count] = json.loads(out)
         p = plans[count]
-        if body:
-            cuts = [t for t in p['cuts'] if a < t + 1 < b]
-            rounds = [[0] * count] + [[min(i + 1, 24)] * count for i in range(len(cuts))] + [[24] * count]
+        if body and kernel in COMMON_CUTS:
+            # interleaved nodes (a NEON pair and a scalar node): cut where every node has finished round r
+            # (the single-batch cuts); the per-node completions leave partial parities unlabelled
+            cuts = [t for t in COMMON_CUTS[kernel] if a < t + 1 < b]
+            rounds = [[0] * count] + [[i + 1] * count for i in range(len(cuts))] + [[24] * count]
+        elif body:
+            sel = [i for i, t in enumerate(p['cuts']) if a < t + 1 < b]
+            cuts = [p['cuts'][i] for i in sel]
+            rounds = [[0] * count] + [p['rounds'][i + 1] for i in sel] + [[24] * count]
+            cuts, rounds = settle_digest_cuts(kernel, count, lanes, cuts, rounds, b)
         else:
             cuts, rounds = [], [[0] * count, [0] * count]
         pf = f'plans/{kernel}_{g}.json'

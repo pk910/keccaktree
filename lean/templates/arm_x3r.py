@@ -5,7 +5,7 @@ import arm_common as C
 
 def render(P):
     NS, SYM, TSYM, TNS = P['NS'], P['SYM'], P['TSYM'], P['TNS']
-    KER = P['KER']; ENTRY = P['ENTRY']
+    KER = P['KER']; ENTRY = P['ENTRY']; KB = P['K_GenSB']
     SUB = P['SUB']; CMP = SUB + 1; BEQ = SUB + 2; CMP3 = SUB + 3; BCS = SUB + 4; XS = SUB + 5
     RET = P['RET']; CBZ2 = RET - 2; TAIL = RET - 1
     IT = (SUB - 14) + 5
@@ -49,7 +49,7 @@ open Keccaktree.Kernels.{NS} (prog rodata)
 
 '''
     common = C.entry_struct()
-    inv = C.inv0('inv0', 'GenSB', 3) + ''.join(C.digest(f'dig{j}', 'GenSB', 3, j, 25) for j in range(3))
+    inv = C.inv0('inv0', 'GenSB', 3) + ''.join(C.digest(f'dig{j}', 'GenSB', 3, j, KB) for j in range(3))
     defs = f"""/-- The number of batches of a call on `c ≥ 3, c ≠ 4` nodes: four remaining nodes go to the tail. -/
 def nb (c : Nat) : Nat := if c % 3 = 1 then (c - 4) / 3 else c / 3
 
@@ -107,10 +107,10 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
   have dat := GenSB.seg_data (rho (off + 3 * k)) hρ hw _ hcut hok' _ (inv0 input (norm S GenSB.sc0) (off + 3 * k) hin)
   have mv := GenSB.seg_moves (rho (off + 3 * k)) hρ hw _ hcut hok' 258 258 (by simp)
   have fl : Arm.isa.run rodata prog GenSB.segLen S =
-      (GenSB.segAt25 (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
+      (GenSB.segAt{KB} (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
     GenSB.seg_flags (rho (off + 3 * k)) hρ hw _ hcut hok' S.zf S.cf S.nf S.vf
   rw [Reloc.var_lt _ 258 (by decide)] at mv
-  generalize hSb' : GenSB.segAt25 (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
+  generalize hSb' : GenSB.segAt{KB} (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
   obtain ⟨_, hokb, hcutb⟩ := sr
   have fb := cut_fields _ _ _ _ hcutb
   generalize hSb : Sb'.withFlags S.zf S.cf S.nf S.vf = Sb at fl
@@ -223,7 +223,7 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
         if kind == 'loop':
             t += f"""  refine ⟨?_, hUok, ?_, hbi, hpre', fun n hn => hdig' n (by omega)⟩
   · rw [show off + 3 * (k + 1) = (off + 3 * k) + 3 by omega, ← rho_add]
-    apply cut_transfer (rho (off + 3 * k)) _ hρ (Reloc.add_ok _ _ hρ (rho_ok 3)) GenSB.ctl25 GenSB.ctl0 GenSB.sc25 GenSB.sc0 Sb'
+    apply cut_transfer (rho (off + 3 * k)) _ hρ (Reloc.add_ok _ _ hρ (rho_ok 3)) GenSB.ctl{KB} GenSB.ctl0 GenSB.sc{KB} GenSB.sc0 Sb'
       (norm U GenSB.sc0) hcutb (hL_dec _ _ (by decide +kernel)) (hL GenSB.sc0 _ (by decide +kernel))
       (hval_succ _ _ hρ (rho_ok 3) _ _ _ _ (by decide +kernel))
 {ctl}  · rw [hUcnt]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
@@ -232,7 +232,7 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
         else:
             t += f"""  have hk3 : nb c = k + 1 := by rcases nb_eq c with ⟨h, h'⟩ | ⟨h, h'⟩ <;> omega
   refine ⟨?_, hUok, ?_, hbi, hpre', fun n hn => hdig' n (by omega)⟩
-  · apply cut_transfer (rho (off + 3 * k)) _ hρ hρ GenSB.ctl25 GenSX.ctl0 GenSB.sc25 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
+  · apply cut_transfer (rho (off + 3 * k)) _ hρ hρ GenSB.ctl{KB} GenSX.ctl0 GenSB.sc{KB} GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
       (hL_dec _ _ (by decide +kernel)) (hL GenSX.sc0 _ (by decide +kernel)) (hval_same _ _ _ _ _ (by decide +kernel))
 {ctl}  · rw [hUcnt, hk3]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
 

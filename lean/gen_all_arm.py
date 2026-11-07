@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render the all-count theorem `Keccaktree/Kernels/<Ns>/All.lean` of an AArch64 kernel from a template
 (templates/arm_<kind>.lean.in) and the kernel's frame indices.  Usage: gen_all_arm.py <kernel>"""
-import os, sys
+import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, 'templates'))
 import arm_common as C
@@ -42,6 +42,7 @@ def iter_case(kind, P):
     HX = {'a': 'GenSHa', 'b': 'GenSHb', 'c': 'GenSHc'}[kind]
     BX = 'GenSBo' if kind == 'c' else 'GenSBe'
     NB = 1 if kind == 'c' else 2
+    KB = P['K_' + BX]
     hyp = {'a': '(hr : 2 * k + 3 ≤ c)', 'b': '(hr : c = 2 * k + 2)', 'c': '(hr : c = 2 * k + 1)'}[kind]
     ZV, CV, NV = {'a': ('false', 'true', 'false'), 'b': ('true', 'true', 'false'), 'c': ('false', 'false', 'true')}[kind]
     GT = 'true' if kind == 'a' else 'false'
@@ -118,10 +119,10 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
   have frB := {BX}.seg_frame _ hρ hw _ hcB hokW'
   have datB := {BX}.seg_data _ hρ hw _ hcB hokW' _ ({inv0} input (norm W {BX}.sc0) (off + 2 * k) hinW)
   have mvB := {BX}.seg_moves _ hρ hw _ hcB hokW' 258 258 (by simp)
-  have flB : Arm.isa.run rodata prog {BX}.segLen W = ({BX}.segAt25 (norm W {BX}.sc0)).withFlags W.zf W.cf W.nf W.vf :=
+  have flB : Arm.isa.run rodata prog {BX}.segLen W = ({BX}.segAt{KB} (norm W {BX}.sc0)).withFlags W.zf W.cf W.nf W.vf :=
     {BX}.seg_flags _ hρ hw _ hcB hokW' W.zf W.cf W.nf W.vf
   rw [Reloc.var_lt _ 258 (by decide)] at mvB
-  generalize hSb' : {BX}.segAt25 (norm W {BX}.sc0) = Sb' at sB frB datB mvB flB
+  generalize hSb' : {BX}.segAt{KB} (norm W {BX}.sc0) = Sb' at sB frB datB mvB flB
   obtain ⟨_, hokb, hcutb⟩ := sB
   have fb := cut_fields _ _ _ _ hcutb
   generalize hSb : Sb'.withFlags W.zf W.cf W.nf W.vf = Sb at flB
@@ -202,7 +203,7 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
     if kind == 'a':
         s += f'''  refine ⟨?_, hUok, ?_, hbi, fun q hq => (hbo q (by omega)).trans (hpre q hq), fun n hn => hdig' n (by omega)⟩
   · rw [show off + 2 * (k + 1) = (off + 2 * k) + 2 by omega, ← rho_add]
-    apply cut_transfer (rho (off + 2 * k)) _ hρ (Reloc.add_ok _ _ hρ (rho_ok 2)) {BX}.ctl25 GenSH.ctl0 {BX}.sc25 GenSH.sc0 Sb'
+    apply cut_transfer (rho (off + 2 * k)) _ hρ (Reloc.add_ok _ _ hρ (rho_ok 2)) {BX}.ctl{KB} GenSH.ctl0 {BX}.sc{KB} GenSH.sc0 Sb'
       (norm U GenSH.sc0) hcutb (hL_dec _ _ (by decide +kernel)) (hL GenSH.sc0 _ (by decide +kernel))
       (hval_succ _ _ hρ (rho_ok 2) _ _ _ _ (by decide +kernel))
 {ctl}  · rw [hUcnt]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
@@ -210,7 +211,7 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
 '''
     else:
         s += f'''  refine ⟨?_, hUok, fun q hq => (hbo q (by omega)).trans (hpre q hq), fun n hn => hdig' n (by omega)⟩
-  apply cut_transfer (rho (off + 2 * k)) _ hρ hρ {BX}.ctl25 GenSX.ctl0 {BX}.sc25 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
+  apply cut_transfer (rho (off + 2 * k)) _ hρ hρ {BX}.ctl{KB} GenSX.ctl0 {BX}.sc{KB} GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
     (hL_dec _ _ (by decide +kernel)) (hL GenSX.sc0 _ (by decide +kernel)) (hval_same _ _ _ _ _ (by decide +kernel))
 {ctl}
 '''
@@ -393,6 +394,12 @@ def lib(P):
 def render(kernel):
     kind, ns, sym, P = KERNELS[kernel]
     P = dict(P, SYM=sym, NS=ns, KER=kernel, ENTRY=ENTRY[kernel])
+    # the number of slices of each body segment, from its plan (plans/<kernel>_<Gen>.json, written by
+    # gen_segments_arm.py): the generated module's last cut is `ctl<K>`/`sc<K>`/`segAt<K>`/`Inv<K>`
+    for g in ('GenSB', 'GenSBe', 'GenSBo'):
+        f = os.path.join(HERE, 'plans', f'{kernel}_{g}.json')
+        if os.path.exists(f):
+            P['K_' + g] = len(json.load(open(f))['cuts']) + 1
     if kind in ('x3', 'x3r'):
         import importlib
         mod = importlib.import_module('arm_' + kind)
@@ -408,8 +415,8 @@ def render(kernel):
         rep = {
             '@COMMON@': C.entry_struct(),
             '@INV0E@': C.inv0('inv0_e', 'GenSBe', 2), '@INV0O@': C.inv0('inv0_o', 'GenSBo', 1),
-            '@DIGE0@': C.digest('dig_e0', 'GenSBe', 2, 0, 25), '@DIGE1@': C.digest('dig_e1', 'GenSBe', 2, 1, 25),
-            '@DIGO0@': C.digest('dig_o0', 'GenSBo', 1, 0, 25),
+            '@DIGE0@': C.digest('dig_e0', 'GenSBe', 2, 0, P['K_GenSBe']), '@DIGE1@': C.digest('dig_e1', 'GenSBe', 2, 1, P['K_GenSBe']),
+            '@DIGO0@': C.digest('dig_o0', 'GenSBo', 1, 0, P['K_GenSBo']),
             '@ITERA@': iter_case('a', P), '@ITERB@': iter_case('b', P), '@ITERC@': iter_case('c', P),
             '@EPI@': epilogue(P), '@MAIN@': main_x2(P), '@LIB@': lib(P),
             '@NS@': ns, '@SYM@': sym, '@IT@': str(P['IT']), '@XLEN6@': str(P['XLEN'] + 6),
