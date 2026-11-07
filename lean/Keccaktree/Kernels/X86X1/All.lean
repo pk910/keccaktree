@@ -218,7 +218,7 @@ theorem ctrl_after (U T sc sc' : State (BitVec 64))
   exact ⟨g2.trans (g1.trans g3), k2.trans (k1.trans k3), hzf, hcf, n2.trans (n1.trans n3), v2.trans (v1.trans v3),
     l2.trans (l1.trans l3), hpc, d2.trans (d1.trans d3)⟩
 
-theorem body_len : GenSB.segLen = 4267 := rfl
+theorem body_len : GenSB.segLen = 4267 := by decide +kernel
 theorem prog_600 : prog.getD 600 .nop = .decm (.base 4 424) := by decide +kernel
 theorem prog_601 : prog.getD 601 .nop = .jcc .ne 13 := by decide +kernel
 
@@ -264,14 +264,12 @@ theorem iter (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) 
     have : (2 : Nat) ^ 54 = 18014398509481984 := rfl
     omega
   have hdec : X86.exec rodata (.decm (.base 4 424)) Sb =
-      next { Sb with mem := memStore Sb.mem rStack 131064 (gprWord ⟨0, (c : Int) - k - 1⟩),
-        zf := decide ((c : Int) - k - 1 = 0) } :=
+      next { Sb with mem := memStore Sb.mem rStack 131064 (gprWord ⟨0, (c : Int) - k - 1⟩), zf := decide ((c : Int) - k - 1 = 0) } :=
     exec_decm_num rodata Sb 4 424 ⟨rStack, 1048088⟩ ((c : Int) - k) hhb hgx (by decide) (by decide)
       hcntb (by
         show 0 ≤ (c : Int) - k ∧ (c : Int) - k < 2 ^ 55
         rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega)
-  generalize hV : next { Sb with mem := memStore Sb.mem rStack 131064 (gprWord ⟨0, (c : Int) - k - 1⟩),
-    zf := decide ((c : Int) - k - 1 = 0) } = V at hdec
+  generalize hV : next { Sb with mem := memStore Sb.mem rStack 131064 (gprWord ⟨0, (c : Int) - k - 1⟩), zf := decide ((c : Int) - k - 1 = 0) } = V at hdec
   have hrunV : X86.isa.run rodata prog 1 Sb = V := by
     rw [X86.run_one rodata prog Sb hhb, show prog.getD Sb.pc .nop = .decm (.base 4 424) by rw [hpcb]; exact prog_600, hdec]
   have hpcV : V.pc = 601 := by rw [← hV]; show Sb.pc + 1 = 601; rw [hpcb]
@@ -337,7 +335,10 @@ theorem iter (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) 
       exact ctrl_after U Sb GenSB.sc25 GenSB.sc0 fb hUc (by decide +kernel)
         (by rw [hUzf, hz]; decide +kernel) (by rw [hUcf, fb.2.2.2.1]; decide +kernel)
         (by rw [hUpc, hz]; decide +kernel)
-    · rw [hUmem, memStore_same]; congr 2; omega
+    · -- (`congr 2` here closed `⟨0, ↑c - ↑k - 1⟩ = ⟨0, ↑c - ↑(k + 1)⟩` by `rfl` at default transparency,
+      -- unfolding the Int arithmetic for > 40 min; `omega` on the offset is immediate)
+      rw [hUmem, memStore_same]
+      exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
   · -- the last iteration: on to the epilogue
     have hz : decide ((c : Int) - k - 1 = 0) = true := decide_eq_true (by omega)
     refine ⟨?_, hUok, hpre', ?_⟩

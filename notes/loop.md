@@ -78,7 +78,16 @@ Branch `loop` (worktree `src/wt-loop`), remote workspace `/root/kt-loop` (rsync 
   (one lemma over `exec`, by cases on the instruction: only `cmprm`/`cmpm`/`xor … [rip+…]`/loads read
   rodata, and the generator can check that word 112 is read only by the policy compare).
 
-## All-count theorem: x86_x1 (pilot, `Kernels/X86X1/All.lean`)
+## All-count theorem: x86_x1 (pilot, `Kernels/X86X1/All.lean`) — PROVED
+* **Status (2026-11-07, remote 13:55)**: `lake build Keccaktree.Kernels.X86X1.All` green (All.lean itself 4.5 s;
+  the 4 segment modules GenSE1/GenSE3/GenSB(25 slices)/GenSX built before). `#print axioms` of `x86_x1_all` and
+  `lib_x86_x1`: `propext`, `Classical.choice`, `Quot.sound` + 1442 `bv_decide` certificates, no `sorryAx`.
+* **Pitfall found**: in `iter`, `rw [hUmem, memStore_same]; congr 2; omega` took > 40 min (and the whole file
+  > 50 min, timing out): `congr 2` tries to close `⟨0, ↑c - ↑k - 1⟩ = ⟨0, ↑c - ↑(k + 1)⟩` by `rfl` at default
+  transparency and unfolds the `Int` arithmetic over the free `c, k`. Replaced by
+  `exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)`. Found by bisection with `sorry`/`#exit`
+  variants (profiler output of a killed `lean` is lost: stdout is block-buffered). Avoid `congr`/`rfl` on
+  equalities whose sides differ only by arithmetic on free variables; use `omega` explicitly.
 * **Statement** `X86X1.All.x86_x1_all off c input S (hE : Entry off c input S) (hb : 64·(off+c) ≤ 2^54)`:
   `run (21 + 4269·c) S` is halted, `err = false`, `tail = none`, output words `< 4·off` unchanged, and
   `Digest input Sf (off+n)` for every `n < c` (byte `8w+i` of keccak256 of input node `off+n` = byte `i`
