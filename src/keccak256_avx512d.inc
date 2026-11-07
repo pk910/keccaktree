@@ -4064,7 +4064,11 @@
 	vpternlogq	VREG(18), VREG(28), VREG(13), 0xD2
 	vpternlogq	VREG(28), VREG(13), VREG(3), 0xD2
 	vpternlogq	VREG(13), VREG(3), VREG(14), 0xD2
-	OUTPUT		26, 18, 28, 13
+	vmovdqa64	VREG(0), VREG(26)
+	vmovdqa64	VREG(1), VREG(18)
+	vmovdqa64	VREG(2), VREG(28)
+	vmovdqa64	VREG(3), VREG(13)
+	OUTPUT		0, 1, 2, 3
 	RHOOK_END
 .endm
 
@@ -4941,7 +4945,7 @@
 	vmovdqa64	VREG(13), VREG(7)
 	vmovdqa64	VREG(1), VREG(30)
 	vmovdqa64	VREG(7), VREG(3)
-	vmovdqa64	VREG(31), VREG(11)
+	vmovdqa64	VREG(26), VREG(11)
 	vmovdqa64	VREG(11), VREG(14)
 	vmovdqa64	VREG(14), VREG(24)
 	vmovdqa64	VREG(24), VREG(21)
@@ -4950,7 +4954,7 @@
 	vmovdqa64	VREG(15), VREG(9)
 	vmovdqa64	VREG(9), VREG(16)
 	vmovdqa64	VREG(16), VREG(10)
-	vmovdqa64	VREG(10), VREG(31)
+	vmovdqa64	VREG(10), VREG(26)
 	/* 25 copies */
 	add		RCP, 32
 	dec		qword ptr [LOOP_CNT]
@@ -5361,6 +5365,10 @@
 	vpternlogq	VREG(18), VREG(26), VREG(23), 0xD2
 	vpternlogq	VREG(26), VREG(23), VREG(17), 0xD2
 	vpternlogq	VREG(23), VREG(17), VREG(15), 0xD2
-	OUTPUT		29, 18, 26, 23
+	vmovdqa64	VREG(0), VREG(29)
+	vmovdqa64	VREG(1), VREG(18)
+	vmovdqa64	VREG(2), VREG(26)
+	vmovdqa64	VREG(3), VREG(23)
+	OUTPUT		0, 1, 2, 3
 	RHOOK_END
 .endm

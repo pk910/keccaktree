@@ -191,7 +191,11 @@ def last_round(pos, free):
     ins("vpternlogq", V(b[1]), V(b[2]), V(b[3]), "0xD2")
     ins("vpternlogq", V(b[2]), V(b[3]), V(b[4]), "0xD2")
     ins("vpternlogq", V(b[3]), V(b[4]), V(b[0]), "0xD2")
-    e("\tOUTPUT\t\t%d, %d, %d, %d" % (t1, b[1], b[2], b[3]))
+    # the digest words to registers 0..3: OUTPUT uses the high registers
+    # as scratch (every other register is free now)
+    outs = [t1, b[1], b[2], b[3]]
+    parallel_move({k: outs[k] for k in range(4)}, [r for r in range(32) if r not in outs])
+    e("\tOUTPUT\t\t0, 1, 2, 3")
 
 def parallel_move(src_of, free):
     """emit copies so that register dst receives the value in src_of[dst]
@@ -200,7 +204,6 @@ def parallel_move(src_of, free):
     pending = dict(src_of)  # dst -> src
     pending = {d: s for d, s in pending.items() if d != s}
     n = 0
-    scratch = [f for f in free if f not in pending.values() and f not in pending]
     while pending:
         # a destination that is not the source of another pending move
         srcs = set(pending.values())
@@ -213,7 +216,8 @@ def parallel_move(src_of, free):
             continue
         # only cycles left: break one with a scratch register
         d = next(iter(pending))
-        t = scratch[0]
+        srcs = set(pending.values())
+        t = [f for f in free if f not in srcs and f not in pending][0]
         ins("vmovdqa64", V(t), V(d))  # save the value of d
         n += 1
         # whoever wanted d's value now takes it from t
