@@ -106,3 +106,8 @@ the hardware runs above, unproved).
    `low3` only through `asAddr`, so a handful of lemmas), no regeneration for x86/ARM; (2)+(3) new
    instructions in `Riscv.lean`/`RiscvHom.lean`/`RiscvReloc.lean` plus bounce segments for the 4 RISC-V
    kernels × VLEN; (4) one extra entry segment per kernel and count class (or the trace check).
+
+## Ownership (2026-11-07, coordinator)
+RISC-V bounce paths (§4 items 1-3 for RISC-V) and the M9 fix (`vsll.vx`/`vsrl.vx` count mod 64): agent
+`rv`. Agent `diff`: in-place aliasing for all ISAs (`notes/inplace.md`), x86/ARM unaligned argument.
+

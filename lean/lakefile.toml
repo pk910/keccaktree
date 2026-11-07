@@ -19,3 +19,7 @@ root = "Tools.Diff"
 [[lean_exe]]
 name = "alignaudit"
 root = "Tools.AlignAudit"
+
+[[lean_exe]]
+name = "inplaceaudit"
+root = "Tools.InplaceAudit"
