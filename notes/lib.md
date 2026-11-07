@@ -131,8 +131,14 @@ Kernel agents: this changes `X86.exec` for one instruction.
   `Rodata.exec_rodata_eq`/`pathW_reloc`, `Footprint` unchanged and green.  `Rodata.exec_cmprm_word` and
   **`policy_ja_class` now hold for every `v < 2^64`** (`classRep` covers all 64-bit setter values:
   avx2_x4 `≥ 3` and avx2_x10 `≥ 9` include every large value).
-* Runs unchanged: identical for every count in which the word is < 2^56 (all existing runs): see the kttool
-  `paths` comparison below.  X86X1 All/Lib rebuilt on the new core (see below).
+* Runs unchanged (kttool `paths`, old core binary vs new, scripts `/root/kt-lib-cmp2.sh`, `/root/kt-lib-cls.sh`):
+  only avx2_x4/avx2_x10 contain `cmprm` (every other program runs identically by construction); for both,
+  the default image, counts 0..84: identical output (paths, final registers, digests); thresholds 0..9,
+  counts 0..30: identical.  Thresholds 2^56, 2^63, 2^64-1: old core faulted (err in 15 resp. 11 counts) or —
+  for 2^63, whose top byte decodes as region 128 % 8 = 0 — silently compared against 0 (class `≤ 1`); new
+  core: no fault, and the run is byte-identical to the class representative (avx2_x4 ↔ 3, avx2_x10 ↔ 9).
+* Rebuilt on the merged core (lean-verification 172eca1 + this change): X86X1 GenSE1/GenSE3/GenSB/GenSX,
+  `X86X1.All`, `X86X1.Lib` (`lib_x86_x1`: no sorry), LibTable, Dispatch, LibArm, LibRv, ArmFlags, RvVl, kttool.
 
 ## Follow-up 2: dispatch (commit ca9c63d)
 * Setters `keccaktree_avx2_small_tail`/`_x10_mid_tail` store their `uint64_t` unclamped (asm:
