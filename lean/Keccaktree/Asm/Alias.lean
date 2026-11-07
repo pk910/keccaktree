@@ -750,3 +750,39 @@ theorem accessRun_mono (rodata : Array (BitVec 64)) (prog : Array Instr) :
 
 end X86
 end Keccaktree.Asm
+
+/-! ## A checker for the access condition (concrete runs) -/
+namespace Keccaktree.Asm
+open X86
+namespace X86
+
+/-- `AccessRun` as a Boolean function on concrete states. -/
+def accessCheck (rodata : Array (BitVec 64)) (prog : Array Instr) : Nat → Int → Int → State (BitVec 64) → Bool
+  | 0, B, Bf, _ => decide (B ≤ Bf)
+  | n + 1, B, Bf, s => if s.halted then decide (B ≤ Bf) else
+      !(exec rodata (prog.getD s.pc .nop) s).err &&
+      (reads s (prog.getD s.pc .nop)).all (fun c => c.1 != rInput || decide (B ≤ c.2)) &&
+      (writes s (prog.getD s.pc .nop)).all (fun c => c.1 != rInput) &&
+      accessCheck rodata prog n (bumpB B s (prog.getD s.pc .nop)) Bf (exec rodata (prog.getD s.pc .nop) s)
+
+theorem accessCheck_sound (rodata : Array (BitVec 64)) (prog : Array Instr) :
+    ∀ (n : Nat) (B Bf : Int) (s : State (BitVec 64)), accessCheck rodata prog n B Bf s = true →
+      AccessRun rodata prog n B Bf s := by
+  intro n
+  induction n with
+  | zero => intro B Bf s h; simp only [accessCheck, decide_eq_true_eq] at h; exact h
+  | succ n ih =>
+    intro B Bf s h
+    cases hh : s.halted
+    · simp only [accessCheck, hh, Bool.false_eq_true, ↓reduceIte, Bool.and_eq_true, Bool.not_eq_true',
+        List.all_eq_true] at h
+      obtain ⟨⟨⟨he, hr⟩, hw⟩, hA⟩ := h
+      simp only [AccessRun, hh, Bool.false_eq_true, ↓reduceIte]
+      refine ⟨he, ⟨fun c hc hrc => ?_, fun c hc hrc => ?_⟩, ih _ _ _ hA⟩
+      · have := hr c hc; simp only [hrc, bne_self_eq_false, Bool.false_or, decide_eq_true_eq] at this; exact this
+      · have := hw c hc; simp [hrc] at this
+    · simp only [accessCheck, hh, ↓reduceIte, decide_eq_true_eq] at h
+      simp only [AccessRun, hh, ↓reduceIte]; exact h
+
+end X86
+end Keccaktree.Asm
