@@ -89,3 +89,20 @@ thread races on first call, user overrides, user setter values ≥ 2^55, buffer 
 64-byte aligned; unaligned = queued item 3), `64·count ≤ 2^54` bytes.
 RVV: dispatch picks rvv/rvv_zvkb for every VLEN ≥ 128; kernel proofs exist per VLEN (`lib_rv vlmax`) — the
 proved VLENs bound the claim (gap for VLENs not proved).
+
+## 5. AArch64 flags at entry (DONE)
+`Asm/ArmEntryCtl.lean`: `Arm.exec_ovr` (all AArch64 instructions; reads: `csel`/`b.cond` per condition;
+must-writes: `cmp`/`subs` all of NZCV), `exec_pc` (static successors `succs`; AArch64 has no calls), dirty-set
+annotations `AnnOk prog ann` ⇒ **`run_ovr_ann`** (run from any flags = run from the normalised state up to the
+still-dirty components), `ovr_mono`, the may-dirty fixpoint `annotate` and compact interval certificates
+`flagAnn I` / `flagAnnOk` (kernel-decidable, iterates over `prog.toList`; ~1-2 GB, seconds).
+`Asm/LibArm.lean`: `NormThmArm`, **`mkKernelArm`** (NormThmArm + `AnnOk` + entry dirty ⇒ `KernelThm Arm.isa EntryArm
+Digest`), `outcome_ovr_arm`.  `Kernels/ArmFlags.lean`: certificates for all 6 AArch64 kernels (no kernel reads a
+flag before its own `cmp`/`subs` on any path): scalar_x1 [(0,2443),(2444,2451)], sha3_x2 [(0,9),(1599,1604)],
+neon_x2 [(0,9),(3788,3793)], sha3_x3/sha3_x3r/neon_x3 [(0,1)].
+For the arm agent: `mkKernelArm (sym k) rank targets rodata prog 0 steps (flagAnn ArmFlags.k) (ArmFlags.k_ok)
+(ArmFlags.entries.…) normThm`.
+Open: the same for RISC-V `vl` (RVV kernels: `vl` at a call is unspecified by the ABI; the model's entry has
+vl = 0) — the static-successor approach applies (RISC-V kernels make no calls either); x86 masks for the AVX-512
+kernels need `run_ovr_path` on the segment paths (the x86 batch is a `call`ed subroutine, so its `ret` has a
+dynamic successor).
