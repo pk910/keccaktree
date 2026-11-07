@@ -25,7 +25,7 @@ usage: gen_avx512d.py > keccak256_avx512d.inc
 """
 import sys
 
-OPT = {"parity_il": 0, "apply_first": 0, "chi_ax": 0}
+OPT = {"parity_il": 0, "apply_first": 0, "chi_ax": 0, "parity": 0}
 for a in sys.argv[1:]:
     k, v = a.split("=")
     OPT[k] = int(v)
@@ -56,7 +56,27 @@ def theta(pos, free):
     """C[x] into free[0..4], D[0..4] derived in place; returns (D regs, free temps)"""
     c = free[:5]
     t0, t1 = free[5], free[6]
-    if OPT["parity_il"]:
+    if OPT["parity"] == 1:
+        # four xors per column, interleaved (no copies, no ternlogs)
+        for x in range(5):
+            ins("vpxorq", V(c[x]), V(pos[x]), V(pos[x + 5]))
+        for x in range(5):
+            ins("vpxorq", V(c[x]), V(c[x]), V(pos[x + 10]))
+        for x in range(5):
+            ins("vpxorq", V(c[x]), V(c[x]), V(pos[x + 15]))
+        for x in range(5):
+            ins("vpxorq", V(c[x]), V(c[x]), V(pos[x + 20]))
+            e("\tVHOOK\t\tt")
+    elif OPT["parity"] == 2:
+        # xor, ternlog, xor: no copies, the last step a 1-cycle xor
+        for x in range(5):
+            ins("vpxorq", V(c[x]), V(pos[x]), V(pos[x + 5]))
+        for x in range(5):
+            ins("vpternlogq", V(c[x]), V(pos[x + 10]), V(pos[x + 15]), "0x96")
+        for x in range(5):
+            ins("vpxorq", V(c[x]), V(c[x]), V(pos[x + 20]))
+            e("\tVHOOK\t\tt")
+    elif OPT["parity_il"]:
         for x in range(5):
             ins("vmovdqa64", V(c[x]), V(pos[x]))
         for x in range(5):
