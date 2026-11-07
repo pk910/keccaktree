@@ -20,7 +20,7 @@ ifneq ($(findstring x86_64,$(ARCH)),)
 X86_KERNELS = avx512_x8 avx512_x9 avx512vl_x4 avx2_x4 avx2_x8 avx2_x9 avx2_x10 avx2_x5 avx2_x6 avx2_x2 x86_x1
 OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(X86_KERNELS))
 else ifneq ($(findstring aarch64,$(ARCH))$(findstring arm64,$(ARCH)),)
-ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r neon_x3 sha3_x3r_n8 sha3_x3r_n16 sha3_x3r_s16 sha3_x2_n16 sha3_x2_v16
+ARM_KERNELS = neon_x2 sha3_x2 scalar_x1 sha3_x3 sha3_x3r neon_x3 sha3_x3r_n8 sha3_x3r_n16 sha3_x3r_s16 sha3_x2_n16 sha3_x2_v16 sha3_x3r_sp sha3_x3rp sha3_x2_v66
 OBJ_LIST = $(patsubst %,$(OBJ_DIR)/keccak256_%.o,$(ARM_KERNELS))
 else ifneq ($(findstring riscv64,$(ARCH)),)
 # the kernels enable their extensions with .option arch, the C code stays rv64gc

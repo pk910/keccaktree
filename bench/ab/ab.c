@@ -143,12 +143,18 @@ void keccaktree_keccak256_sha3_x3r_n16(unsigned char*, const unsigned char*, uin
 void keccaktree_keccak256_sha3_x3r_s16(unsigned char*, const unsigned char*, uint64_t);
 void keccaktree_keccak256_sha3_x2_n16(unsigned char*, const unsigned char*, uint64_t);
 void keccaktree_keccak256_sha3_x2_v16(unsigned char*, const unsigned char*, uint64_t);
+void keccaktree_keccak256_sha3_x3r_sp(unsigned char*, const unsigned char*, uint64_t);
+void keccaktree_keccak256_sha3_x3rp(unsigned char*, const unsigned char*, uint64_t);
+void keccaktree_keccak256_sha3_x2_v66(unsigned char*, const unsigned char*, uint64_t);
 #else
 #define keccaktree_keccak256_sha3_x3r_n8 NULL
 #define keccaktree_keccak256_sha3_x3r_n16 NULL
 #define keccaktree_keccak256_sha3_x3r_s16 NULL
 #define keccaktree_keccak256_sha3_x2_n16 NULL
 #define keccaktree_keccak256_sha3_x2_v16 NULL
+#define keccaktree_keccak256_sha3_x3r_sp NULL
+#define keccaktree_keccak256_sha3_x3rp NULL
+#define keccaktree_keccak256_sha3_x2_v66 NULL
 #endif
 
 static double now(void) {
@@ -226,6 +232,9 @@ static fn lookup_cand(const char* n) {
     if (!strcmp(n, "sha3_x3r_s16")) return keccaktree_keccak256_sha3_x3r_s16;
     if (!strcmp(n, "sha3_x2_n16")) return keccaktree_keccak256_sha3_x2_n16;
     if (!strcmp(n, "sha3_x2_v16")) return keccaktree_keccak256_sha3_x2_v16;
+    if (!strcmp(n, "sha3_x3r_sp")) return keccaktree_keccak256_sha3_x3r_sp;
+    if (!strcmp(n, "sha3_x3rp")) return keccaktree_keccak256_sha3_x3rp;
+    if (!strcmp(n, "sha3_x2_v66")) return keccaktree_keccak256_sha3_x2_v66;
     return NULL;
 }
 static fn lookup_base(const char* n) {

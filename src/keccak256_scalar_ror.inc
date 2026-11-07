@@ -69,10 +69,15 @@
 /* parities C0..C4, column 4 of the state updated with D4 = C3 ^ rotl(C0, 1)
  * and rotated, then D1, D3, D0, D2 over c0, c2, c4, c1 in that order (each
  * C's last use first); c3 is free */
-/* parities C0..C4, column 4 of the state updated with D4 = C3 ^ rotl(C0, 1)
- * and rotated, then D1, D3, D0, D2 over c0, c2, c4, c1 in that order (each
- * C's last use first); c3 is free */
-.macro STHETA SARGS
+/* SCALAR_ROR_D4_SPILL 1: lane 2 is stored to [sp, #SPILL_SLOT] and its
+ * register forms D4, so column 4 takes one plain EOR per lane: 6 ALU
+ * instructions and a store/load pair instead of 10 ALU instructions
+ * (round 23 only needs lane 24 of that column, 12 fewer there). Set by
+ * keccak256_sha3_x3r_sp.S. */
+#ifndef SCALAR_ROR_D4_SPILL
+#define SCALAR_ROR_D4_SPILL 0
+#endif
+.macro STHETA_PARITY SARGS
 	eor		x\c0, x\s0, x\s5
 	eor		x\c1, x\s1, x\s6
 	eor		x\c2, x\s2, x\s7
@@ -93,6 +98,28 @@
 	eor		x\c2, x\c2, x\s22
 	eor		x\c3, x\c3, x\s23
 	eor		x\c4, x\c4, x\s24
+.endm
+/* D1, D3, D0, D2 over c0, c2, c4, c1 (each C's last use first); c3 free */
+.macro STHETA_D SARGS
+	eor		x\c0, x\c0, x\c2, ror #63
+	eor		x\c2, x\c2, x\c4, ror #63
+	eor		x\c4, x\c4, x\c1, ror #63
+	eor		x\c1, x\c1, x\c3, ror #63
+.endm
+.macro STHETA SARGS
+#if SCALAR_ROR_D4_SPILL
+	str		x\s2, [sp, #SPILL_SLOT]
+	STHETA_PARITY	SPASS
+	eor		x\s2, x\c3, x\c0, ror #63
+	eor		x\s4, x\s4, x\s2
+	eor		x\s9, x\s9, x\s2
+	eor		x\s14, x\s14, x\s2
+	eor		x\s19, x\s19, x\s2
+	eor		x\s24, x\s24, x\s2
+	STHETA_D	SPASS
+	ldr		x\s2, [sp, #SPILL_SLOT]
+#else
+	STHETA_PARITY	SPASS
 	eor		x\s4, x\s4, x\c3
 	eor		x\s9, x\s9, x\c3
 	eor		x\s14, x\s14, x\c3
@@ -103,15 +130,25 @@
 	eor		x\s14, x\s14, x\c0, ror #63
 	eor		x\s19, x\s19, x\c0, ror #63
 	eor		x\s24, x\s24, x\c0, ror #63
-	eor		x\c0, x\c0, x\c2, ror #63
-	eor		x\c2, x\c2, x\c4, ror #63
-	eor		x\c4, x\c4, x\c1, ror #63
-	eor		x\c1, x\c1, x\c3, ror #63
+	STHETA_D	SPASS
+#endif
 	SROL		\s4, R4
 	SROL		\s9, R9
 	SROL		\s14, R14
 	SROL		\s19, R19
 	SROL		\s24, R24
+.endm
+/* round 23: only lane 24 of column 4 is needed (row 0, x = 0..3) */
+.macro STHETA_LAST SARGS
+#if SCALAR_ROR_D4_SPILL
+	STHETA_PARITY	SPASS
+	eor		x\s2, x\c3, x\c0, ror #63
+	eor		x\s24, x\s24, x\s2
+	STHETA_D	SPASS
+	SROL		\s24, R24
+#else
+	STHETA		SPASS
+#endif
 .endm
 
 /* theta and rho on columns 0..3: D0 in c4, D1 in c0, D2 in c1, D3 in c2 */
@@ -126,6 +163,62 @@
 	SRHO1		\s8, \c2, R8
 	SRHO1		\s10, \c4, R10
 	SRHO1		\s11, \c0, R11
+	SRHO1		\s12, \c1, R12
+	SRHO1		\s13, \c2, R13
+	SRHO1		\s15, \c4, R15
+	SRHO1		\s16, \c0, R16
+	SRHO1		\s17, \c1, R17
+	SRHO1		\s18, \c2, R18
+	SRHO1		\s20, \c4, R20
+	SRHO1		\s21, \c0, R21
+	SRHO1		\s22, \c1, R22
+	SRHO1		\s23, \c2, R23
+.endm
+
+/* STHETA in two pieces (parities; the rest), SRHO in two halves, for
+ * finer interleaving (keccak256_sha3_x3rp.S) */
+.macro STHETA_REST SARGS
+#if SCALAR_ROR_D4_SPILL
+	eor		x\s2, x\c3, x\c0, ror #63
+	eor		x\s4, x\s4, x\s2
+	eor		x\s9, x\s9, x\s2
+	eor		x\s14, x\s14, x\s2
+	eor		x\s19, x\s19, x\s2
+	eor		x\s24, x\s24, x\s2
+	STHETA_D	SPASS
+	ldr		x\s2, [sp, #SPILL_SLOT]
+#else
+	eor		x\s4, x\s4, x\c3
+	eor		x\s9, x\s9, x\c3
+	eor		x\s14, x\s14, x\c3
+	eor		x\s19, x\s19, x\c3
+	eor		x\s24, x\s24, x\c3
+	eor		x\s4, x\s4, x\c0, ror #63
+	eor		x\s9, x\s9, x\c0, ror #63
+	eor		x\s14, x\s14, x\c0, ror #63
+	eor		x\s19, x\s19, x\c0, ror #63
+	eor		x\s24, x\s24, x\c0, ror #63
+	STHETA_D	SPASS
+#endif
+	SROL		\s4, R4
+	SROL		\s9, R9
+	SROL		\s14, R14
+	SROL		\s19, R19
+	SROL		\s24, R24
+.endm
+.macro SRHO_H SARGS
+	SRHO1		\s0, \c4, R0
+	SRHO1		\s1, \c0, R1
+	SRHO1		\s2, \c1, R2
+	SRHO1		\s3, \c2, R3
+	SRHO1		\s5, \c4, R5
+	SRHO1		\s6, \c0, R6
+	SRHO1		\s7, \c1, R7
+	SRHO1		\s8, \c2, R8
+	SRHO1		\s10, \c4, R10
+	SRHO1		\s11, \c0, R11
+.endm
+.macro SRHO_T SARGS
 	SRHO1		\s12, \c1, R12
 	SRHO1		\s13, \c2, R13
 	SRHO1		\s15, \c4, R15
@@ -234,7 +327,7 @@
 
 /* round 23: row 0, x = 0..3 only, stored at [[sp + OUT_SLOT] + OUT_OFF] */
 .macro SLAST_ROUND SARGS
-	STHETA		SPASS
+	STHETA_LAST	SPASS
 	SRHO1		\s0, \c4, R0
 	SRHO1		\s6, \c0, R6
 	SRHO1		\s12, \c1, R12
