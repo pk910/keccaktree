@@ -82,6 +82,21 @@ Branch `all-diff` (after merging lean-verification 0fbdb01), remote `/root/kt-di
   - ARM/RISC-V versions (`reads` + `exec_local` per ISA, ~250 lines each following the x86 file:
     `reads` definition, `_loc` combinators, generated case list).
 
+### Audit
+`inplaceaudit <Kernel>` on `/root/kt-diff` (memory compacted every 256 steps):
+
+| | |
+|---|---|
+| kernels | all 14 x86 kernels |
+| counts | 0 .. 64+2N each, 1,104 runs |
+| `accessCheck` | true |
+| aliased machine | halts, no model fault |
+| digests | every digest the kernel writes is in the storage |
+| failures | 0 |
+
+Per kernel: Avx2X10 85/85, Avx2X2 69/69, Avx2X4 73/73, Avx2X5 75/75, Avx2X6 77/77, Avx2X8 81/81,
+Avx2X9 83/83, Avx512vlX4(d) 73/73, Avx512X8(d) 81/81, Avx512X9(d) 83/83, X86X1 67/67.
+
 ## (b) Unaligned buffers
 * x86/ARM: the argument in `notes/unaligned.md` ("region base = user pointer") stands, with evidence:
   - `alignaudit`: 0 of 3.7M aligned moves outside the stack frame;
