@@ -11,6 +11,9 @@ package cgo
 static const char* keccaktree_go_detect(void) {
 	keccaktree_hash_fcn f = keccaktree_detect();
 #ifdef __x86_64__
+	if (f == keccaktree_keccak256_avx512_x9d) return "avx512_x9d";
+	if (f == keccaktree_keccak256_avx512_x8d) return "avx512_x8d";
+	if (f == keccaktree_keccak256_avx512vl_x4d) return "avx512vl_x4d";
 	if (f == keccaktree_keccak256_avx512_x9) return "avx512_x9";
 	if (f == keccaktree_keccak256_avx512_x8) return "avx512_x8";
 	if (f == keccaktree_keccak256_avx512vl_x4) return "avx512vl_x4";

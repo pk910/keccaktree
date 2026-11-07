@@ -51,6 +51,9 @@ pub mod ffi {
         pub fn keccaktree_keccak256_avx512vl_x4(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512_x8(output: *mut u8, input: *const u8, count: u64);
         pub fn keccaktree_keccak256_avx512_x9(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_avx512vl_x4d(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_avx512_x8d(output: *mut u8, input: *const u8, count: u64);
+        pub fn keccaktree_keccak256_avx512_x9d(output: *mut u8, input: *const u8, count: u64);
     }
 
     #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
@@ -147,6 +150,12 @@ pub enum Backend {
     Avx512X8,
     /// x86-64 AVX-512 x8 plus one node in the integer registers (BMI1, BMI2).
     Avx512X9,
+    /// Avx512VlX4 with the D-form rounds (all lanes in registers): AMD cores.
+    Avx512VlX4d,
+    /// Avx512X8 with the D-form rounds: AMD cores (Zen 4: 1.12x, Zen 5: 1.19x).
+    Avx512X8d,
+    /// Avx512X9 with the D-form rounds: the pick on Zen 4 (1.17x Avx512X9).
+    Avx512X9d,
     /// AArch64 Advanced SIMD, 2 nodes per batch.
     NeonX2,
     /// AArch64 FEAT_SHA3, 2 nodes per batch.
@@ -182,7 +191,7 @@ impl fmt::Display for Unsupported {
 
 impl Backend {
     /// Every backend, in no particular order.
-    pub const ALL: [Backend; 22] = [
+    pub const ALL: [Backend; 25] = [
         Backend::Generic,
         Backend::Avx2X4,
         Backend::Avx2X8,
@@ -195,6 +204,9 @@ impl Backend {
         Backend::Avx512VlX4,
         Backend::Avx512X8,
         Backend::Avx512X9,
+        Backend::Avx512VlX4d,
+        Backend::Avx512X8d,
+        Backend::Avx512X9d,
         Backend::NeonX2,
         Backend::Sha3X2,
         Backend::ScalarX1,
@@ -222,6 +234,9 @@ impl Backend {
             Backend::Avx512VlX4 => "avx512vl_x4",
             Backend::Avx512X8 => "avx512_x8",
             Backend::Avx512X9 => "avx512_x9",
+            Backend::Avx512VlX4d => "avx512vl_x4d",
+            Backend::Avx512X8d => "avx512_x8d",
+            Backend::Avx512X9d => "avx512_x9d",
             Backend::NeonX2 => "neon_x2",
             Backend::Sha3X2 => "sha3_x2",
             Backend::ScalarX1 => "scalar_x1",
@@ -262,6 +277,12 @@ impl Backend {
             Backend::Avx512X8 if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512_x8),
             #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
             Backend::Avx512X9 if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512_x9),
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
+            Backend::Avx512VlX4d if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512vl_x4d),
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
+            Backend::Avx512X8d if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512_x8d),
+            #[cfg(all(keccaktree_asm, target_arch = "x86_64"))]
+            Backend::Avx512X9d if x86::avx512() && x86::bmi() => Some(ffi::keccaktree_keccak256_avx512_x9d),
             #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]
             Backend::NeonX2 => Some(ffi::keccaktree_keccak256_neon_x2),
             #[cfg(all(keccaktree_asm, target_arch = "aarch64"))]

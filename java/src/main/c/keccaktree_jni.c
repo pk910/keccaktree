@@ -71,6 +71,9 @@ static const kernel kernels[] = {
     {"avx512vl_x4", keccaktree_keccak256_avx512vl_x4},
     {"avx512_x8", keccaktree_keccak256_avx512_x8},
     {"avx512_x9", keccaktree_keccak256_avx512_x9},
+    {"avx512vl_x4d", keccaktree_keccak256_avx512vl_x4d},
+    {"avx512_x8d", keccaktree_keccak256_avx512_x8d},
+    {"avx512_x9d", keccaktree_keccak256_avx512_x9d},
 #endif
 #ifdef __aarch64__
     {"neon_x2", keccaktree_keccak256_neon_x2},

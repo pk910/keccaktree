@@ -8,7 +8,18 @@
  * registers with explicit rotations (keccak256_scalar_ror.inc), their
  * rounds interleaved row by row. keccak256_sha3_x3.S is the same kernel
  * with the lazy-rotation scalar stream for Arm Ltd cores. Fewer than 3
- * remaining nodes go to keccak256_sha3_x2.
+ * remaining nodes go to keccak256_sha3_x2, and so do 4: sha3_x2 pads a
+ * single node to a pair, so 4 nodes as two pairs (4 x 77 ns on M1) beat
+ * a triple and a padded single (3 x 67 + 155 ns): 1.14x at count 4, 1.09x
+ * at 7, 1.07x at 10, 1.04x at 16, within noise from 64 on.
+ *
+ * On Apple M1 this kernel is at the core's dispatch bound: 197
+ * instructions per round (67 vector, 130 scalar) at 8 per cycle = 24.6
+ * cycles, measured 24.4-24.9 (62-67 ns per node, 2.9-3.2 GHz). A pure
+ * vector kernel needs 33 SIMD ops per node per round on 4 pipes = 8.25
+ * cycles per node-round, the same as x3r's 24.6 / 3, so no wider SHA3
+ * kernel (x4 as two vector streams, x5/x6 hybrids) can be faster here;
+ * see notes in the optimization project (round 2, apple).
  *
  * Each ROUND3 line names the 25 lane registers and the free pair of the
  * vector stream, then the 25 lane registers and the five parity registers
@@ -49,6 +60,8 @@
 	FUNCTION keccaktree_keccak256_sha3_x3r
 	cmp		x2, #3
 	b.lo		3f
+	cmp		x2, #4
+	b.eq		3f
 	stp		x29, x30, [sp, #-192]!
 	stp		x19, x20, [sp, #16]
 	stp		x21, x22, [sp, #32]
@@ -99,8 +112,11 @@
 	add		x0, x0, #96
 	add		x1, x1, #192
 	sub		x2, x2, #3
+	cmp		x2, #4			/* 4 left: two pairs, not 3 + 1 */
+	b.eq		4f
 	cmp		x2, #3
 	b.hs		1b
+4:
 	ldp		x19, x20, [sp, #16]
 	ldp		x21, x22, [sp, #32]
 	ldp		x23, x24, [sp, #48]
