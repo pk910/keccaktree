@@ -245,6 +245,7 @@ theorem path{c} : {ISA_EXPR}.pathOk rodata prog idx{c} cut{c} = true := by decid
     for key, (g, used0, hidx0) in groups.items():
         sig, hk, ck, kind, rot = key
         params = ' '.join(f'v{i}' for i in range(len(used0)))
+        params = f'({params} : Nat) ' if used0 else ''
         hyps = ' '.join(f'(h{i} : env v{i} = {quantity("n", k_)}.rotateLeft {r_})' for i, kr in enumerate(hk) if kr for (k_, r_) in [kr])
         hyps += ''.join(f' (c{k} : L (A n) {k} = {"1#64" if k == 8 else ("0x8000000000000000#64" if k == 16 else "0#64")})' for k in ck)
         hnames = ' '.join(f'h{i}' for i, kr in enumerate(hk) if kr)
@@ -252,14 +253,17 @@ theorem path{c} : {ISA_EXPR}.pathOk rodata prog idx{c} cut{c} = true := by decid
         out.write(f'''set_option maxHeartbeats 40000000 in
 set_option maxRecDepth 100000 in
 /-- Lane kind {kind} (rotated by {rot}) of round {round_in}, for any node `n` whose quantities are at `v*`. -/
-theorem lane{c}_g{g} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (n : Fin {count}) ({params} : Nat) {hyps} :
-    E.eval env ({sig}) = (specQuantity (Spec.round {round_in} (A n)) {kind}).rotateLeft {rot} := by
-  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
+theorem lane{c}_g{g} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (n : Fin {count}) {params}{hyps} :
+    E.eval env ({sig}) = {out_quantity('n', round_in, kind)}.rotateLeft {rot} := by
+''' + (f'''  simp only [E.eval]
+  all_goals decide +kernel
+
+''' if kind >= 75 else f'''  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
   {"simp only [specQuantity, Spec.RC]" + at_h if hnames else "skip"}
   simp only [{SIMP_SPEC}]
   bv_decide (config := {{ timeout := 1800 }})
 
-''')
+'''))
     for j, (node, kind, var, rot, ln) in enumerate(outs):
         g, node, used, hidx, cidx = inst[j]
         hyps = ' '.join(f'(h{i} : env {var_} = {quantity(node_, kind_)}.rotateLeft {rot_})'
@@ -269,7 +273,7 @@ theorem lane{c}_g{g} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) 
         hargs = ' '.join(f'h{i}' for i in hidx if i is not None) + ''.join(f' c{i}' for i in cidx)
         out.write(f'''/-- {ln} -/
 theorem lane{c}_{j} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) {hyps} :
-    E.eval env (readVar result{c} {var}) = (specQuantity (Spec.round {round_in} (A {node})) {kind}).rotateLeft {rot} := by
+    E.eval env (readVar result{c} {var}) = {out_quantity(node, round_in, kind)}.rotateLeft {rot} := by
   rw [out{c}_{j}]
   exact lane{c}_g{g} env A ⟨{node}, by decide⟩ {args} {hargs}
 
@@ -293,6 +297,10 @@ theorem lane{c}_{j} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) {
     out.write('  exact ⟨' + ', '.join(parts) + '⟩\n\n')
     out.write(f'end Keccaktree.Kernels.{ns}\n')
 
+def out_quantity(node, round_in, kind):
+    """the spec quantity of an output: of the node's state after the slice's round, or a round constant"""
+    return f'(specQuantity (Spec.round {round_in} (A {node})) {kind})' if kind < 75 else f'(Spec.RC {kind - 75})'
+
 def quantity(node, kind):
     """the spec quantity of a match: `specQuantity (A node) kind`, or a round constant (kinds 75..98)"""
     return f'(specQuantity (A {node}) {kind})' if kind < 75 else f'(Spec.RC {kind - 75})'
@@ -314,6 +322,8 @@ open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak
 ''')
         for c in range(25):
             doc = f'The locations at the start of slice {c}' if c < 24 else 'The output locations after the batch'
+            if len(allocs[c]) > 200:
+                f.write('set_option maxRecDepth 100000 in\n')
             f.write(f'/-- {doc} (for states `A n` of the nodes). -/\n')
             f.write(f'def Inv{c} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) : Prop :=\n  ' + inv_conj(allocs[c]) +
                     (''.join(f' ∧\n  {h}' for (_, _, h) in chyps) if c == 0 else '') + '\n\n')
