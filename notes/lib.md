@@ -57,11 +57,7 @@ starts with `kmovw k1`), or prove `NormThm` directly for `EntryX86` states.
   `pathW (setWord rodata 112 rep) prog 112 idx cut` (decide; `pathW_reloc` for relocated cuts) ⇒ same run
   under v (`pathW_run`); the policy step: `policy_ja_class`; the dirty flags after it: `run_ovr_path` with
   `D = {zf, cf}` up to the next compare (`cmpi 0 (2)` before the `jcct`).
-* **Model limitation (documented gap)**: a threshold word ≥ 2^56 decodes as a pointer (region tag in the top
-  byte) in the model and the compare faults (`err`); hardware compares unsigned (class `≥ 3` / `≥ 9`).
-  The library itself only writes 1, 2 (small tail; default 1) and 5, 9 (mid tail; default 4); the public
-  setters accept any `uint64_t`.  Values in [2^55, 2^56) also decode as numbers but are outside `classRep`'s
-  `< 2^55` hypothesis (harmless to extend).
+* (Former gap, fixed by the core change below: threshold words ≥ 2^56 used to decode as pointers.)
 
 ## 3. Library tables (DONE: statements; kernel theorems to be plugged in)
 `Asm/LibTable.lean`: `x86Shape` (14 kernels), `armShape` (6), `rvShape` (4; one table per `vlmax`):
@@ -120,3 +116,38 @@ before any vector instruction on every path.  Axioms: propext, Quot.sound (no bv
   annotation with call/return handling (the x86 batch is `call`ed: `ret` has a dynamic successor).
 * Thresholds ≥ 2^56 (model decodes them as pointers); VLENs without RVV kernel proofs.
 * Calibration runs alias input and output (`fns[i](buf, buf, n)`): outside the model (results discarded).
+
+
+## CORE CHANGE (follow-up 1, commit ca9c63d): unsigned policy compare `cmprm`
+Kernel agents: this changes `X86.exec` for one instruction.
+* `.cmprm a m` (`cmp reg, qword ptr [m]`; used only by avx2_x4 idx 761 and avx2_x10 idx 1884, both
+  `[rip + 896]` = `.data` word 112) now reads the loaded word as a **data constant** (`asConst`) and compares
+  it with the register's number as **64-bit unsigned** (`X86.setFlagsNum s x w`: ZF = `ofInt x = w`,
+  CF = `(ofInt x).toNat < w.toNat`); the register must be a number (region 0), else fault.  Before: the word
+  was decoded as an address (`asAddr`), so words ≥ 2^56 decoded as pointers and the compare faulted.
+* `X86.decodes (.cmprm a m)` no longer lists the loaded word (it is not decoded as an address any more):
+  `mb m ++ [s.getGD a]` — fewer `relocOk` side conditions.
+* Updated proofs: `Hom.exec_map_cmprm`/`err_exec_cmprm`, `Reloc.exec_reloc_cmprm`; `EntryCtl.exec_ovr`,
+  `Rodata.exec_rodata_eq`/`pathW_reloc`, `Footprint` unchanged and green.  `Rodata.exec_cmprm_word` and
+  **`policy_ja_class` now hold for every `v < 2^64`** (`classRep` covers all 64-bit setter values:
+  avx2_x4 `≥ 3` and avx2_x10 `≥ 9` include every large value).
+* Runs unchanged (kttool `paths`, old core binary vs new, scripts `/root/kt-lib-cmp2.sh`, `/root/kt-lib-cls.sh`):
+  only avx2_x4/avx2_x10 contain `cmprm` (every other program runs identically by construction); for both,
+  the default image, counts 0..84: identical output (paths, final registers, digests); thresholds 0..9,
+  counts 0..30: identical.  Thresholds 2^56, 2^63, 2^64-1: old core faulted (err in 15 resp. 11 counts) or —
+  for 2^63, whose top byte decodes as region 128 % 8 = 0 — silently compared against 0 (class `≤ 1`); new
+  core: no fault, and the run is byte-identical to the class representative (avx2_x4 ↔ 3, avx2_x10 ↔ 9).
+* Rebuilt on the merged core (lean-verification 172eca1 + this change): X86X1 GenSE1/GenSE3/GenSB/GenSX,
+  `X86X1.All`, `X86X1.Lib` (`lib_x86_x1`: no sorry), LibTable, Dispatch, LibArm, LibRv, ArmFlags, RvVl, kttool.
+
+## Follow-up 2: dispatch (commit ca9c63d)
+* Setters `keccaktree_avx2_small_tail`/`_x10_mid_tail` store their `uint64_t` unclamped (asm:
+  `mov qword ptr [rip+.L…], ARG_OUT; ret`) — modelled as `Event.writeSmall/writeMid v` (value mod 2^64);
+  every value is in a covered class.
+* `Event` model of the globals (`detectStore`, `override`, setter writes), `reachable`: after any interleaving,
+  `hash_ptr` is init_and_hash / generic / a supported library kernel / a user override; `reachable_cfg`;
+  `hash_x86_reachable`: in every reachable state the library theorem holds for whatever thresholds a call
+  reads.  Memory-model assumption (documented in Dispatch.lean): aligned 8-byte plain stores/loads of
+  `hash_ptr` and the threshold words are not torn (x86-64 atomic, AArch64/RISC-V single-copy atomic); C11
+  formally calls the race UB.  Remaining trusted: compiler/ABI, CPU feature reports, calibration's in-place
+  scratch runs (aliasing, results discarded), user override functions.
