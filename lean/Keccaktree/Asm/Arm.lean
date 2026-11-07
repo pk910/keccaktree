@@ -89,17 +89,13 @@ def vop3 (s : State α) (d a b c : Nat) (f : α → α → α → α) : State α
 
 def rotr (x : α) (n : Nat) : α := rol x ((64 - n % 64) % 64)
 
-def wordGpr (v : BitVec 64) : Addr :=
-  let r := (v >>> 56).toNat
-  if r = 0 then ⟨0, v.toInt⟩ else ⟨⟨r % 8, Nat.mod_lt _ (by decide)⟩, ((v &&& 0x00ffffffffffffff#64).toNat : Int)⟩
-
 /-- The general registers live in `gd` (data view); a pointer or count is a
 constant word in the `gprWord` encoding.  `gx` decodes it; it is `none` for a
 non-constant (symbolic) word, and every instruction that needs it fails then. -/
-def gx (s : State α) (n : Nat) : Option Addr := (asConst (s.getGD n)).map wordGpr
+def gx (s : State α) (n : Nat) : Option Addr := asAddr (s.getGD n)
 
 /-- Write a general register with a pointer/count (`g` is not used by this model). -/
-def setX (s : State α) (n : Nat) (a : Addr) : State α := s.setGD n (const (gprWord a))
+def setX (s : State α) (n : Nat) (a : Addr) : State α := s.setGD n (ptr a)
 
 /-- Run `k` on the decoded register `n`, failing if it is not a constant. -/
 def withX (s : State α) (n : Nat) (k : Addr → State α) : State α :=
@@ -128,9 +124,6 @@ def condHolds (s : State α) : Cond → Bool
 def setFlags (s : State α) (a b : Int) : State α :=
   { s with zf := a = b, cf := b ≤ a, nf := a < b, vf := false }
 
-/-- A general register as a stored word: a number as is, a pointer as (region << 56) | offset. -/
-def gprWord (a : Addr) : BitVec 64 :=
-  if a.region = 0 then BitVec.ofInt 64 a.off else BitVec.ofNat 64 (a.region.val * 2 ^ 56 + a.off.toNat)
 /-- Words to store for a register operand. -/
 def regWords (s : State α) : LReg → List α
   | .q n => [lane s n 0, lane s n 1]
@@ -243,7 +236,7 @@ def execTrace (rodata : Array (BitVec 64)) (l : List Instr) (s : State α) : Sta
 def initState (input : Int → α) (zero : α) (count : Nat) (entry : Nat) : State α :=
   let g := ((((Vector.replicate 32 (⟨0, 0⟩ : Addr)).set 0 ⟨rOutput, 0⟩).set 1 ⟨rInput, 0⟩).set 2 ⟨0, count⟩).set 31 ⟨rStack, 1 <<< 20⟩
   { v := Vector.replicate 32 (Vector.replicate 8 (const 0#64))
-    g := g, gd := Vector.ofFn fun n : Fin 32 => const (gprWord g[n])
+    g := g, gd := Vector.ofFn fun n : Fin 32 => ptr g[n]
     k := Vector.replicate 8 0
     zf := false, cf := false, nf := false, vf := false, vl := 0
     mem := initMem input zero

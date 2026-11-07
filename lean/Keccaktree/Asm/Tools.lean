@@ -26,6 +26,7 @@ def hex (v : BitVec 64) : String := "0x" ++ String.ofList (Nat.toDigits 16 v.toN
 def _root_.Keccaktree.Asm.E.toLean : E → String
   | .var i => s!"(.var {i})"
   | .const v => s!"(.const {hex v})"
+  | .ptr a => s!"(.ptr (Addr.mk {a.region.val} ({a.off})))"
   | .xor a b => s!"(.xor {E.toLean a} {E.toLean b})"
   | .and a b => s!"(.and {E.toLean a} {E.toLean b})"
   | .or a b => s!"(.or {E.toLean a} {E.toLean b})"
@@ -37,7 +38,7 @@ def _root_.Keccaktree.Asm.E.toLean : E → String
   | .ternlog imm a b c => s!"(.ternlog {imm} {E.toLean a} {E.toLean b} {E.toLean c})"
 
 def _root_.Keccaktree.Asm.E.size : E → Nat
-  | .var _ => 1 | .const _ => 1
+  | .var _ => 1 | .const _ => 1 | .ptr _ => 1
   | .xor a b | .and a b | .or a b | .add a b => 1 + a.size + b.size
   | .not a | .shl a _ | .shr a _ | .rol a _ => 1 + a.size
   | .ternlog _ a b c => 1 + a.size + b.size + c.size
@@ -125,6 +126,7 @@ def symRun (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : List Nat) 
 partial def _root_.Keccaktree.Asm.E.vars : E → List Nat
   | .var i => [i]
   | .const _ => []
+  | .ptr _ => []
   | .xor a b | .and a b | .or a b | .add a b => a.vars ++ b.vars
   | .not a | .shl a _ | .shr a _ | .rol a _ => a.vars
   | .ternlog _ a b c => a.vars ++ b.vars ++ c.vars

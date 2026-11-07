@@ -13,3 +13,6 @@ import Keccaktree.Asm.Compose
 import Keccaktree.Asm.Final
 import Keccaktree.Asm.RoundLanes
 import Keccaktree.Asm.Node
+import Keccaktree.Asm.Reloc
+import Keccaktree.Asm.ArmReloc
+import Keccaktree.Asm.RiscvReloc

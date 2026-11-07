@@ -153,13 +153,9 @@ def State.getV (s : State α) (n : Nat) : List α := (s.v.getD n (Vector.replica
 def State.setV (s : State α) (n : Nat) (x : Vector α 8) : State α := { s with v := s.v.setIfInBounds n x }
 def State.getG (s : State α) (n : Nat) : Addr := s.g.getD n ⟨0, 0⟩
 
-/-- A general register as a stored word: a number as is, a pointer as (region << 56) | offset. -/
-def gprWord (a : Addr) : BitVec 64 :=
-  if a.region = 0 then BitVec.ofInt 64 a.off else BitVec.ofNat 64 (a.region.val * 2 ^ 56 + a.off.toNat)
-
 /-- Write a general register (both views). -/
 def State.setG (s : State α) (n : Nat) (a : Addr) : State α :=
-  { s with g := s.g.setIfInBounds n a, gd := s.gd.setIfInBounds n (const (gprWord a)) }
+  { s with g := s.g.setIfInBounds n a, gd := s.gd.setIfInBounds n (ptr a) }
 
 /-- The data view of a general register. -/
 def State.getGD (s : State α) (n : Nat) : α := s.gd.getD n (const 0)
@@ -188,16 +184,12 @@ def memStoreFrom (m : Region → Int → α) (r : Region) (q : Int) : List α �
 def State.storeWords (s : State α) (a : Addr) (vs : List α) : Option (State α) :=
   if a.off % 8 = 0 ∧ a.region ≠ rRodata then some { s with mem := memStoreFrom s.mem a.region (a.off / 8) vs } else none
 
-/-- A word as a register value: a number as is, a pointer as (region << 56) | offset. -/
-def wordGpr (v : BitVec 64) : Addr :=
-  let r := (v >>> 56).toNat
-  if r = 0 then ⟨0, v.toInt⟩ else ⟨⟨r % 8, Nat.mod_lt _ (by decide)⟩, ((v &&& 0x00ffffffffffffff#64).toNat : Int)⟩
-
-/-- The general registers live in `gd`; a pointer or count is a constant word
-in the `gprWord` encoding.  `gx` decodes it; it is `none` for a non-constant
-(symbolic) word, and every instruction that needs it fails then. -/
-def gx (s : State α) (n : Nat) : Option Addr := (asConst (s.getGD n)).map wordGpr
-def setX (s : State α) (n : Nat) (a : Addr) : State α := s.setGD n (const (gprWord a))
+/-- The general registers live in `gd`; a pointer or count is a `ptr` lane
+(a constant word in the `gprWord` encoding on the concrete machine).  `gx`
+decodes it; it is `none` for a data (symbolic) word, and every instruction
+that needs it fails then. -/
+def gx (s : State α) (n : Nat) : Option Addr := asAddr (s.getGD n)
+def setX (s : State α) (n : Nat) (a : Addr) : State α := s.setGD n (ptr a)
 def withX (s : State α) (n : Nat) (k : Addr → State α) : State α :=
   match gx s n with
   | some a => k a
@@ -428,20 +420,22 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
     else next (setX s d ⟨a.region, a.off - imm⟩)
   | .andi d imm => withX s d fun a =>
     -- only used to align the stack pointer: `and rsp, -64`; region bases are 64-byte aligned
-    if imm = -64 then next (setX s d ⟨a.region, a.off - (a.off % 64)⟩) else s.fail
+    if imm = -64 ∧ a.region = rStack then next (setX s d ⟨a.region, a.off - (a.off % 64)⟩) else s.fail
   | .shl d imm => withX s d fun a =>
     if a.region = 0 then next (setX s d ⟨0, a.off * 2 ^ imm⟩) else s.fail
-  | .dec d => withX s d fun a => next { setX s d ⟨a.region, a.off - 1⟩ with zf := a.off - 1 = 0 }
+  | .dec d => withX s d fun a =>
+    -- a counter: zf is only meaningful for plain numbers
+    if a.region = 0 then next { setX s d ⟨a.region, a.off - 1⟩ with zf := a.off - 1 = 0 } else s.fail
   | .xorz d => next { setX s d (Addr.num 0) with zf := true, cf := false }
   | .cmpi a imm => withX s a fun x => next (setFlagsSub s x (Addr.num imm))
   | .cmpr a b => withX s a fun x => withX s b fun y => next (setFlagsSub s x y)
   | .cmpm m b => withMem s m fun ad => withLoad rodata s ad 1 fun ws =>
-    match asConst (ws.headD (const 0)) with
-    | some v => withX s b fun y => next (setFlagsSub s (wordGpr v) y)
+    match asAddr (ws.headD (const 0)) with
+    | some v => withX s b fun y => next (setFlagsSub s v y)
     | none => s.fail
   | .cmprm a m => withMem s m fun ad => withLoad rodata s ad 1 fun ws =>
-    match asConst (ws.headD (const 0)) with
-    | some v => withX s a fun x => next (setFlagsSub s x (wordGpr v))
+    match asAddr (ws.headD (const 0)) with
+    | some v => withX s a fun x => next (setFlagsSub s x v)
     | none => s.fail
   | .test a b => withX s a fun x => withX s b fun y =>
     if x.region = 0 ∧ y.region = 0 then
@@ -462,8 +456,10 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   | .addm m imm => withMem s m fun a => withLoad rodata s a 1 fun ws =>
     withStore s a [add (ws.headD (const 0)) (const (BitVec.ofInt 64 imm))] next
   | .decm m => withMem s m fun a => withLoad rodata s a 1 fun ws =>
-    match asConst (ws.headD (const 0)) with
-    | some v => withStore s a [const (v - 1#64)] fun s' => next { s' with zf := v - 1#64 = 0#64 }
+    match asAddr (ws.headD (const 0)) with
+    | some v =>
+      if v.region = 0 then withStore s a [ptr ⟨v.region, v.off - 1⟩] fun s' => next { s' with zf := v.off - 1 = 0 }
+      else s.fail
     | none => s.fail
   | .jcc c t => { s with pc := if condHolds s c then t else s.pc + 1 }
   | .jmp t => { s with pc := t }
@@ -471,12 +467,12 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   | .call t => withX s 4 fun sp =>
     let sp' : Addr := ⟨sp.region, sp.off - 8⟩
     -- the return address is modelled as the instruction index
-    withStore s sp' [const (BitVec.ofNat 64 (s.pc + 1))] fun s' => { setX s' 4 sp' with pc := t, depth := s.depth + 1 }
+    withStore s sp' [ptr (Addr.num (s.pc + 1))] fun s' => { setX s' 4 sp' with pc := t, depth := s.depth + 1 }
   | .ret =>
     if s.depth = 0 then { s with halted := true } else
     withX s 4 fun sp => withLoad rodata s sp 1 fun ws =>
-      match asConst (ws.headD (const 0)) with
-      | some ra => { setX s 4 ⟨sp.region, sp.off + 8⟩ with pc := ra.toNat, depth := s.depth - 1 }
+      match asAddr (ws.headD (const 0)) with
+      | some ra => if ra.region = 0 then { setX s 4 ⟨sp.region, sp.off + 8⟩ with pc := ra.off.toNat, depth := s.depth - 1 } else s.fail
       | none => s.fail
   | .push src => withX s 4 fun sp =>
     let sp' : Addr := ⟨sp.region, sp.off - 8⟩
@@ -488,6 +484,41 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   | .repmovsb => withX s 1 fun n => withX s 6 fun src => withX s 7 fun dst => repBody rodata s n src dst
   | .tailcall name => { s with halted := true, tail := some name }
   | .nop => next s
+
+/-- The lane values an instruction decodes as addresses (pointers, counts): the
+base registers of its memory operands, its pointer/count registers, and the
+words it loads as addresses.  Relocation (`Keccaktree.Asm.Reloc`) only needs
+these to stay representable. -/
+def decodes (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : List α :=
+  let mb : MemOp → List α := fun m => match m with | .base g _ => [s.getGD g] | .rip _ => []
+  let sb : Src → List α := fun b => match b with | .mem m | .bcst m => mb m | .reg _ => []
+  let gb : GSrc → List α := fun b => match b with | .mem m => mb m | _ => []
+  let word : MemOp → List α := fun m => match memAddr? s m with
+    | some a => match s.loadWords rodata a 1 with | some ws => [ws.headD (const 0)] | none => []
+    | none => []
+  let spWord : List α := match gx s 4 with
+    | some sp => match s.loadWords rodata sp 1 with | some ws => [ws.headD (const 0)] | none => []
+    | none => []
+  match i with
+  | .vmov _ _ src _ => sb src
+  | .vstore _ m _ => mb m
+  | .vpxor _ _ _ b | .vpand _ _ _ b | .vpandn _ _ _ b | .vpor _ _ _ b | .vpaddq _ _ _ b
+  | .vpsllvq _ _ _ b | .vpsrlvq _ _ _ b | .vpternlogq _ _ _ b _ | .vpshufb _ _ _ b
+  | .vpblendd _ _ _ b _ | .vpalignr _ _ _ b _ | .vpunpcklqdq _ _ _ b | .vpunpckhqdq _ _ _ b
+  | .vperm2i128 _ _ b _ | .vinserti128 _ _ b _ | .vshufi64x2 _ _ _ b _ | .vpermt2q _ _ _ b => sb b
+  | .vextracti128 m _ _ | .kmovw _ m | .lea _ m | .xorm m _ | .storeqi m _ | .addm m _
+  | .storeq m _ | .loadq _ m => mb m
+  | .add d _ | .sub d _ | .andi d _ | .shl d _ | .dec d | .cmpi d _ => [s.getGD d]
+  | .cmpr a b | .test a b => [s.getGD a, s.getGD b]
+  | .cmpm m b => mb m ++ word m ++ [s.getGD b]
+  | .cmprm a m => mb m ++ word m ++ [s.getGD a]
+  | .bt _ b => [s.getGD b]
+  | .alu _ _ b | .andn _ _ b | .rorx _ b _ => gb b
+  | .decm m => mb m ++ word m
+  | .call _ | .push _ | .pop _ => [s.getGD 4]
+  | .ret => [s.getGD 4] ++ spWord
+  | .repmovsb => [s.getGD 1, s.getGD 6, s.getGD 7]
+  | _ => []
 
 def step (rodata : Array (BitVec 64)) (prog : Array Instr) (s : State α) : State α := exec rodata (prog.getD s.pc .nop) s
 
