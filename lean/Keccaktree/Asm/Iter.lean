@@ -138,6 +138,7 @@ def ctlTreeOk (B : Int) : E → Bool
 next cut holds the folded pointer). -/
 def E.fold : E → E
   | .add (.ptr a) (.const k) => .ptr ⟨a.region, a.off + (k.toNat : Int)⟩
+  | .ptr a => if a.region = 0 then .const (gprWord a) else .ptr a
   | e => e
 
 theorem gprWord_add_const (a : Addr) (k : BitVec 64) :
@@ -150,7 +151,7 @@ theorem gprWord_add_const (a : Addr) (k : BitVec 64) :
   · rw [h]
   · rw [h, BitVec.add_assoc]
 
-theorem E.eval_reloc_fold (ρ : Reloc) (env : Nat → BitVec 64) (e : E) :
+theorem E.eval_reloc_fold (ρ : Reloc) (hρ : ρ.ok) (env : Nat → BitVec 64) (e : E) :
     E.eval env (E.reloc ρ (E.fold e)) = E.eval env (E.reloc ρ e) := by
   unfold E.fold
   split
@@ -160,6 +161,13 @@ theorem E.eval_reloc_fold (ρ : Reloc) (env : Nat → BitVec 64) (e : E) :
     show gprWord ⟨a.region, a.off + (k.toNat : Int) + ρ.δ a.region⟩ = gprWord ⟨a.region, a.off + ρ.δ a.region + (k.toNat : Int)⟩
     congr 2
     omega
+  · -- a number as a pointer of region 0: the constant word (relocation leaves numbers)
+    rename_i a
+    split
+    · rename_i h
+      simp only [E.reloc, E.eval]
+      rw [Reloc.addr_region0 ρ hρ a h]
+    · rfl
   · rfl
 
 /-- The closed facts about one slice at its base position. -/
@@ -269,7 +277,7 @@ theorem step (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S : State (BitVec 64
           E.eval (envOf S) (E.reloc ρ (cutVar C.ctl' C.sc' i)) := by
         rw [hconc, envOf_mapState, ← hvar, readVar_relocState_var, hvar]
         show E.eval (envOf S) (E.reloc ρ (readVar C.res i)) = _
-        rw [← E.eval_reloc_fold, show E.fold (readVar C.res i) = cutVar C.ctl' C.sc' i from hgl]
+        rw [← E.eval_reloc_fold ρ hρ, show E.fold (readVar C.res i) = cutVar C.ctl' C.sc' i from hgl]
       exact cutVar_reloc_closed C.ctl' C.sc' _ i hi ρ hρ B hw htree _ henv
     · intro i hi hge
       have hcell := List.all_eq_true.mp C.cells i hi

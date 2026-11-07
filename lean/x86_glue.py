@@ -28,6 +28,12 @@ class Val:
         self.rep = py if rep is None else rep
 
 
+def fixed_of(ch):
+    """the count registers with literal values (closed: decidable hand-over checks)"""
+    items = [f'({r}, {lit(v.py)})' for r, v in sorted(ch.vals.items()) if v.py is not None]
+    return '[' + ', '.join(items) + ']'
+
+
 def lit(v):
     return f'({v} : Int)' if v >= 0 else f'(({v}) : Int)'
 
@@ -107,6 +113,15 @@ class FrChain:
             w, v = V[a[0]], V[a[1]]
             self.nxt(f'{p}.bt {a[0]} {a[1]} {w.lean} {v.lean} {hi} {self.mem()} {self.mem()} (by fr_lo) (by fr_hi)')
             self.cf = bool((w.rep % 2 ** 64 >> (v.rep % 64)) & 1)
+            self.pc = pc + 1
+        elif op == 'cmprm':
+            v = V[a[0]]
+            off = int(re.search(r'\d+', a[1]).group(0))
+            wv = self.rodata[off // 8]
+            self.nxt(f'{p}.cmprm {a[0]} {off} {v.lean} ({wv}) {hi} (by decide) (by decide +kernel) (by decide) {self.mem()} (by fr_lo) (by fr_hi)')
+            self.zf_lean = f'{v.lean} = {wv}'
+            self.zf, self.cf = v.rep == wv, v.rep < wv
+            self.flags_known = v.py is not None
             self.pc = pc + 1
         elif op in ('nop', 'vzeroupper'):
             self.nxt(f'{p}.nop (Or.{"inl" if op == "nop" else "inr"} {hi})')
@@ -286,11 +301,9 @@ def targets : List String := {json.dumps(targets)}
 
 macro "fr_lo" : tactic => `(tactic| first | decide | omega)
 macro "fr_hi" : tactic => `(tactic| first | decide | (rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; omega))
-macro "fr_eq" : tactic => `(tactic| first | decide +kernel | (rw [decide_eq_true (by omega)]; decide +kernel)
-  | (rw [decide_eq_false (by omega)]; decide +kernel))
+macro "fr_eq" : tactic => `(tactic| first | decide +kernel | (rw [decide_eq_true (by omega)]; decide +kernel) | (rw [decide_eq_false (by omega)]; decide +kernel))
 macro "wok_in" : tactic => `(tactic| (intro q; rfl))
-macro "wok_out" : tactic => `(tactic| (intro q hq; first | rfl | (simp only [Bool.or_eq_false_iff, Bool.and_eq_false_iff,
-  decide_eq_false_iff_not]; omega) | (simp; omega)))
+macro "wok_out " g:ident : tactic => `(tactic| (intro q hq; simp only [$g:ident]; first | rfl | (simp <;> omega)))
 
 abbrev DoneK := Done rodata prog targets
 """)
@@ -314,7 +327,7 @@ abbrev DoneK := Done rodata prog targets
   have dx := {G}.seg_data (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok _ (inv0_{nm} input U m hI.inp)
   rw [← sr.1] at dx
   have dg := digest_{nm} input _ m _ (fun _ => rfl) dx
-  have hI' := hI.seg' {G}.facts m {b0} (by omega) hmb hcut (by wok_in) (by wok_out)
+  have hI' := hI.seg' {G}.facts m {b0} (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
   have hdig : ∀ n, n < done + {h} → Digest input (X86.isa.run rodata prog {G}.facts.len U) (off + n) := by
     intro n hn
     by_cases hn' : n < done
@@ -324,7 +337,7 @@ abbrev DoneK := Done rodata prog targets
       exact this
 """
         else:
-            data = f"""  have hI' := hI.seg {G}.facts m (by omega) hmb hcut (by wok_in) (by wok_out)
+            data = f"""  have hI' := hI.seg {G}.facts m (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
   have hdig : ∀ n, n < done + 0 → Digest input (X86.isa.run rodata prog {G}.facts.len U) (off + n) :=
     fun n hn => hI'.dig n (by omega)
 """
@@ -383,7 +396,9 @@ theorem exit_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVe
   rw [Isa.run_halted _ _ _ _ _ rfl]
   refine ⟨rfl, hok.1, fun q hq => hI'.pre q hq, Or.inr ⟨"{sym}", done + {bK - b0}, rfl, by decide, by omega,
     fun n hn => hdig n (by omega), ?_⟩⟩
-  · have he := handover m {G}.facts.ctlK {G}.facts.scK (X86.isa.run rodata prog {G}.facts.len U) _ input hcutK {r} {bK}
+  · have he := handover m {G}.facts.ctlK {G}.facts.scK (X86.isa.run rodata prog {G}.facts.len U)
+      {{ {{ X86.isa.run rodata prog {G}.facts.len U with halted := true, tail := some "{sym}" }} with halted := false, tail := none }}
+      input hcutK {r} {bK}
       (by decide +kernel) ⟨rfl, rfl, rfl, rfl, hok.1, rfl, rfl⟩ hI'.inp
     rw [show m + {bK} = off + (done + {bK - b0}) by omega, show {r} = c - (done + {bK - b0}) by omega] at he
     exact ⟨he, by omega⟩
@@ -400,6 +415,7 @@ theorem exit_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVe
     w(digest_text('Bb', 'GenBb', Kb, cntB, list(range(N)), outs, mid_round=rW))
     for nm in ba_names:
         G = gen(nm)
+        ka = K(nm)
         w(inv0_text(nm, G, cntB, list(range(N))))
         w(f"""set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -422,13 +438,14 @@ theorem body_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVe
   have cut2 := seg_chain {G}.facts GenBb.facts _ hρ _ cut1 (by decide +kernel) (by decide +kernel) (by decide +kernel)
   obtain ⟨ok2, cut3⟩ := GenBb.facts.run _ hρ hw _ cut2 ok1
   have sr2 := GenBb.seg_run _ hρ hw _ cut2 ok1
-  have db := GenBb.seg_data _ hρ hw _ cut2 ok1 _ da
+  have db := GenBb.seg_data _ hρ hw _ cut2 ok1 ({G}.AAt (fun n => absorbNode (nodeWords input (off + done + n.val))) {ka}) (by exact da)
   rw [← sr2.1] at db
-  have dg := digest_Bb input _ (off + done) _ _ (fun _ => rfl) (fun n => match n with
+  have dg := digest_Bb input _ (off + done) (fun n => absorbNode (nodeWords input (off + done + n.val)))
+    ({G}.AAt (fun n => absorbNode (nodeWords input (off + done + n.val))) {ka}) (fun _ => rfl) (fun n => match n with
 """ + ''.join(f"""    | ⟨{n}, _⟩ => fun _ _ => {G}.aat_{n} _
-""" for n in range(N)) + f"""    | ⟨n + {N}, _⟩ => fun h1 _ => absurd h1 (by simp only [Fin.val_mk]; omega)) db
-  have I1 := hI.seg {G}.facts (off + done) (by omega) hmb hcut (by wok_in) (by wok_out)
-  have I2 := I1.seg GenBb.facts (off + done) (by omega) hmb cut2 (by wok_in) (by wok_out)
+""" for n in range(N)) + f"""    | ⟨n + {N}, _⟩ => fun h1 _ => absurd h1 (by simp only [Fin.val_mk]; omega)) (by exact db)
+  have I1 := hI.seg {G}.facts (off + done) (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
+  have I2 := I1.seg GenBb.facts (off + done) (by omega) hmb cut2 (by wok_in) (by wok_out GenBb.facts)
   rw [Isa.run_add]
   refine ⟨cut3, ⟨I2.ok, I2.inp, I2.pre, fun n hn => ?_⟩, ?_⟩
   · by_cases hn' : n < done
@@ -493,7 +510,7 @@ def XM : Nat := {XM}
         assert sig >= 0, (prev_base, b0)
         o = lambda t: out.append(' ' * ind + t)
         o(f'have hx := Fr.cut (rho_ok {prev_m}) (rho_ok {sig}) _ {G}.facts.ctl0 _ {G}.facts.sc0')
-        o(f'  (PreCut.of_cut _ (rho_ok _) _ _ _ {prev_cut}) {ch.cur()} (by decide +kernel) (by decide +kernel)')
+        o(f'  (PreCut.of_cut _ (rho_ok _) _ _ _ {prev_cut}) {ch.cur()} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel)')
         o(f'  (by fr_eq) (by fr_eq) (by decide +kernel)')
         o(f'rw [rho_add] at hx')
         if ex['term'][0] == 'ret':
@@ -597,13 +614,13 @@ theorem afterB_step (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
         G = gen(nm)
         e = ch.vals[2].lean
         for t in f"""have hx := Fr.cut (rho_ok (off + {N} * k)) (rho_ok {N}) _ {G}.facts.ctl0 _ {G}.facts.sc0
-  (PreCut.of_cut _ (rho_ok _) _ _ _ hcut) {ch.cur()} (by decide +kernel) (by decide +kernel) (by fr_eq) (by fr_eq) (by decide +kernel)
+  (PreCut.of_cut _ (rho_ok _) _ _ _ hcut) {ch.cur()} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel) (by fr_eq) (by fr_eq) (by decide +kernel)
 rw [rho_add, show off + {N} * k + {N} = off + {N} * (k + 1) by omega] at hx
 obtain ⟨hc', hI', hr'⟩ := body_{nm} off c input S0 _ ({N} * (k + 1)) hx (hI.fr {ch.cur()}) (by omega)
 have hd := cont (by omega) _ hc' hI' (by
   rw [← envOf_gdVar _ 2 (by decide), hr', envOf_gdVar _ 2 (by decide), {ch.cur()}.vals (2, {e}) (by simp [setVal])]
   congr 1; push_cast; omega)
-rw [len_{nm}, len_Bb] at hd ⊢
+rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI; omega)""".split('\n'):
             out.append(' ' * ind + t)
     L.extend(emit_dispatch(2, 'f0', f'((c : Int) - {N} * (k : Int))', N, f'c - {N} * (k + 1)', 0, C,
@@ -654,13 +671,13 @@ theorem afterP_{pv} (off c : Nat) (input : Int → BitVec 64) (S0 T : State (Bit
             G = gen(nm)
             e = ch.vals[2].lean
             for t in f"""have hx := Fr.cut (rho_ok off) (rho_ok 0) _ {G}.facts.ctl0 _ {G}.facts.sc0
-  (PreCut.of_cut _ (rho_ok _) _ _ _ hcut) {ch.cur()} (by decide +kernel) (by decide +kernel) (by fr_eq) (by fr_eq) (by decide +kernel)
+  (PreCut.of_cut _ (rho_ok _) _ _ _ hcut) {ch.cur()} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel) (by fr_eq) (by fr_eq) (by decide +kernel)
 rw [rho_add] at hx
 obtain ⟨hc', hI', hr'⟩ := body_{nm} off c input S0 _ 0 hx (hI.fr {ch.cur()}) (by omega)
-have hd := afterB off c input S0 hb _ 0 _ (le_refl _) (by omega) (by simpa using hc') (by simpa using hI') (by
+have hd := afterB off c input S0 hb _ 0 _ (Nat.le_refl _) (by omega) (by simpa only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] using hc') (by simpa only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using hI') (by
   rw [← envOf_gdVar _ 2 (by decide), hr', envOf_gdVar _ 2 (by decide), {ch.cur()}.vals (2, {e}) (by simp [setVal])]
   congr 1; push_cast; omega)
-rw [len_{nm}, len_Bb] at hd ⊢
+rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI XM; omega)""".split('\n'):
                 out.append(' ' * ind + t)
         L.extend(emit_dispatch(2, 'f0', '(c : Int)', 0, 'c', 0, G_pc, 'off', 0, '0', on_H_P))
@@ -731,10 +748,10 @@ theorem norm_thm : NormThm rodata prog {ENT} steps targets := by
         zfp = '(by fr_eq)' if ch.i > 0 else '(hE.ctrl.2.2.1.trans (by decide +kernel))'
         cfp = '(by fr_eq)' if ch.i > 0 else '(hE.ctrl.2.2.2.1.trans (by decide +kernel))'
         for t in f"""have hx := Fr.cut (rho_ok off) (rho_ok 0) entryCtl {GP}.facts.ctl0 entrySc {GP}.facts.sc0
-  (PreCut.entry off c input S hE hb) {f} (by decide +kernel) (by decide +kernel) {zfp} {cfp} (by decide +kernel)
+  (PreCut.entry off c input S hE hb) {f} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel) {zfp} {cfp} (by decide +kernel)
 rw [rho_add, Nat.add_zero] at hx
 obtain ⟨ok1, cut1⟩ := {GP}.facts.run (rho off) (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok
-have I1 := (I0.fr {f}).seg {GP}.facts off (by omega) hmb hx (by wok_in) (by wok_out)
+have I1 := (I0.fr {f}).seg {GP}.facts off (by omega) hmb hx (by wok_in) (by wok_out {GP}.facts)
 have hd := afterP_{pv} off c input S _ hb cut1 I1 (by
   rw [← envOf_gdVar _ 2 (by decide), {GP}.facts_rdx _ (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok,
     envOf_gdVar _ 2 (by decide), {f}.vals (2, {vals[2].lean if cv == 'sym' else f'((({cv} : Nat)) : Int)'}) (by simp [setVal])])

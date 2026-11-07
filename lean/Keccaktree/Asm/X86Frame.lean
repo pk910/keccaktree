@@ -243,6 +243,24 @@ theorem Fr.bt (h : Fr rodata prog S m pc zf cf vals R) (a b : Nat) (w v : Int)
   simp only [hi, exec, hh, Bool.false_eq_true, ↓reduceIte, withX, hg, hvs _ hw, h0, and_self, next, hp]
   all_goals (cases T; simp only at *; subst_vars; rfl)
 
+/-- `cmp a, qword [rip + off]` against a constant word that is a number (a runtime threshold). -/
+theorem Fr.cmprm (h : Fr rodata prog S m pc zf cf vals R) (a off : Nat) (v wv : Int)
+    (hi : prog.getD pc .nop = .cmprm a (.rip off)) (hal : (off : Int) % 8 = 0)
+    (hw : wordGpr (rodata.getD ((off : Int) / 8).toNat 0) = ⟨0, wv⟩) (hpos : 0 ≤ (off : Int) / 8)
+    (hv : (a, v) ∈ vals) (h0 : 0 ≤ v) (h1 : v < 2 ^ 55) :
+    Fr rodata prog S (m + 1) (pc + 1) (decide (v = wv)) (decide (v < wv)) vals R := by
+  apply h.flags
+  rintro T ⟨hh, hp, -, -, hvs⟩
+  have hg := gx_num T a v (hvs _ hv) h0 h1
+  simp only [hi, exec, hh, Bool.false_eq_true, ↓reduceIte, withMem, memAddr?, withLoad, State.loadWords, hal,
+    List.range_one, List.map_cons, List.map_nil, State.read, rRodata, Int.ofNat_eq_coe, Int.cast_ofNat_Int, Int.add_zero,
+    List.headD_cons, ge_iff_le, hpos]
+  have ha : LaneOps.asAddr (α := BitVec 64) (LaneOps.const (α := BitVec 64) (rodata.getD ((off : Int) / 8).toNat 0#64)) = some ⟨0, wv⟩ := by
+    show some (wordGpr (rodata.getD ((off : Int) / 8).toNat 0#64)) = _
+    exact congrArg some hw
+  rw [ha]
+  simp only [withX, hg, setFlagsSub, Addr.num, next, hp, ↓reduceIte, hh]
+
 /-! ## Handing a count-step state over to the next segment -/
 
 theorem envOf_near (R : List Nat) (S T : State (BitVec 64)) (h : Near R S T) (i : Nat)
@@ -273,9 +291,10 @@ of the previous cut not written by the count steps (`σ` moves them, e.g. one ba
 count registers whose value the count steps know. -/
 theorem Fr.cut {ρ σ : Reloc} (hρ : ρ.ok) (hσ : σ.ok) (L L' : List Nat) (sc sc' : State (BitVec 64))
     (hA : PreCut ρ L sc S) (h : Fr rodata prog S m pc zf cf vals R)
+    (fixed : List (Nat × Int)) (hfix : ∀ p ∈ fixed, p ∈ vals)
     (hchk : (L'.all fun i => (decide (i < 288) || memVarRegion i == rStack) &&
        ((L.contains i && R.all (fun n => i != 256 + n) && (cutVar L sc i == E.reloc σ (cutVar L' sc' i))) ||
-        vals.any (fun p => i == 256 + p.1 && decide (p.1 < 32) && (cutVar L' sc' i == .const (BitVec.ofInt 64 p.2)) &&
+        fixed.any (fun p => i == 256 + p.1 && decide (p.1 < 32) && (cutVar L' sc' i == .const (BitVec.ofInt 64 p.2)) &&
           ((wordGpr (BitVec.ofInt 64 p.2)).region == 0)))) = true)
     (hctl : sc'.g = Vector.replicate 32 ⟨0, 0⟩ ∧ sc.k = sc'.k ∧ sc.nf = sc'.nf ∧ sc.vf = sc'.vf ∧
       sc.vl = sc'.vl ∧ sc.depth = sc'.depth)
@@ -293,7 +312,7 @@ theorem Fr.cut {ρ σ : Reloc} (hρ : ρ.ok) (hσ : σ.ok) (L L' : List Nat) (sc
     · have henv : envOf (X86.isa.run rodata prog m S) i = envOf S i :=
         envOf_near R S _ h.near i (fun n hn => hR n hn)
       rw [cutVar_eq_of_env L L' S _ i hi hin henv, hw i hin hcell, hv, E.reloc_add ρ σ hρ hσ]
-    · have hval := h.vals p hp
+    · have hval := h.vals p (hfix p hp)
       subst hip
       have he : envOf (X86.isa.run rodata prog m S) (256 + p.1) = BitVec.ofInt 64 p.2 := by
         rw [envOf_gdVar _ _ hp32]; exact hval

@@ -293,7 +293,7 @@ def gen_segments(kernel, patch=None):
     countregs = {256 + n for ex in A['exits'] for n in map(int, ex['vals'])} | {258}
     # ---- exits
     ex_ctl = {}
-    for ex in A['exits']:
+    for ex in (A['exits'] if os.environ.get('ONLY') != 'Bb' else []):
         src = ex['src']; c = src['count']
         pl = find_plan(kernel, c, patch=patch) if c > 0 else {'cuts': [], 'rounds': [[]], 'end': src['end']}
         a, b = src['start'], src['end']
@@ -333,6 +333,7 @@ def gen_segments(kernel, patch=None):
         if op in WRITERS or (op == 'sub' and a[0] != 4):
             tW = t; break
     assert tW is not None
+    A['h_flags'] = [tuple(h) + (False,) * (3 - len(h)) for h in A['h_flags']]
     assert all(cf is False for (zf, cf, ks) in A['h_flags']), A['h_flags']
     kmask = None
     if any(ks for (zf, cf, ks) in A['h_flags']):
@@ -340,8 +341,13 @@ def gen_segments(kernel, patch=None):
         out = subprocess.run([KT, 'matches', kernel, str(2 * N), str(tC), '0'], capture_output=True, text=True, check=True).stdout
         kmask = int(re.search(r'^CONTROL .* k=\[(.*?)\]', out, re.M).group(1).split(',')[1])
     pl = find_plan(kernel, 2 * N, patch=patch)
+    if os.environ.get('ONLY') == 'Bb':
+        ex_ctl = {k_: v['ctl0'] for k_, v in A['segments'].items() if k_.startswith('X')}
     need_x = set(v for ctl in ex_ctl.values() for v in ctl) - countregs
     b_end = set(need_x)
+    only_bb = os.environ.get('ONLY') == 'Bb'
+    if only_bb:
+        b_end |= set().union(*[set(v['ctl0']) for k_, v in A['segments'].items() if k_.startswith('Ba')])
     for it in range(4):
         cuts, rounds = window(pl, tW + 1, tC, list(range(N)))
         env = {'NODES': ','.join(map(str, range(N))), 'END_CTL': ','.join(map(str, sorted(b_end))),
@@ -350,6 +356,9 @@ def gen_segments(kernel, patch=None):
         pln = {'kernel': kernel, 'count': 2 * N, 'lanes': lanes_of(kernel), 'entry': tW + 1, 'end': tC, 'cuts': cuts,
                'rounds': rounds}
         bb_ctl0, nsl_b = gen('Bb', pln, 2 * N, env)
+        if only_bb:
+            print('  (only Bb)', flush=True)
+            return
         cuts, rounds = window(pl, tH, tW + 1, list(range(N)))
         ba = {}
         for (zf, cf, ks) in A['h_flags']:

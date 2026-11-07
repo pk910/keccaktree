@@ -929,11 +929,11 @@ theorem exec_map_cmprm (rodata : Array (BitVec 64)) (st : State α) (a : _) (m :
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ hne3
     rw [headD_map hf.lane]
-    rcases hc : LaneOps.asAddr (ws.headD (LaneOps.const 0)) with _ | v
+    rcases hc : LaneOps.asConst (ws.headD (LaneOps.const 0)) with _ | v
     · simp only [hc, fail_err] at hne3; exact absurd hne3 (by decide)
-    · simp only [hc] at hne3; simp only [hf.asAddr _ _ hc]
+    · simp only [hc] at hne3; simp only [hf.asConst _ _ hc]
       apply withX_map hf _ _ _ _ hne3
-      intro x _ _; simp only [setFlagsSub_map, next_map]
+      intro x _ _; split <;> first | rfl | simp only [fail_map]
   · simp [exec, mapState, hh]
 
 theorem exec_map_test (rodata : Array (BitVec 64)) (st : State α) (a : _) (b : _)
@@ -1266,7 +1266,7 @@ theorem err_exec_vmov (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (
     (exec rodata (.vmov lanes dst src mask) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1276,7 +1276,7 @@ theorem err_exec_vstore (rodata : Array (BitVec 64)) (st : State α) (lanes : _)
     (exec rodata (.vstore lanes dst src) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1286,7 +1286,7 @@ theorem err_exec_vpxor (rodata : Array (BitVec 64)) (st : State α) (lanes : _) 
     (exec rodata (.vpxor lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1296,7 +1296,7 @@ theorem err_exec_vpand (rodata : Array (BitVec 64)) (st : State α) (lanes : _) 
     (exec rodata (.vpand lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1306,7 +1306,7 @@ theorem err_exec_vpandn (rodata : Array (BitVec 64)) (st : State α) (lanes : _)
     (exec rodata (.vpandn lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1316,7 +1316,7 @@ theorem err_exec_vpor (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (
     (exec rodata (.vpor lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1326,7 +1326,7 @@ theorem err_exec_vpaddq (rodata : Array (BitVec 64)) (st : State α) (lanes : _)
     (exec rodata (.vpaddq lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1336,7 +1336,7 @@ theorem err_exec_vpsllq (rodata : Array (BitVec 64)) (st : State α) (lanes : _)
     (exec rodata (.vpsllq lanes d a imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1346,7 +1346,7 @@ theorem err_exec_vpsrlq (rodata : Array (BitVec 64)) (st : State α) (lanes : _)
     (exec rodata (.vpsrlq lanes d a imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1356,7 +1356,7 @@ theorem err_exec_vprolq (rodata : Array (BitVec 64)) (st : State α) (lanes : _)
     (exec rodata (.vprolq lanes d a imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1366,7 +1366,7 @@ theorem err_exec_vpsllvq (rodata : Array (BitVec 64)) (st : State α) (lanes : _
     (exec rodata (.vpsllvq lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1376,7 +1376,7 @@ theorem err_exec_vpsrlvq (rodata : Array (BitVec 64)) (st : State α) (lanes : _
     (exec rodata (.vpsrlvq lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1386,7 +1386,7 @@ theorem err_exec_vpternlogq (rodata : Array (BitVec 64)) (st : State α) (lanes 
     (exec rodata (.vpternlogq lanes d a b imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1396,7 +1396,7 @@ theorem err_exec_vpshufb (rodata : Array (BitVec 64)) (st : State α) (lanes : _
     (exec rodata (.vpshufb lanes d a ctrl) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1406,7 +1406,7 @@ theorem err_exec_vpshufd (rodata : Array (BitVec 64)) (st : State α) (lanes : _
     (exec rodata (.vpshufd lanes d a imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1416,7 +1416,7 @@ theorem err_exec_vpblendd (rodata : Array (BitVec 64)) (st : State α) (lanes : 
     (exec rodata (.vpblendd lanes d a b imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1426,7 +1426,7 @@ theorem err_exec_vpalignr (rodata : Array (BitVec 64)) (st : State α) (lanes : 
     (exec rodata (.vpalignr lanes d a b imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1436,7 +1436,7 @@ theorem err_exec_vpunpcklqdq (rodata : Array (BitVec 64)) (st : State α) (lanes
     (exec rodata (.vpunpcklqdq lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1446,7 +1446,7 @@ theorem err_exec_vpunpckhqdq (rodata : Array (BitVec 64)) (st : State α) (lanes
     (exec rodata (.vpunpckhqdq lanes d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1456,7 +1456,7 @@ theorem err_exec_vperm2i128 (rodata : Array (BitVec 64)) (st : State α) (d : _)
     (exec rodata (.vperm2i128 d a b imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1466,7 +1466,7 @@ theorem err_exec_vinserti128 (rodata : Array (BitVec 64)) (st : State α) (d : _
     (exec rodata (.vinserti128 d a b imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1476,7 +1476,7 @@ theorem err_exec_vextracti128 (rodata : Array (BitVec 64)) (st : State α) (m : 
     (exec rodata (.vextracti128 m a imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1486,7 +1486,7 @@ theorem err_exec_vshufi64x2 (rodata : Array (BitVec 64)) (st : State α) (lanes 
     (exec rodata (.vshufi64x2 lanes d a b imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1496,7 +1496,7 @@ theorem err_exec_vpermt2q (rodata : Array (BitVec 64)) (st : State α) (lanes : 
     (exec rodata (.vpermt2q lanes d idx b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1506,7 +1506,7 @@ theorem err_exec_kmovw (rodata : Array (BitVec 64)) (st : State α) (k : _) (m :
     (exec rodata (.kmovw k m) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1516,7 +1516,7 @@ theorem err_exec_vzeroupper (rodata : Array (BitVec 64)) (st : State α) (h : st
     (exec rodata (.vzeroupper) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1526,7 +1526,7 @@ theorem err_exec_mov (rodata : Array (BitVec 64)) (st : State α) (d : _) (src :
     (exec rodata (.mov d src) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1536,7 +1536,7 @@ theorem err_exec_xchg (rodata : Array (BitVec 64)) (st : State α) (a : _) (b : 
     (exec rodata (.xchg a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1546,7 +1546,7 @@ theorem err_exec_movi (rodata : Array (BitVec 64)) (st : State α) (d : _) (imm 
     (exec rodata (.movi d imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1556,7 +1556,7 @@ theorem err_exec_lea (rodata : Array (BitVec 64)) (st : State α) (d : _) (m : _
     (exec rodata (.lea d m) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1566,7 +1566,7 @@ theorem err_exec_add (rodata : Array (BitVec 64)) (st : State α) (d : _) (imm :
     (exec rodata (.add d imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1576,7 +1576,7 @@ theorem err_exec_sub (rodata : Array (BitVec 64)) (st : State α) (d : _) (imm :
     (exec rodata (.sub d imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1586,7 +1586,7 @@ theorem err_exec_andi (rodata : Array (BitVec 64)) (st : State α) (d : _) (imm 
     (exec rodata (.andi d imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1596,7 +1596,7 @@ theorem err_exec_shl (rodata : Array (BitVec 64)) (st : State α) (d : _) (imm :
     (exec rodata (.shl d imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1606,7 +1606,7 @@ theorem err_exec_dec (rodata : Array (BitVec 64)) (st : State α) (d : _) (h : s
     (exec rodata (.dec d) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1616,7 +1616,7 @@ theorem err_exec_xorz (rodata : Array (BitVec 64)) (st : State α) (d : _) (h : 
     (exec rodata (.xorz d) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1626,7 +1626,7 @@ theorem err_exec_cmpi (rodata : Array (BitVec 64)) (st : State α) (a : _) (imm 
     (exec rodata (.cmpi a imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1636,7 +1636,7 @@ theorem err_exec_cmpr (rodata : Array (BitVec 64)) (st : State α) (a : _) (b : 
     (exec rodata (.cmpr a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1646,7 +1646,7 @@ theorem err_exec_cmpm (rodata : Array (BitVec 64)) (st : State α) (m : _) (b : 
     (exec rodata (.cmpm m b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1656,7 +1656,7 @@ theorem err_exec_cmprm (rodata : Array (BitVec 64)) (st : State α) (a : _) (m :
     (exec rodata (.cmprm a m) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1666,7 +1666,7 @@ theorem err_exec_test (rodata : Array (BitVec 64)) (st : State α) (a : _) (b : 
     (exec rodata (.test a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1676,7 +1676,7 @@ theorem err_exec_bt (rodata : Array (BitVec 64)) (st : State α) (a : _) (b : _)
     (exec rodata (.bt a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1686,7 +1686,7 @@ theorem err_exec_btc (rodata : Array (BitVec 64)) (st : State α) (a : _) (imm :
     (exec rodata (.btc a imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1696,7 +1696,7 @@ theorem err_exec_alu (rodata : Array (BitVec 64)) (st : State α) (op : _) (d : 
     (exec rodata (.alu op d b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1706,7 +1706,7 @@ theorem err_exec_andn (rodata : Array (BitVec 64)) (st : State α) (d : _) (a : 
     (exec rodata (.andn d a b) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1716,7 +1716,7 @@ theorem err_exec_rorx (rodata : Array (BitVec 64)) (st : State α) (d : _) (b : 
     (exec rodata (.rorx d b imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1726,7 +1726,7 @@ theorem err_exec_xorm (rodata : Array (BitVec 64)) (st : State α) (m : _) (src 
     (exec rodata (.xorm m src) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1736,7 +1736,7 @@ theorem err_exec_storeqi (rodata : Array (BitVec 64)) (st : State α) (m : _) (i
     (exec rodata (.storeqi m imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1746,7 +1746,7 @@ theorem err_exec_addm (rodata : Array (BitVec 64)) (st : State α) (m : _) (imm 
     (exec rodata (.addm m imm) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1756,7 +1756,7 @@ theorem err_exec_decm (rodata : Array (BitVec 64)) (st : State α) (m : _) (h : 
     (exec rodata (.decm m) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1766,7 +1766,7 @@ theorem err_exec_jcc (rodata : Array (BitVec 64)) (st : State α) (c : _) (t : _
     (exec rodata (.jcc c t) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1776,7 +1776,7 @@ theorem err_exec_jmp (rodata : Array (BitVec 64)) (st : State α) (t : _) (h : s
     (exec rodata (.jmp t) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1796,7 +1796,7 @@ theorem err_exec_call (rodata : Array (BitVec 64)) (st : State α) (t : _) (h : 
     (exec rodata (.call t) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1806,7 +1806,7 @@ theorem err_exec_ret (rodata : Array (BitVec 64)) (st : State α) (h : st.err = 
     (exec rodata (.ret) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1816,7 +1816,7 @@ theorem err_exec_push (rodata : Array (BitVec 64)) (st : State α) (src : _) (h 
     (exec rodata (.push src) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1826,7 +1826,7 @@ theorem err_exec_pop (rodata : Array (BitVec 64)) (st : State α) (d : _) (h : s
     (exec rodata (.pop d) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1836,7 +1836,7 @@ theorem err_exec_storeq (rodata : Array (BitVec 64)) (st : State α) (m : _) (sr
     (exec rodata (.storeq m src) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1846,7 +1846,7 @@ theorem err_exec_loadq (rodata : Array (BitVec 64)) (st : State α) (d : _) (m :
     (exec rodata (.loadq d m) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1856,7 +1856,7 @@ theorem err_exec_repmovsb (rodata : Array (BitVec 64)) (st : State α) (h : st.e
     (exec rodata (.repmovsb) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1866,7 +1866,7 @@ theorem err_exec_tailcall (rodata : Array (BitVec 64)) (st : State α) (name : _
     (exec rodata (.tailcall name) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
@@ -1876,7 +1876,7 @@ theorem err_exec_nop (rodata : Array (BitVec 64)) (st : State α) (h : st.err = 
     (exec rodata (.nop) st).err = true := by
   cases hh : st.halted
   · simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withX, withMem, withSrc, withLoad, withStore,
-      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, State.fail, h] <;>
+      readG, binop, repBody, next, setX, State.setGD, State.setV, writeV, setFlagsSub, setFlagsNum, State.fail, h] <;>
     (repeat' split) <;> (try simp_all) <;>
       (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]

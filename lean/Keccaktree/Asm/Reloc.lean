@@ -1237,13 +1237,15 @@ theorem exec_reloc_cmprm (rodata : Array (BitVec 64)) (st : State E) (a : _) (m 
     intro ad had hne2
     apply withLoad_reloc ρ hρ _ _ _ _ _ _ hne2
     intro ws hws hne3
-    rw [headD_reloc]
-    rcases hc : LaneOps.asAddr (ws.headD (LaneOps.const 0)) with _ | v
+    rw [headD_reloc, reloc_asConst ρ hρ]
+    rcases hc : LaneOps.asConst (ws.headD (LaneOps.const 0)) with _ | v
     · simp only [hc, fail_err] at hne3; exact absurd hne3 (by decide)
-    · simp only [hc] at hne3
-      rw [reloc_asAddr ρ hρ _ _ hc (hok _ (by simp [decodes, had, hws]))]
+    · simp only [hc] at hne3 ⊢
       apply withX_reloc ρ hρ _ _ _ _ hne3 (hok _ (by simp [decodes]))
-      intro y _ _; rw [setFlagsSub_reloc, next_reloc]
+      intro y _ _
+      by_cases h0 : y.region = 0
+      · rw [Reloc.addr_region0 ρ hρ y h0]; split <;> rfl
+      · simp only [Reloc.addr_region, h0, ↓reduceIte, fail_reloc]
   · simp [exec, relocState, hh]
 
 include hρ in

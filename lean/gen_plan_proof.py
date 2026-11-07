@@ -947,7 +947,7 @@ def main():
         allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K], region_filter=2)
     else:
         allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K])
-    for c in range(1, K + 1):
+    for c in range(0, K + 1):
         allocs[c] = [h for h in allocs[c] if h[0] in nodes]
     ALLOC_END = allocs[K]
     chyps = {c: const_hyps([n for n in nodes if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}
