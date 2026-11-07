@@ -38,3 +38,27 @@ Provide `NormThm rodata prog entry steps targets`:
 Then `mkKernel name rank targets rodata prog entry steps m (by decide +kernel) (by decide +kernel) hm thm`.
 For AVX-512 kernels (masked moves) the static check fails: use `run_ovr_path` per segment (the batch
 starts with `kmovw k1`), or prove `NormThm` directly for `EntryX86` states.
+
+## 2. Runtime thresholds (word 112 of the constant image) (DONE: model lemmas)
+`Asm/Rodata.lean` (x86):
+* `AgreeExcept r1 r2 w` (images agree except word `w`), `noReadW w i s` (the instruction's loads avoid word
+  `w`; `false` if an address does not decode), **`exec_rodata_eq`**: `noReadW → exec r1 i s = exec r2 i s`
+  (all instructions).
+* **`pathW r prog w idx t`** (symbolic, like `pathOk`, plus `noReadW` at every step; kernel-decidable on a
+  cut) ⇒ **`pathW_run`**: for every env, `run r2 … (eval t) = run r1 … (eval t)`; `pathOk_of_pathW`;
+  **`pathW_reloc`**: `pathW` holds at every relocated cut (same side condition as `pathOk_reloc`).
+* `exec_cmprm_word` (the policy `cmp reg, [rip+8w]` with the word = number `v < 2^55`),
+  `classRep lo hi v = max (lo-1) (min v hi)`, `classRep_gt`, **`policy_ja_class`**: `cmp x,[w]; ja t`
+  with `x ∈ [lo,hi]` under image `setWord rodata w v` = under `setWord rodata w (classRep lo hi v)` up to
+  dirty ZF/CF (`ovr {zf,cf}`), `classes_small_tail` (avx2_x4: x ∈ [2,3], reps {1,2,3}),
+  `classes_mid_tail` (avx2_x10: x ∈ [5,9], reps {4..9}), `setWord_agree`, `setWord_getD`.
+* Recipe for the x86 agent (avx2_x4 / avx2_x10, any threshold v < 2^55): prove the kernel for the image
+  `setWord rodata 112 rep` for each class rep; for a value v: every segment except the policy step has
+  `pathW (setWord rodata 112 rep) prog 112 idx cut` (decide; `pathW_reloc` for relocated cuts) ⇒ same run
+  under v (`pathW_run`); the policy step: `policy_ja_class`; the dirty flags after it: `run_ovr_path` with
+  `D = {zf, cf}` up to the next compare (`cmpi 0 (2)` before the `jcct`).
+* **Model limitation (documented gap)**: a threshold word ≥ 2^56 decodes as a pointer (region tag in the top
+  byte) in the model and the compare faults (`err`); hardware compares unsigned (class `≥ 3` / `≥ 9`).
+  The library itself only writes 1, 2 (small tail; default 1) and 5, 9 (mid tail; default 4); the public
+  setters accept any `uint64_t`.  Values in [2^55, 2^56) also decode as numbers but are outside `classRep`'s
+  `< 2^55` hypothesis (harmless to extend).
