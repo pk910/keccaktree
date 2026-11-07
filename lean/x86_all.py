@@ -135,17 +135,23 @@ def analyze(kernel, patch=None):
     prog, entry, rodata = load_prog(kernel)
     pj = json.load(open(os.path.join(HERE, f'paths/{kernel}.json')))
     N = pj['nodes']
-    H = pj['loop_head']['index']
     br = pj['batch_region']
+    maxc0 = 64 + 2 * N + 2
+    runs0 = paths(kernel, maxc0, patch=patch)
+    big = runs0[maxc0]['path']
+    # the loop head: the batch call visited most often on the largest count
+    calls = [pc for pc in set(big) if pc > br['end'] and parse(prog[pc]) == ('call', [0])]
+    H = max(calls, key=lambda pc: big.count(pc))
     inbatch = lambda pc: br['start'] <= pc <= br['end']
-    maxc = 64 + 2 * N + 2
-    runs = paths(kernel, maxc, patch=patch)
+    maxc = maxc0
+    runs = runs0
     # ---- walk every count's path through the pieces
     pieces = {}           # piece name -> info
     exits = {}            # (pc, vals) -> exit info
     P0 = None; G = None; C = None
     per_count = {}
     p0_flags = set(); h_flags = set()
+    masks = any(parse(i)[0] == 'kmovw' for i in prog)
     for c in range(maxc + 1):
         r = runs[c]
         assert r['halted'] and not r['err'], (c, r)
@@ -154,6 +160,7 @@ def analyze(kernel, patch=None):
         assert path[0] == entry
         seq = []          # pieces taken
         vals = {2: c}; zf = cf = None
+        kset = False
         mode = 'policy'
         while True:
             pc = path[t]
@@ -184,7 +191,7 @@ def analyze(kernel, patch=None):
                 t = t2; mode = 'guard'; continue
             if pc == H:
                 assert zf is not None and cf is not None, (c, t)
-                h_flags.add((zf, cf))
+                h_flags.add((zf, cf, kset and masks))
                 t2 = t
                 while inbatch(path[t2]) or fr_step(prog, rodata, path[t2], {2: vals[2]}, False, False) is None: t2 += 1
                 if C is None: C = path[t2]
@@ -192,10 +199,11 @@ def analyze(kernel, patch=None):
                 seq.append(('seg', 'B', t, t2))
                 vals = {2: vals[2]}
                 zf = True   # the batch's round counter reached zero; it does not write CF
+                kset = True
                 t = t2; mode = 'control'; continue
             # an exit: runs to the end of the path
             fl = (bool(zf), bool(cf))   # None (fresh call): clear
-            key = (pc, tuple(sorted(vals.items())), fl)
+            key = (pc, tuple(sorted(vals.items())), fl, kset and masks)
             assert H not in path[t:], (c, pc)
             last = path[-1]
             op, a = parse(prog[last])
@@ -204,7 +212,7 @@ def analyze(kernel, patch=None):
             elif op == 'jcct': term = ('jcct', a[1])
             else: raise AssertionError((c, last, prog[last]))
             # the step index of the terminal instruction is len(path) - 1
-            ex = exits.setdefault(key, {'pc': pc, 'vals': dict(vals), 'flags': fl, 'term': term, 'sources': []})
+            ex = exits.setdefault(key, {'pc': pc, 'vals': dict(vals), 'flags': fl, 'kset': kset and masks, 'term': term, 'sources': []})
             assert ex['term'] == term, (key, ex['term'], term)
             ex['sources'].append({'count': c, 'start': t, 'end': len(path) - 1, 'tail': r['tail'], 'rem': r['rem'],
                                   'len': len(path) - 1 - t})
@@ -213,12 +221,12 @@ def analyze(kernel, patch=None):
         per_count[c] = seq
     # exit names, and each exit's source run (smallest count)
     ex_list = []
-    for i, (key, ex) in enumerate(sorted(exits.items(), key=lambda kv: (kv[0][0], kv[0][1]))):
+    for i, (key, ex) in enumerate(sorted(exits.items(), key=lambda kv: (kv[0][0], kv[0][1], kv[0][3]))):
         lens = set(s['len'] for s in ex['sources'])
         assert len(lens) == 1, (key, lens)
         src = min(ex['sources'], key=lambda s: s['count'])
         assert flags_at(kernel, src['count'], src['start'], patch) == ex['flags'], (key, ex['flags'])
-        ex_list.append({'name': f'X{i}', 'pc': ex['pc'], 'vals': {str(k): v for k, v in ex['vals'].items()}, 'flags': ex['flags'],
+        ex_list.append({'name': f'X{i}', 'pc': ex['pc'], 'vals': {str(k): v for k, v in ex['vals'].items()}, 'flags': ex['flags'], 'kset': ex['kset'],
                         'term': ex['term'], 'src': src, 'len': src['len'],
                         'counts': sorted(set(s['count'] for s in ex['sources']))})
     res = {'kernel': kernel, 'dir': DIRS[kernel], 'N': N, 'entry': entry, 'P0': P0, 'G': G, 'H': H, 'C': C,
@@ -325,7 +333,12 @@ def gen_segments(kernel, patch=None):
         if op in WRITERS or (op == 'sub' and a[0] != 4):
             tW = t; break
     assert tW is not None
-    assert all(cf is False for (zf, cf) in A['h_flags']), A['h_flags']
+    assert all(cf is False for (zf, cf, ks) in A['h_flags']), A['h_flags']
+    kmask = None
+    if any(ks for (zf, cf, ks) in A['h_flags']):
+        # the mask k1 the batch's `kmovw` writes (at the loop control after the first iteration)
+        out = subprocess.run([KT, 'matches', kernel, str(2 * N), str(tC), '0'], capture_output=True, text=True, check=True).stdout
+        kmask = int(re.search(r'^CONTROL .* k=\[(.*?)\]', out, re.M).group(1).split(',')[1])
     pl = find_plan(kernel, 2 * N, patch=patch)
     need_x = set(v for ctl in ex_ctl.values() for v in ctl) - countregs
     b_end = set(need_x)
@@ -339,11 +352,11 @@ def gen_segments(kernel, patch=None):
         bb_ctl0, nsl_b = gen('Bb', pln, 2 * N, env)
         cuts, rounds = window(pl, tH, tW + 1, list(range(N)))
         ba = {}
-        for (zf, cf) in A['h_flags']:
-            nm = 'Ba' + ('t' if zf else 'f')
+        for (zf, cf, ks) in A['h_flags']:
+            nm = 'Ba' + ('t' if zf else 'f') + ('m' if ks else '')
             env = {'NODES': ','.join(map(str, range(N))), 'END_CTL': ','.join(map(str, bb_ctl0)),
                    'FORBID_CTL': '258', 'MOVES': '258:258', 'FLAGS': f'{str(zf).lower()},{str(cf).lower()}',
-                   'HEAL': str(tW + 1),
+                   'HEAL': str(tW + 1), **({'K1': str(kmask)} if ks else {}),
                    'WRITE_OK': f'fun p => p.1 == 3 || (p.1 == 2 && decide (0 ≤ p.2) && decide (p.2 < {4 * N}))'}
             pln = {'kernel': kernel, 'count': 2 * N, 'lanes': lanes_of(kernel), 'entry': tH, 'end': tW + 1,
                    'cuts': cuts, 'rounds': rounds}

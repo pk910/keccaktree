@@ -138,6 +138,9 @@ theorem Fr.write (h : Fr rodata prog S m pc zf cf vals R) (n : Nat) (hn : n < 32
           halted := by rw [hr]; exact h.halted
           tail := by rw [hr]; exact h.tail }
 
+theorem Fr.pc_congr (h : Fr rodata prog S m pc zf cf vals R) {pc' : Nat} (e : pc = pc') :
+    Fr rodata prog S m pc' zf cf vals R := e ▸ h
+
 /-! ## The instruction forms -/
 
 theorem Fr.cmpi (h : Fr rodata prog S m pc zf cf vals R) (n : Nat) (imm v : Int)

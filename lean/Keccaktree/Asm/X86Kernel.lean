@@ -278,6 +278,36 @@ theorem handover (ρm : Nat) (L : List Nat) (sc T Y : State (BitVec 64)) (input 
     congr 2; push_cast; omega
   · show Y.mem rInput q = input q; rw [y2]; exact hinp q
 
+/-- **The hand-over at a tail call of the entry policy**: count steps that keep `rdx`, `rsp`, `rsi`,
+`rdi` leave the entry state of the called kernel on the same nodes. -/
+theorem handover_fr {rodata : Array (BitVec 64)} {prog : Array Instr} {off c : Nat} {input : Int → BitVec 64}
+    {S : State (BitVec 64)} {m pc : Nat} {zf cf : Bool} {vals : List (Nat × Int)} {R : List Nat}
+    (hE : Entry off c input S) (f : Fr rodata prog S m pc zf cf vals R)
+    (hR : (R.all fun n => n != 2 && n != 4 && n != 6 && n != 7) = true) (Y : State (BitVec 64))
+    (hY : Y.gd = (X86.isa.run rodata prog m S).gd ∧ Y.mem = (X86.isa.run rodata prog m S).mem ∧
+      Y.g = (X86.isa.run rodata prog m S).g ∧ Y.depth = (X86.isa.run rodata prog m S).depth ∧
+      Y.err = false ∧ Y.halted = false ∧ Y.tail = none) :
+    Entry off c input (normCtl Y) := by
+  obtain ⟨y1, y2, y3, y4, y5, y6, y7⟩ := hY
+  obtain ⟨n1, n2, n3, n4, n5, n6, n7, n8⟩ := f.near
+  have keep : ∀ n, n ∉ R → (normCtl Y).getGD n = S.getGD n := by
+    intro n hn
+    show Y.gd.getD n 0 = _
+    rw [y1]; exact n2 n hn
+  have nR : ∀ n, n ∈ [2, 4, 6, 7] → n ∉ R := by
+    intro n hn hm
+    have := List.all_eq_true.mp hR n hm
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
+    rcases hn with rfl | rfl | rfl | rfl <;> simp at this
+  refine ⟨⟨?_, normCtl_k Y, rfl, rfl, rfl, rfl, rfl, ?_⟩, ⟨y5, y6, y7⟩, ?_, ?_, ?_, ?_, fun q => ?_⟩
+  · show Y.g = _; rw [y3]; exact f.g
+  · show Y.depth = 0; rw [y4, n8]; exact hE.ctrl.2.2.2.2.2.2.2
+  · rw [keep 2 (nR 2 (by simp))]; exact hE.rdx
+  · rw [keep 4 (nR 4 (by simp))]; exact hE.rsp
+  · rw [keep 6 (nR 6 (by simp))]; exact hE.rsi
+  · rw [keep 7 (nR 7 (by simp))]; exact hE.rdi
+  · show Y.mem rInput q = input q; rw [y2, n7]; exact hE.inp q
+
 /-- The flag condition of a count step, decided (literal values) or by `omega` (symbolic counts). -/
 macro "fr_cond" : tactic => `(tactic| first
   | decide
@@ -343,6 +373,24 @@ theorem Inv.seg {off c : Nat} {input : Int → BitVec 64} {S0 S : State (BitVec 
   apply digest_congr input S _ _ _ (h.dig n hn)
   intro w hw4
   exact hout _ (by simp only [Int.ofNat_eq_coe]; omega)
+
+/-- `Inv.seg` for a segment whose own output words start `lo` nodes after its relocation base. -/
+theorem Inv.seg' {rodata : Array (BitVec 64)} {prog : Array Instr} {off c : Nat} {input : Int → BitVec 64}
+    {S0 S : State (BitVec 64)} {done : Nat}
+    (X : SegFacts rodata prog) (m lo : Nat) (hm : off + done ≤ m + lo) (hw : 64 * m ≤ 2 ^ 54)
+    (hcut : relocState (rho m) (cutOf X.ctl0 X.sc0) = cutOf X.ctl0 S) (h : Inv off c input S0 S done)
+    (win : ∀ q, X.wok (rInput, q) = false) (wout : ∀ q : Int, q < 4 * (lo : Int) → X.wok (rOutput, q) = false) :
+    Inv off c input S0 (X86.isa.run rodata prog X.len S) done := by
+  have hρ := rho_ok m
+  have hw' := rho_within m hw
+  have fr := X.frame (rho m) hρ hw' S hcut h.ok
+  have hout : ∀ q : Int, q < 4 * ((m + lo : Nat) : Int) → (X86.isa.run rodata prog X.len S).mem rOutput q = S.mem rOutput q := by
+    intro q hq; apply fr; rw [rho_wshift_out]; exact wout _ (by push_cast at hq; omega)
+  refine ⟨(X.run (rho m) hρ hw' S hcut h.ok).1, fun q => (fr rInput q (win _)).trans (h.inp q),
+    fun q hq => (hout q (by push_cast; omega)).trans (h.pre q hq), fun n hn => ?_⟩
+  apply digest_congr input S _ _ _ (h.dig n hn)
+  intro w hw4
+  exact hout _ (by simp only [Int.ofNat_eq_coe]; push_cast; omega)
 
 end Run
 

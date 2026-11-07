@@ -86,6 +86,10 @@ def slice_lits(kernel, count, a, b, ctl=(), cells=()):
     out = subprocess.run([KT, 'slice', kernel, str(count), str(a), str(b)], capture_output=True, text=True, check=True, env=env).stdout
     ctl = [int(x) for x in re.findall(r'\d+', re.search(r'^CTL (.*)$', out, re.M).group(1))]
     sc = re.search(r'^SC (.*)$', out, re.M).group(1)
+    if K1 is not None and a == PLAN['entry']:
+        # mask register k1 at the segment's start (written by the batch's `kmovw k1` before any masked move)
+        sc, n = re.subn(r'#v\[(\d+), (\d+), ((?:\d+, )*\d+)\] (true|false) (true|false) ', lambda m: f'#v[{m.group(1)}, {K1}, {m.group(3)}] {m.group(4)} {m.group(5)} ', sc, count=1)
+        assert n == 1, sc[-300:]
     if FLAGS and a < HEAL:
         # the segment is proved for these flags at its start (they are dead until the first flag write, HEAL)
         sc, n = re.subn(r'(#v\[[0-9, ]*\]) (true|false) (true|false) ', lambda m: f'{m.group(1)} {FLAGS[0]} {FLAGS[1]} ', sc, count=1)
@@ -900,7 +904,8 @@ def seg_moves_text():
 ALLOC_END = []
 SEG = bool(os.environ.get('SEG'))
 FLAGS = os.environ.get('FLAGS', '').split(',') if os.environ.get('FLAGS') else None   # zf,cf override at the start
-HEAL = int(os.environ.get('HEAL', '0'))   # the override applies to states before this step
+HEAL = int(os.environ.get('HEAL', '0'))
+K1 = int(os.environ['K1']) if os.environ.get('K1') else None   # k1 override at the segment's start   # the override applies to states before this step
 END_CTL = [int(x) for x in os.environ.get('END_CTL', '').split(',') if x]
 FORBID_CTL = [int(x) for x in os.environ.get('FORBID_CTL', '').split(',') if x]
 WRITE_OK = os.environ.get('WRITE_OK', 'fun _ => true')   # Lean: (Region × Int) → Bool, the cells a slice may store to
