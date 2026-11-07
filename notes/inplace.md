@@ -90,7 +90,7 @@ Branch `all-diff` (after merging lean-verification 0fbdb01), remote `/root/kt-di
   Making it formal needs an `aligned` flag on `vmov`/`vstore` restricted to the stack region. That
   changes `X86.Instr`, so every Hom, Reloc, EntryCtl and Footprint lemma and every x86 `Program.lean`
   and kernel proof must be regenerated and rebuilt — not cheap, so not done.
-* RISC-V bounce paths: still not covered. The per-region misalignment parameter plus `lbu`/`sb`/
-  `vle8`/`vse8` and `vsetvli e8` (design in `notes/unaligned.md` §4) touches `Riscv.lean`,
-  `RiscvHom.lean`, `RiscvReloc.lean` and `RiscvEntryCtl.lean`, and needs new bounce segments for 4
-  kernels × 3 VLENs. Not done.
+* RISC-V bounce paths: **handed to agent `rv`** (coordinator, scope update). Nothing was started
+  here beyond the design in `notes/unaligned.md` §4: per-region misalignment `rb`, `lbu`/`sb`, `vle8`/
+  `vse8` as region-relative word copies, `vsetvli e8,m4/m8`, and bounce segments per class. The M9 model
+  fix also goes to `rv`.
