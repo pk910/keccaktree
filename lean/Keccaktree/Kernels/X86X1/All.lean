@@ -539,7 +539,7 @@ theorem x86_x1_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 
 
 /-- The x86 calling convention of the library at node offset `off` (within the address bound). -/
 def EntryX86 (name : String) (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop :=
-  Entry off count input S ∧ 64 * (off + count) ≤ 2 ^ 54
+  Entry off count input { S with pc := 0 } ∧ 64 * (off + count) ≤ 2 ^ 54
 
 /-- `keccaktree_keccak256_x86_x1` as a kernel of the library (rank 0: it hands nothing over). -/
 def kernel : Library.KernelThm X86.isa EntryX86 Digest where
@@ -547,9 +547,10 @@ def kernel : Library.KernelThm X86.isa EntryX86 Digest where
   rank := 0
   rodata := rodata
   prog := prog
+  entry := 0
   steps := fun _ c => 21 + 4269 * c
   thm := fun off count input S h => by
-    obtain ⟨hh, he, ht, hp, hd⟩ := x86_x1_all off count input S h.1 h.2
+    obtain ⟨hh, he, ht, hp, hd⟩ := x86_x1_all off count input _ h.1 h.2
     exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
 
 theorem digest_local : Library.DigestLocal Digest := by
@@ -561,7 +562,8 @@ theorem ranks_ok : Library.RanksOk [kernel] := by
   intro K hK off count input S hS next done htail _
   simp only [List.mem_cons, List.mem_nil_iff, or_false] at hK
   subst hK
-  have ht : (X86.isa.run rodata prog (21 + 4269 * count) S).tail = none := (x86_x1_all off count input S hS.1 hS.2).2.2.1
+  have ht : (X86.isa.run rodata prog (21 + 4269 * count) { S with pc := 0 }).tail = none :=
+    (x86_x1_all off count input _ hS.1 hS.2).2.2.1
   have h := ht.symm.trans htail
   cases h
 

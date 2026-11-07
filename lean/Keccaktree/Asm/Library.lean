@@ -7,7 +7,9 @@ set_option linter.unusedVariables false
 
 A kernel call on `count` nodes either finishes every node or ends in a tail
 call to another kernel of the library with the remaining nodes (`jmp
-other_kernel`, modelled as halting with `tail = some name`).  `LibRun`
+other_kernel`, modelled as halting with `tail = some name`).  A call starts at
+the kernel's entry instruction (`pc := entry`); the calling convention
+`EntryAt` constrains the rest of the state.  `LibRun`
 continues in the called kernel from the hand-over state; the library theorem
 chains the per-kernel all-count theorems by strong induction on the measure
 `count · (maxRank + 1) + rank`: a hand-over either finishes nodes (`count`
@@ -33,10 +35,12 @@ structure KernelThm (isa : Isa)
   rank : Nat
   rodata : Array (BitVec 64)
   prog : Array isa.Instr
+  /-- the kernel's first instruction in `prog` (a call or a tail jump continues there) -/
+  entry : Nat
   steps : Nat → Nat → Nat
   thm : ∀ (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)),
     EntryAt name off count input S →
-    let Sf := isa.run rodata prog (steps off count) S
+    let Sf := isa.run rodata prog (steps off count) { S with pc := entry }
     Sf.halted = true ∧ Sf.err = false ∧
     (∀ q : Int, q < 4 * off → Sf.mem rOutput q = S.mem rOutput q) ∧
     ((Sf.tail = none ∧ ∀ n, n < count → Digest input Sf (off + n)) ∨
@@ -59,13 +63,13 @@ def Table.find (T : Table isa EntryAt Digest) (name : String) : Option (KernelTh
 `S` ends in `Sf` (no tail call) or in a tail call that the library continues. -/
 inductive LibRun (T : Table isa EntryAt Digest) : String → Nat → Nat → State (BitVec 64) → State (BitVec 64) → Prop
   | stop (K : KernelThm isa EntryAt Digest) (hK : K ∈ T) (off count : Nat) (S : State (BitVec 64))
-      (hnone : (isa.run K.rodata K.prog (K.steps off count) S).tail = none) :
-      LibRun T K.name off count S (isa.run K.rodata K.prog (K.steps off count) S)
+      (hnone : (isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry }).tail = none) :
+      LibRun T K.name off count S (isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry })
   | tail (K : KernelThm isa EntryAt Digest) (hK : K ∈ T) (off count : Nat) (S : State (BitVec 64))
       (next : String) (done : Nat) (Sf' : State (BitVec 64))
-      (htail : (isa.run K.rodata K.prog (K.steps off count) S).tail = some next)
+      (htail : (isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry }).tail = some next)
       (hrest : LibRun T next (off + done) (count - done)
-        { isa.run K.rodata K.prog (K.steps off count) S with halted := false, tail := none } Sf') :
+        { isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry } with halted := false, tail := none } Sf') :
       LibRun T K.name off count S Sf'
 
 /-- The measure of a call: a hand-over finishes nodes or goes down in rank. -/
@@ -76,8 +80,8 @@ def RanksOk (T : Table isa EntryAt Digest) : Prop :=
   ∀ (K : KernelThm isa EntryAt Digest), K ∈ T →
     ∀ (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)), EntryAt K.name off count input S →
     ∀ (next : String) (done : Nat),
-      (isa.run K.rodata K.prog (K.steps off count) S).tail = some next →
-      EntryAt next (off + done) (count - done) input { isa.run K.rodata K.prog (K.steps off count) S with halted := false, tail := none } →
+      (isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry }).tail = some next →
+      EntryAt next (off + done) (count - done) input { isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry } with halted := false, tail := none } →
       ∃ K' ∈ T, K'.name = next ∧ (done = 0 → K'.rank < K.rank)
 
 /-- The digest predicate only looks at the output words of the node: a state that agrees with

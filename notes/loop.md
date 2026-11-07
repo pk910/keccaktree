@@ -78,6 +78,35 @@ Branch `loop` (worktree `src/wt-loop`), remote workspace `/root/kt-loop` (rsync 
   (one lemma over `exec`, by cases on the instruction: only `cmprm`/`cmpm`/`xor … [rip+…]`/loads read
   rodata, and the generator can check that word 112 is read only by the policy compare).
 
+## All-count theorem: x86_x1 (pilot, `Kernels/X86X1/All.lean`)
+* **Statement** `X86X1.All.x86_x1_all off c input S (hE : Entry off c input S) (hb : 64·(off+c) ≤ 2^54)`:
+  `run (21 + 4269·c) S` is halted, `err = false`, `tail = none`, output words `< 4·off` unchanged, and
+  `Digest input Sf (off+n)` for every `n < c` (byte `8w+i` of keccak256 of input node `off+n` = byte `i`
+  of output word `4(off+n)+w`).  `Entry`: control part of a fresh call (g, k, flags, vl, pc=0, depth=0),
+  `rdx = c`, `rsp = ⟨stack, 2^20⟩`, `rsi/rdi` at node `off` of input/output, input region = message;
+  vector registers, other GPRs and all other memory arbitrary.
+* **Library instance**: `kernel : KernelThm X86.isa EntryX86 Digest` (rank 0, steps `21 + 4269·c`),
+  `digest_local`, `ranks_ok`, `lib_x86_x1` = `lib_correct` on the table `[kernel]`.
+* **Structure** (4 generated segments, `lean/gen_segments_x86_x1.sh`): `GenSE1` [0,7) pushes/frame
+  (moves rdx), concrete `test rdx,rdx; je` (X86Steps), `GenSE3` [9,13) spills (rdx → count word
+  `[rsp+424]`), loop head 13: `GenSB` body [13,4280) (25 slices, relocated by `rho (off+k)`), concrete
+  `dec qword [rsp+424]; jne 13`, `GenSX` [602,609) epilogue, concrete `ret` at depth 0 (halts).
+  Count 0 takes `je` straight to the epilogue.
+* **Loop**: `Head off c input S0 k S` (body start cut relocated by `off+k`, `Ok`, count word `c-k`,
+  message, earlier outputs, digests of nodes `< k`); `iter`: one iteration (4269 steps) to `Head (k+1)`
+  or (last) `ExitAt`; `loop`: induction on the remaining iterations.  Back edge: `cut_transfer` with
+  `hval_succ` (closed check `cut_end = reloc (rho 1) cut_start`, `relocState_add`, `rho_add`).
+* **Hand-over lemmas** (`Asm/KernelGlue.lean`): `cut_transfer` (end cut of one segment → start cut of the
+  next at a concrete state whose control words and control part are known), `hval_same`/`hval_succ`/
+  `hL_dec` (decidable side conditions), `cutVar_ptr_of`, `X86.run_one`, `envOf_gdVar`, `memStore_*`.
+* **Generator changes** (segment mode): `LOOP=1` (end control words ⊇ start control words, fixpoint);
+  no stack-cell union across slices in segment mode (it put a never-written cell into the body cut);
+  segment states are plain definitions `segAt{c}` (the recursive `segAt` with literal arms was compiled by
+  WF recursion and the final `rfl` of `seg_run` unfolded the symbolic `execTrace` instead: >20 min for
+  one slice; now < 1 s); `seg_run` rewrites in `cert.idx.length` form (kabstract works at instances
+  transparency); `seg_frame` closes by `hq.symm.trans` (the `writes` instance is beta-reduced); no `aat`
+  lemmas for segments starting mid-way.
+
 ## Commands
     rsync -az --exclude .lake --exclude .git --exclude 'Gen*/' ./ root@2.28.133.253:/root/kt-loop/
     python3 find_plan.py x86_x1 2 0 > plans/x86_x1_c2.json
