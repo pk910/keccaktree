@@ -47,5 +47,26 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
   `systemd-run --scope` defaults to `OOMPolicy=stop` (one OOM kill stops the whole scope): pass
   `-p OOMPolicy=continue`.
 
-## Status
-* rv64_x1: segments generated; GenSE/GenSX built; GenSB (25 slices) building; `Kernels/Rv64X1/All.lean` written.
+## Library interface (lib agent, merged lean-verification 8e53c82 → all-rv 7885f38)
+* Every kernel provides `norm_thm : LibRv.NormThmRv vlmax rodata prog 1 steps []` (from `LibTable.EntryR` + `pc = 1`)
+  and `kernel := LibRv.mkKernelRv vlmax (LibTable.sym "<k>") 0 [] … (Riscv.vlAnn RvVl.<k>) RvVl.<k>_ok RvVl.entries.…`
+  (any `vl` at the call).  Digest = `LibX86.Digest` (re-exported by `RiscvCommon`).
+* Scalar kernels (`rv64_x1`, `zbb_x1`): no `vsetvli` (`scalar : prog.all (!·.usesVlmax)` by decide) ⇒
+  `Riscv.run_vlmax`: the same run for every `vlmax`, so `kernel vlmax` for **every** `vlmax`.
+* RVV kernels: one theorem per `vlmax ∈ {2, 4, 8}` (VLEN 128/256/512), body variants `GenB1..GenB<vlmax>`.
+* `Kernels/RvLib.lean`: `table2/4/8` (order of `rvShape`), `shape_ = rfl`, `lib2/lib4/lib8` = `LibTable.lib_rv`.
+* **VLEN coverage gap** (dispatch picks rvv/rvv_zvkb for every VLEN ≥ 128): VLEN ≥ 1024 (`vlmax ≥ 16`) is NOT
+  covered.  The model's vector registers have 8 lanes (`State.v : Vector (Vector α 8) 32`, `setActive` over
+  `Fin 8`), so `Riscv.isa vlmax` for `vlmax > 8` does not model the hardware; a VLEN-parametric theorem would
+  need (a) a wider/parametric register file (touches every ISA model, all cut variable numbering, all generated
+  proofs) and (b) a body proof per `vl` value up to VLMAX (or a lane-generic body proof, which the symbolic
+  per-node method does not give).  Covered exactly: VLEN ∈ {128, 256, 512}.
+
+## Status (18:00 UTC)
+* rv64_x1: GenSE/GenSX built; GenSB slices 0–12 built, 13–24 building (P=1: 8–12 GB, ~8 min each).
+* zbb_x1: segments generated (`gen_segments_rv.sh zbb_x1 ZbbX1 18 3456 3460 3474 2097155`), `All.lean` from the
+  template (`gen_all_rv1.py zbb_x1 ZbbX1 3479 3498 3438`); build after rv64.
+* RVV: frame lemmas (`RvvCommon`) build; generator `gen_all_rvv.py` checked on `batch1` of rvv_v2; queue
+  `/root/kt-rv-rvvq.sh` building all body variants (log `/root/kt-rv-rvvq.log`), then each `All`.
+* Commands: `/root/kt-rv-gen-rvv.sh` (generation), `/root/kt-rv-rvvq.sh "<Ns> <ProgNs> <kernel> <V> <s> <L>" …`
+  (rvv: s=380 L=5767; rvv_zvkb: s=237 L=3160), `/root/kt-rv-build.sh <Ns> <P> <Gen…>`.
