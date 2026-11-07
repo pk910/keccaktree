@@ -5,3 +5,4 @@ target/
 Cargo.lock
 java/native/
 java/target/
+lean/paths/raw/
