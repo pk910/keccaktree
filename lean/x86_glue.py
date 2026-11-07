@@ -930,6 +930,8 @@ namespace Keccaktree.Kernels.{d}.Lib
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Asm.LibX86
 open Keccaktree.Kernels.{d} (prog rodata)
 
+set_option maxHeartbeats 0 in
+set_option maxRecDepth 100000 in
 def kernel : Library.KernelThm X86.isa EntryX86 Digest :=
   {mk}
 
