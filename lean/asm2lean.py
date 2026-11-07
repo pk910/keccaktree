@@ -672,6 +672,66 @@ class Riscv:
             if m: data += bytes.fromhex(m.group(2).replace(' ', ''))
         self.rodata = [int.from_bytes(data[i:i + 8], 'little') for i in range(0, len(data) - len(data) % 8, 8)]
         self.instrs = [self.translate(a, t) for a, t in raw]
+        # `auipc rd, %pcrel_hi(.LRC+o)` is modelled as `rd := the address of .LRC+o`; the CPU leaves only the
+        # pc-relative high part in rd, and the low part is added by the next instruction (`addi rd, rd,
+        # %pcrel_lo` -- shown as `mv rd, rd` before relocation -- or `ld rd, %pcrel_lo(rd)`).  Faithful iff
+        # that pair is adjacent: the model's `mv`/`ld ..(0)` then sees the full address.
+        for i, ins in enumerate(self.instrs):
+            if ins.startswith('.lea '):
+                rd = ins.split()[1]
+                nxt = self.instrs[i + 1] if i + 1 < len(self.instrs) else ''
+                lo = [r for r in self.reloc.get(raw[i + 1][0], []) if r[0] in ('R_RISCV_PCREL_LO12_I', 'R_RISCV_PCREL_LO12_S')] \
+                    if i + 1 < len(raw) else []
+                if not lo or not re.match(r'^\.(ld %s %s \(0\)|mv %s %s)$' % (rd, rd, rd, rd), nxt):
+                    raise ValueError('auipc %d not paired with its %%pcrel_lo addi/ld (%s)' % (i, nxt))
+        self.check_shift_counts()
+
+    def check_shift_counts(self):
+        """`vsll.vx`/`vsrl.vx`/`vror.vx`: the model shifts by the register value if it is < 64 (else 0);
+        the CPU by its low 6 bits.  Require (forward must-analysis) that the count register holds a
+        `li` constant < 64 on every path."""
+        n = len(self.instrs)
+        succ = []
+        for i, x in enumerate(self.instrs):
+            m = re.match(r'^\.(br \.\w+ \d+ \d+|j) (\d+)$', x)
+            if x == '.ret':
+                succ.append([])
+            elif m:
+                succ.append([int(m.group(2))] + ([i + 1] if x.startswith('.br') else []))
+            else:
+                succ.append([i + 1] if i + 1 < n else [])
+        TOP = None   # unvisited
+        st = [TOP] * n
+        st[self.entry] = {}
+        def out(i):
+            d = dict(st[i])
+            x = self.instrs[i]
+            m = re.match(r'^\.(op|opi|li|mv|not|lea|ld|vsetvli) (\d+)', x)
+            if m:
+                d.pop(int(m.group(2)), None)
+                ml = re.match(r'^\.li (\d+) \(0x([0-9a-f]+)#64\)$', x)
+                if ml and int(ml.group(2), 16) < 64:
+                    d[int(ml.group(1))] = int(ml.group(2), 16)
+            return d
+        changed = True
+        while changed:
+            changed = False
+            for i in range(n):
+                if st[i] is TOP:
+                    continue
+                o = out(i)
+                for j in succ[i]:
+                    if j >= n:
+                        continue
+                    new = o if st[j] is TOP else {k: v for k, v in st[j].items() if o.get(k) == v}
+                    if st[j] is TOP or new != st[j]:
+                        if st[j] is TOP or len(new) < len(st[j]):
+                            st[j] = new
+                            changed = True
+        for i, x in enumerate(self.instrs):
+            m = re.match(r'^\.vshiftx \d+ \d+ \.\w+ (\d+)$', x)
+            if m and st[i] is not TOP and int(m.group(1)) not in st[i]:
+                raise ValueError('vector shift count register x%s at %d is not a constant < 64' % (m.group(1), i))
 
     def reg(self, s):
         return self.REGS[s.strip()]

@@ -225,8 +225,7 @@ def make_state(roles, avx512, kind_hint=None):
         g[r] = gval('count')
     for r in roles.data:
         g[r] = gval('pure')
-    for r in roles.r32:
-        g[r] = ('d', rng.choice([1, 2, 3, 4, rng.randrange(1, 1 << 32)]))
+
     for a, b in roles.pairs:
         k = rng.random()
         if k < 0.4:     # two counts
@@ -241,6 +240,8 @@ def make_state(roles, avx512, kind_hint=None):
             reg = rng.choice([1, 2, 3])
             g[a] = ('p', reg, MID + 8 * rng.randrange(-16, 16))
             g[b] = ('p', reg, MID + 8 * rng.randrange(-16, 16)) if rng.random() < 0.7 else g[a]
+    for r in roles.r32:     # the translator's domain for 32-bit forms: upper half zero, dec of non-zero
+        g[r] = ('d', rng.choice([1, 2, 3, 4, rng.randrange(1, 1 << 32)]))
     mem = []
     for base, (region, disp) in roles.ptr.items():
         if base == 'rsp' and roles.stack_any:

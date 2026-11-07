@@ -102,7 +102,7 @@ def make_state(roles, vlmax):
         elif g[a][0] == 'p':
             g[b] = ('p', g[a][1], g[a][2] + 8 * rng.choice([-1, 1]))
     for r in roles.shift:
-        g[IDX[r]] = ('d', rng.choice([rng.randrange(64), rng.randrange(64), rng.randrange(128), r64()]))
+        g[IDX[r]] = ('d', rng.randrange(64))     # the translator's domain (constant counts < 64)
     for r in roles.ptr:
         if r in IDX and IDX[r] not in (0, 1, 3, 4):
             base = MID + 8 * rng.randrange(-200, 200)
@@ -138,10 +138,7 @@ def kernel_instrs(dis):
             continue
         if op == 'vsetvli' and 'e64,m1' not in text:
             continue
-        a = text.split(None, 1)[1].split(',')
-        if a[0] == 'ra':     # keep ra as the return address
-            text = text.replace('ra', 't6', 1)
-        text = re.sub(r'\bra\b', 't6', text) if op in ('sd', 'mv', 'xor', 'and', 'or') else text
+        text = re.sub(r'\bra\b', 't6', text)     # ra is the trampoline's return address
         seen.add(text)
     return sorted(seen)
 
@@ -172,6 +169,8 @@ def t_rv():
         return ['not %s, %s' % (R(), R())]
     if c == 6:
         r = R()
+        if rng.random() < 0.5:
+            return ['1: auipc %s, %%pcrel_hi(.LRC+%d)' % (r, 8 * rng.randrange(32)), 'addi %s, %s, %%pcrel_lo(1b)' % (r, r)]
         return ['1: auipc %s, %%pcrel_hi(.LRC+%d)' % (r, 8 * rng.randrange(32)), 'ld %s, %%pcrel_lo(1b)(%s)' % (r, r)]
     if c == 7:
         return ['ld %s, %s' % (R(), mem())]
