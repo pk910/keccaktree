@@ -291,9 +291,10 @@ of the previous cut not written by the count steps (`σ` moves them, e.g. one ba
 count registers whose value the count steps know. -/
 theorem Fr.cut {ρ σ : Reloc} (hρ : ρ.ok) (hσ : σ.ok) (L L' : List Nat) (sc sc' : State (BitVec 64))
     (hA : PreCut ρ L sc S) (h : Fr rodata prog S m pc zf cf vals R)
+    (fixed : List (Nat × Int)) (hfix : ∀ p ∈ fixed, p ∈ vals)
     (hchk : (L'.all fun i => (decide (i < 288) || memVarRegion i == rStack) &&
        ((L.contains i && R.all (fun n => i != 256 + n) && (cutVar L sc i == E.reloc σ (cutVar L' sc' i))) ||
-        vals.any (fun p => i == 256 + p.1 && decide (p.1 < 32) && (cutVar L' sc' i == .const (BitVec.ofInt 64 p.2)) &&
+        fixed.any (fun p => i == 256 + p.1 && decide (p.1 < 32) && (cutVar L' sc' i == .const (BitVec.ofInt 64 p.2)) &&
           ((wordGpr (BitVec.ofInt 64 p.2)).region == 0)))) = true)
     (hctl : sc'.g = Vector.replicate 32 ⟨0, 0⟩ ∧ sc.k = sc'.k ∧ sc.nf = sc'.nf ∧ sc.vf = sc'.vf ∧
       sc.vl = sc'.vl ∧ sc.depth = sc'.depth)
@@ -311,7 +312,7 @@ theorem Fr.cut {ρ σ : Reloc} (hρ : ρ.ok) (hσ : σ.ok) (L L' : List Nat) (sc
     · have henv : envOf (X86.isa.run rodata prog m S) i = envOf S i :=
         envOf_near R S _ h.near i (fun n hn => hR n hn)
       rw [cutVar_eq_of_env L L' S _ i hi hin henv, hw i hin hcell, hv, E.reloc_add ρ σ hρ hσ]
-    · have hval := h.vals p hp
+    · have hval := h.vals p (hfix p hp)
       subst hip
       have he : envOf (X86.isa.run rodata prog m S) (256 + p.1) = BitVec.ofInt 64 p.2 := by
         rw [envOf_gdVar _ _ hp32]; exact hval
