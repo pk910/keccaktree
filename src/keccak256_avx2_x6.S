@@ -27,9 +27,12 @@
  * of it); the calibration picks.
  *
  * Tail (Gracemont costs per node: a batch here 183 ns, avx2_x5 188, avx2_x4
- * 239, a padded x4 batch of 3 nodes 320, x86_x1 278): a single remaining
- * node goes to keccaktree_keccak256_x86_x1, 2..4 to
- * keccaktree_keccak256_avx2_x4, 5 to keccaktree_keccak256_avx2_x5. When 9,
+ * 239, a padded x4 batch of 3 nodes 320, x86_x1 278, the lane-pair kernel
+ * 373): 1..3 remaining nodes go to keccaktree_keccak256_x86_x1 one after
+ * the other (2 nodes: 561 ns against 746 through the pairs or a padded x4
+ * batch; 3: 862 against 960 padded), 4 to keccaktree_keccak256_avx2_x4
+ * (954 against 1112), 5 to keccaktree_keccak256_avx2_x5. Measured on
+ * Gracemont: counts 2 1.35x, 3 1.12x, 8 1.11x, 26 1.04x. When 9,
  * 10, 14, 15 or 20 nodes remain (before a batch, BATCH_ALT_MASK) they go
  * to avx2_x5 as well: 5 + 4, 5 + 5, 5 + 5 + 4, 5 + 5 + 5 and 5 x 4 beat a
  * batch here and the x4 tail of the rest (14 nodes: 202 vs 210 ns/node,
@@ -48,8 +51,9 @@
 #define NODES		6
 #define VBYTES		32
 #define SLOTS		2688
-#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar directly */
-#define SMALL_TAIL	keccaktree_keccak256_avx2_x4	/* 2..4 nodes */
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* 1..3 nodes: scalar, one by one */
+#define SMALL_TAIL_X1_MAX	3
+#define SMALL_TAIL	keccaktree_keccak256_avx2_x4	/* 4 nodes */
 #define SMALL_TAIL_MAX	4
 #define SMALL_TAIL_MID	keccaktree_keccak256_avx2_x5	/* 5 nodes */
 #define SMALL_TAIL_MID_MASK	(1 << 5)
