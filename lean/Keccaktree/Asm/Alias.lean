@@ -673,36 +673,47 @@ theorem sim_step (rodata : Array (BitVec 64)) (i : Instr) (s t : State α) (B : 
     rw [hfr _ _ hw2, hfr _ _ hw1]
     exact hC q (Int.le_trans (bumpB_ge B s i) hq)
 
-/-- The access condition along a separate-region run of `n` steps from `s`, starting at bound `B`. -/
-def AccessRun (rodata : Array (BitVec 64)) (prog : Array Instr) : Nat → Int → State α → Prop
-  | 0, _, _ => True
-  | n + 1, B, s => s.halted = true ∨
+/-- The access condition along a separate-region run of `n` steps from `s`, starting at bound `B`;
+when the run stops (halted, or `n` steps done) the bound is at most `Bf`. -/
+def AccessRun (rodata : Array (BitVec 64)) (prog : Array Instr) : Nat → Int → Int → State α → Prop
+  | 0, B, Bf, _ => B ≤ Bf
+  | n + 1, B, Bf, s => if s.halted then B ≤ Bf else
       ((exec rodata (prog.getD s.pc .nop) s).err = false ∧ AccessOk B s (prog.getD s.pc .nop) ∧
-        AccessRun rodata prog n (bumpB B s (prog.getD s.pc .nop)) (exec rodata (prog.getD s.pc .nop) s))
+        AccessRun rodata prog n (bumpB B s (prog.getD s.pc .nop)) Bf (exec rodata (prog.getD s.pc .nop) s))
 
-/-- **The simulation along a run.** -/
+theorem clean_mono (B B' : Int) (s : State α) (h : B ≤ B') (hC : Clean B s) : Clean B' s :=
+  fun q hq => hC q (Int.le_trans h hq)
+
+/-- **The simulation along a run**: the aliased run follows the separate-region run, and at the end
+the output region of the latter still holds the input above `Bf`. -/
 theorem sim_run (rodata : Array (BitVec 64)) (prog : Array Instr) :
-    ∀ (n : Nat) (B : Int) (s t : State α), AccessRun rodata prog n B s → Sim s t → Clean B s →
-      Sim (X86.isa.run rodata prog n s) (runAl rodata prog n t) := by
+    ∀ (n : Nat) (B Bf : Int) (s t : State α), AccessRun rodata prog n B Bf s → Sim s t → Clean B s →
+      Sim (X86.isa.run rodata prog n s) (runAl rodata prog n t) ∧ Clean Bf (X86.isa.run rodata prog n s) ∧
+      ∀ q, (X86.isa.run rodata prog n s).mem rInput q = s.mem rInput q := by
   intro n
   induction n with
-  | zero => intro B s t _ hS _; exact hS
+  | zero => intro B Bf s t hA hS hC; exact ⟨hS, clean_mono _ _ _ hA hC, fun _ => rfl⟩
   | succ n ih =>
-    intro B s t hA hS hC
+    intro B Bf s t hA hS hC
     have hth : t.halted = s.halted := hS.2.2.2.2.2.2.2.2.2.2.2.2.1
     have htpc : t.pc = s.pc := hS.2.2.2.2.2.2.2.2.2.1
-    rcases hA with hh | ⟨hne, hok, hA⟩
-    · rw [Isa.run_halted _ _ _ _ _ hh]
-      simp only [runAl, hth, hh, ↓reduceIte]; exact hS
-    · cases hh : s.halted
-      · have hst := sim_step rodata (prog.getD s.pc .nop) s t B hS hC hok hh hne
-        show Sim (if s.halted then s else X86.isa.run rodata prog n (X86.exec rodata (prog.getD s.pc .nop) s))
-          (if t.halted then t else runAl rodata prog n (execAl rodata (prog.getD t.pc .nop) t))
-        rw [hth, hh, htpc]
-        simp only [Bool.false_eq_true, ↓reduceIte]
-        exact ih _ _ _ hA hst.1 hst.2
-      · rw [Isa.run_halted _ _ _ _ _ hh]
-        simp only [runAl, hth, hh, ↓reduceIte]; exact hS
+    cases hh : s.halted
+    · simp only [AccessRun, hh, Bool.false_eq_true, ↓reduceIte] at hA
+      obtain ⟨hne, hok, hA⟩ := hA
+      have hst := sim_step rodata (prog.getD s.pc .nop) s t B hS hC hok hh hne
+      show Sim (if s.halted then s else X86.isa.run rodata prog n (X86.exec rodata (prog.getD s.pc .nop) s))
+        (if t.halted then t else runAl rodata prog n (execAl rodata (prog.getD t.pc .nop) t)) ∧
+        Clean Bf (if s.halted then s else X86.isa.run rodata prog n (X86.exec rodata (prog.getD s.pc .nop) s)) ∧
+        ∀ q, (if s.halted then s else X86.isa.run rodata prog n (X86.exec rodata (prog.getD s.pc .nop) s)).mem rInput q =
+          s.mem rInput q
+      rw [hth, hh, htpc]
+      simp only [Bool.false_eq_true, ↓reduceIte]
+      obtain ⟨h1, h2, h3⟩ := ih _ _ _ _ hA hst.1 hst.2
+      refine ⟨h1, h2, fun q => (h3 q).trans ?_⟩
+      exact exec_frame rodata _ s hne rInput q (fun hw => hok.2 _ hw rfl)
+    · simp only [AccessRun, hh, ↓reduceIte] at hA
+      rw [Isa.run_halted _ _ _ _ _ hh]
+      simp only [runAl, hth, hh, ↓reduceIte]; exact ⟨hS, clean_mono _ _ _ hA hC, fun _ => trivial⟩
 
 /-- The separate-region state an aliased state starts from: the output region holds the storage too. -/
 def dupState (t : State α) : State α :=
@@ -716,22 +727,26 @@ theorem sim_dup (t : State α) : Sim (dupState t) t := by
 theorem clean_dup (t : State α) (B : Int) : Clean B (dupState t) := by
   intro q _; simp [dupState, show rInput ≠ rOutput by decide]
 
+theorem bumpB_mono (B B' : Int) (s : State α) (i : Instr) (h : B' ≤ B) : bumpB B' s i ≤ bumpB B s i := by
+  unfold bumpB
+  generalize writes s i = l
+  induction l generalizing B B' with
+  | nil => exact h
+  | cons c l ih2 => simp only [List.foldl_cons]; apply ih2; split <;> omega
+
 theorem accessRun_mono (rodata : Array (BitVec 64)) (prog : Array Instr) :
-    ∀ (n : Nat) (B B' : Int) (s : State α), B' ≤ B → AccessRun rodata prog n B s → AccessRun rodata prog n B' s := by
+    ∀ (n : Nat) (B B' Bf : Int) (s : State α), B' ≤ B → AccessRun rodata prog n B Bf s → AccessRun rodata prog n B' Bf s := by
   intro n
   induction n with
-  | zero => intros; trivial
+  | zero => intro B B' Bf s hB hA; exact Int.le_trans hB hA
   | succ n ih =>
-    intro B B' s hB hA
-    rcases hA with hh | ⟨hne, hok, hA⟩
-    · exact Or.inl hh
-    · refine Or.inr ⟨hne, ⟨fun c hc hr => Int.le_trans hB (hok.1 c hc hr), hok.2⟩, ih _ _ _ ?_ hA⟩
-      unfold bumpB
-      generalize writes s (prog.getD s.pc .nop) = l
-      clear hA hok hne
-      induction l generalizing B B' with
-      | nil => exact hB
-      | cons c l ih2 => simp only [List.foldl_cons]; apply ih2; split <;> omega
+    intro B B' Bf s hB hA
+    cases hh : s.halted
+    · simp only [AccessRun, hh, Bool.false_eq_true, ↓reduceIte] at hA ⊢
+      obtain ⟨hne, hok, hA⟩ := hA
+      exact ⟨hne, ⟨fun c hc hr => Int.le_trans hB (hok.1 c hc hr), hok.2⟩, ih _ _ _ _ (bumpB_mono _ _ _ _ hB) hA⟩
+    · simp only [AccessRun, hh, ↓reduceIte] at hA ⊢
+      exact Int.le_trans hB hA
 
 end X86
 end Keccaktree.Asm
