@@ -21,9 +21,9 @@ theorem outcome_ovr_rv (targets : List String) (off count : Nat) (input : Int �
     Library.Outcome EntryRv Digest targets off count input S' (ovr D c X) := by
   obtain ⟨hh, he, hp, hout⟩ := h
   refine ⟨hh, he, fun q hq => (hp q hq).trans (by rw [hmem]), ?_⟩
-  rcases hout with ⟨ht, hd⟩ | ⟨next, done, ht, hmemb, hdone, hd, hpos, hnext⟩
+  rcases hout with ⟨ht, hd⟩ | ⟨next, done, ht, hmemb, hdone, hd, hnext⟩
   · exact Or.inl ⟨ht, hd⟩
-  · refine Or.inr ⟨next, done, ht, hmemb, hdone, hd, hpos, ?_⟩
+  · refine Or.inr ⟨next, done, ht, hmemb, hdone, hd, ?_⟩
     unfold EntryRv at hnext ⊢
     rw [normCtl_ovr_upd]; exact hnext
 
