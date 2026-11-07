@@ -62,3 +62,30 @@ starts with `kmovw k1`), or prove `NormThm` directly for `EntryX86` states.
   The library itself only writes 1, 2 (small tail; default 1) and 5, 9 (mid tail; default 4); the public
   setters accept any `uint64_t`.  Values in [2^55, 2^56) also decode as numbers but are outside `classRep`'s
   `< 2^55` hypothesis (harmless to extend).
+
+## 3. Library tables (DONE: statements; kernel theorems to be plugged in)
+`Asm/LibTable.lean`: `x86Shape` (14 kernels), `armShape` (6), `rvShape` (4; one table per `vlmax`):
+(symbol `keccaktree_keccak256_<k>`, rank = depth in the tail-call graph, static targets from the programs'
+`tailcall`/`jcct`), `shapeOk` decided for all three; `lib_of_shape` (any table of a given shape ⇒ every kernel,
+every count, every node); `lib_x86` (per threshold configuration), `lib_arm`, `lib_rv vlmax`.
+Calling conventions: `LibX86.EntryX86` (rdi/rsi/rdx/rsp), `LibTable.EntryArm` (x0/x1/x2/sp=31),
+`LibTable.EntryRv` (a0/a1/a2/sp=x2); all normalise the control part (`normCtl`): any flags/masks/vl.
+Kernel names must be the full symbols (`KernelThm.name`), e.g. `X86X1.Lib.kernel` = `keccaktree_keccak256_x86_x1`.
+**Plug-in**: `T := [k_x86_x1, k_avx2_x2, …]` in the order of `x86Shape`, `hT : T.shape = x86Shape := rfl`
+(or `by decide`), then `LibTable.lib_x86 (fun cfg => T cfg) hT`.
+
+## 4. Dispatch (`src/keccaktree.c`, upstream main 6ede9ab = PR #17 merge, src identical to lean-verification) (DONE)
+`Keccaktree/Dispatch.lean`: `detectX86` (OSXSAVE, XCR0 ymm/zmm state, AVX2, AVX512F/VL, BMI1/2;
+calibration = oracle returning a candidate; tail/mid-tail calibration writes), `detectArm` (Linux HWCAP / Apple
+sysctl / other OS), `detectRv` (hwprobe V/Zbb/Zvkb, vlenb ≥ 16).
+Proved: `detectX86_sound`/`detectArm_sound`/`detectRv_sound` (portable C kernel or a library kernel whose ISA
+extensions the CPU reports; `needs*_closed`: tail targets need no more than the caller), `detectX86_cfg`
+(thresholds after detection: small ∈ {1,2}, mid ∈ {4,5,9}), `hash_x86`/`hash_arm`/`hash_rv`: after
+`keccaktree_init(NULL)`, `keccaktree_hash(out,in,count)` is `Proof.hashC_spec` (generic C) or a library run with
+every digest (`LibOk`) from the entry state at offset 0.  Axioms: propext, Classical.choice, Quot.sound.
+Trusted (documented in the file): C compiler/ABI (argument registers ↔ `Entry`), CPUID/XGETBV/HWCAP/hwprobe
+reports, calibration runs (in-place `fns[i](buf, buf, n)`, aliasing not in the model, results discarded),
+thread races on first call, user overrides, user setter values ≥ 2^55, buffer alignment (model regions are
+64-byte aligned; unaligned = queued item 3), `64·count ≤ 2^54` bytes.
+RVV: dispatch picks rvv/rvv_zvkb for every VLEN ≥ 128; kernel proofs exist per VLEN (`lib_rv vlmax`) — the
+proved VLENs bound the claim (gap for VLENs not proved).
