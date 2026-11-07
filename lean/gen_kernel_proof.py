@@ -129,7 +129,7 @@ def var_id(v):
 
 # the spec side: `specQuantity (Spec.round r (A n)) kind` → lanes of the round → `round_lane_k` (Asm/RoundLanes.lean)
 # → expressions in the atoms `L (A n) j`; the round constant becomes a literal.
-SIMP_SPEC = '''specQuantity, ''' + ', '.join(f'round_lane_{k}' for k in range(25)) + ''', Spec.RC'''
+SIMP_SPEC = '''specQuantity, specQuantity0, specQuantityCol, Nat.reduceLT, ↓reduceIte, Nat.reduceSub, Nat.reduceDiv, Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, ''' + ', '.join(f'round_lane_{k}' for k in range(25)) + ''', Spec.RC'''
 
 def const_hyps(count, only_node):
     """lanes 8..24 of the absorbed single-block state: 0x01 at lane 8, 0x80<<56 at lane 16, 0 elsewhere"""
@@ -262,7 +262,7 @@ theorem lane{c}_g{g} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) 
   all_goals decide +kernel
 
 ''' if 75 <= kind < 99 else f'''  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
-  {"simp only [specQuantity, Spec.RC]" + at_h if hnames else "skip"}
+  {"simp only [specQuantity, specQuantity0, specQuantityCol, Nat.reduceLT, ↓reduceIte, Nat.reduceSub, Nat.reduceDiv, Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, Spec.RC]" + at_h if hnames else "skip"}
   simp only [{SIMP_SPEC}]
   bv_decide (config := {{ timeout := 1800 }})
 
@@ -523,7 +523,7 @@ for the sponge states of the nodes. -/
 theorem entry_inv (input : Int → BitVec 64) :
     Inv0 (envOf (entryState input)) (fun n => absorbNode (nodeWords input n)) := by
   refine ⟨''' + ', '.join(
-      [f'(by rw [entry_mem_input]; simp only [specQuantity, absorbNode_lane{w}, nodeWords, rotl0]; try rfl)' for n in range(count) for w in range(8)] +
+      [f'(by rw [entry_mem_input]; simp only [specQuantity, specQuantity0, specQuantityCol, Nat.reduceLT, ↓reduceIte, Nat.reduceSub, Nat.reduceDiv, Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, absorbNode_lane{w}, nodeWords, rotl0]; try rfl)' for n in range(count) for w in range(8)] +
       [f'(absorbNode_lane{k} _)' for n in range(count) for k in range(8, 25)]) + f'''⟩
 
 set_option maxRecDepth 100000 in
@@ -533,7 +533,7 @@ to compare terms containing the concrete `Spec.rounds 24 …` states). -/
 theorem inv24_word (Sf : State (BitVec 64)) (A : Fin {count} → Spec.State) (h : Inv24 (envOf Sf) A)
     (n w : Nat) (hn : n < {count}) (hw : w < 4) :
     Sf.mem rOutput (Int.ofNat (4 * n + w)) = L (A ⟨n, hn⟩) w := by
-  simp only [Inv24, specQuantity, rotl0, envOf_mem] at h
+  simp only [Inv24, specQuantity, specQuantity0, specQuantityCol, Nat.reduceLT, ↓reduceIte, Nat.reduceSub, Nat.reduceDiv, Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, rotl0, envOf_mem] at h
   rcases n with ''' + ' | '.join(['_'] * count + ['n']) + ''' <;> rcases w with _ | _ | _ | _ | w <;> (try omega)
 ''' + ''.join(f'  · exact h{"".join(".2" for _ in range(4 * n + w))}{".1" if 4 * n + w + 1 < 4 * count else ""}\n' for n in range(count) for w in range(4)) + f'''
 set_option maxRecDepth 100000 in
