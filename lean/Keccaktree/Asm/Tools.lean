@@ -151,9 +151,11 @@ partial def findCtl (rodata : Array (BitVec 64)) (prog : Array T.Instr) (idx : L
     -- candidates: the general registers' variables (singly, then together and minimised), then the stack cells
     -- that are still variables (return addresses read by `ret`/`pop` directly from memory)
     let regCands := (st.gd.toList.flatMap E.vars).eraseDups.filter (!ctl.contains ·)
-    let stackCands := (List.range 1024).filterMap fun (i : Nat) =>
+    -- (the variables of the window's cells at the failing step: a counter or pointer in a stack
+    -- slot may already have been updated, e.g. `add qword ptr [rsp+..], 16` before the compare)
+    let stackCands := ((List.range 1024).flatMap fun (i : Nat) =>
       let q : Int := 131072 - 1024 + Int.ofNat i
-      match st.mem rStack q with | .var v => if ctl.contains v then none else some v | _ => none
+      (E.vars (st.mem rStack q)).filter fun v => v ≥ 288 && !ctl.contains v).eraseDups
     let advances (extra : List Nat) : Bool :=
       match firstFail T rodata prog idx (cutOf (extra ++ ctl) sc) with
       | none => true
