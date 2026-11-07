@@ -74,7 +74,10 @@ def control_at(kernel, count, steps, lanes):
     g = re.sub(r'⟨(\d+), \((-?\d+)\)⟩', r'(Addr.mk \1 (\2))', m.group(1))
     halted = m.group(10) or 'false'
     tail = (m.group(11) or '').strip('"')
-    return g, m.group(2), m.group(3), m.group(4), m.group(5), m.group(6), int(m.group(7)), int(m.group(8)), int(m.group(9)), halted, tail
+    zf, cf = m.group(3), m.group(4)
+    if FLAGS and steps < HEAL:
+        zf, cf = FLAGS
+    return g, m.group(2), zf, cf, m.group(5), m.group(6), int(m.group(7)), int(m.group(8)), int(m.group(9)), halted, tail
 
 
 def slice_lits(kernel, count, a, b, ctl=(), cells=()):
@@ -83,6 +86,10 @@ def slice_lits(kernel, count, a, b, ctl=(), cells=()):
     out = subprocess.run([KT, 'slice', kernel, str(count), str(a), str(b)], capture_output=True, text=True, check=True, env=env).stdout
     ctl = [int(x) for x in re.findall(r'\d+', re.search(r'^CTL (.*)$', out, re.M).group(1))]
     sc = re.search(r'^SC (.*)$', out, re.M).group(1)
+    if FLAGS and a < HEAL:
+        # the segment is proved for these flags at its start (they are dead until the first flag write, HEAL)
+        sc, n = re.subn(r'(#v\[[0-9, ]*\]) (true|false) (true|false) ', lambda m: f'{m.group(1)} {FLAGS[0]} {FLAGS[1]} ', sc, count=1)
+        assert n == 1, sc[-300:]
     idx = re.search(r'^IDX (.*)$', out, re.M).group(1)
     trees = {}
     for m in re.finditer(r'^VAR (\d+) (.*)$', out, re.M):
@@ -475,22 +482,32 @@ theorem rounds_succ (r : Nat) (X : Spec.State) : Spec.round r (Spec.rounds r X) 
   simp only [Spec.rounds, Spec.memo_eq]
 
 ''')
+        nodes_ = [int(x) for x in os.environ.get('NODES', '').split(',') if x] or list(range(count))
         for n in range(count):
-            if PLAN['rounds'][0][n] != 0:
-                continue   # a segment starting mid-way: `A n` is not the absorbed state
-            f.write(f'''set_option maxRecDepth 100000 in
+            r0n = PLAN['rounds'][0][n]
+            if r0n != 0 and n not in nodes_:
+                continue
+            if r0n == 0:
+                f.write(f'''set_option maxRecDepth 100000 in
 theorem aat_{n} (A : Fin {count} → Spec.State) : AAt A {K} ⟨{n}, by decide⟩ = Spec.rounds {rounds_end[n]} (A ⟨{n}, by decide⟩) := by
   have h0 : AAt A 0 ⟨{n}, by decide⟩ = Spec.rounds 0 (A ⟨{n}, by decide⟩) := rfl
+''')
+            else:
+                # a segment starting mid-way: node `n` starts at round {r0n} of some absorbed state `X n`
+                f.write(f'''set_option maxRecDepth 100000 in
+theorem aat_{n} (X A : Fin {count} → Spec.State) (hA : A ⟨{n}, by decide⟩ = Spec.rounds {r0n} (X ⟨{n}, by decide⟩)) :
+    AAt A {K} ⟨{n}, by decide⟩ = Spec.rounds {rounds_end[n]} (X ⟨{n}, by decide⟩) := by
+  have h0 : AAt A 0 ⟨{n}, by decide⟩ = Spec.rounds {r0n} (X ⟨{n}, by decide⟩) := hA
 ''')
             for c in range(K):
                 r0, r1 = PLAN['rounds'][c][n], PLAN['rounds'][c + 1][n]
                 if r1 == r0 + 1:
-                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} (A ⟨{n}, by decide⟩) := by
+                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} ({'A' if r0n == 0 else 'X'} ⟨{n}, by decide⟩) := by
     show sched (AAt A {c}) {c} ⟨{n}, by decide⟩ = _
     rw [sched_act (AAt A {c}) {c} ⟨{n}, by decide⟩ (by decide), h{c}, show sched.rndSlice {c} = {r0} from rfl, rounds_succ]
 ''')
                 else:
-                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} (A ⟨{n}, by decide⟩) := by
+                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} ({'A' if r0n == 0 else 'X'} ⟨{n}, by decide⟩) := by
     show sched (AAt A {c}) {c} ⟨{n}, by decide⟩ = _
     rw [sched_nact (AAt A {c}) {c} ⟨{n}, by decide⟩ (by decide), h{c}]
 ''')
@@ -850,6 +867,8 @@ def seg_moves_text():
 
 ALLOC_END = []
 SEG = bool(os.environ.get('SEG'))
+FLAGS = os.environ.get('FLAGS', '').split(',') if os.environ.get('FLAGS') else None   # zf,cf override at the start
+HEAL = int(os.environ.get('HEAL', '0'))   # the override applies to states before this step
 END_CTL = [int(x) for x in os.environ.get('END_CTL', '').split(',') if x]
 FORBID_CTL = [int(x) for x in os.environ.get('FORBID_CTL', '').split(',') if x]
 WRITE_OK = os.environ.get('WRITE_OK', 'fun _ => true')   # Lean: (Region × Int) → Bool, the cells a slice may store to
@@ -877,12 +896,24 @@ def main():
     CTLS.update(find_ctls(kernel, count, bounds))
     print(f'control words per slice: {[CTLS[c] for c in range(K)]}', file=sys.stderr)
     allocs = {}
-    allocs[0] = [(n, w, mem_var(1, 8 * n + w), 0, f'input word {w} of node {n}') for n in range(count) for w in range(8)]
+    # NODES: the nodes the plan tracks (default all); the others are not hashed in the plan (a segment
+    # after earlier batches, e.g. the exit of a kernel's loop with the remaining nodes)
+    nodes = [int(x) for x in os.environ.get('NODES', '').split(',') if x] or list(range(count))
+    if all(PLAN['rounds'][0][n] == 0 for n in nodes):
+        allocs[0] = [(n, w, mem_var(1, 8 * n + w), 0, f'input word {w} of node {n}') for n in nodes for w in range(8)]
+    else:
+        # a segment starting mid-way (e.g. after the first flag write of a batch): the locations then
+        allocs[0] = matches(kernel, count, bounds[0], lanes, PLAN['rounds'][0])
     for c in range(1, K):
         allocs[c] = matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c])
-    allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K], region_filter=2)
+    if all(PLAN['rounds'][K][n] == 24 for n in nodes):
+        allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K], region_filter=2)
+    else:
+        allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K])
+    for c in range(1, K + 1):
+        allocs[c] = [h for h in allocs[c] if h[0] in nodes]
     ALLOC_END = allocs[K]
-    chyps = {c: const_hyps([n for n in range(count) if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}
+    chyps = {c: const_hyps([n for n in nodes if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}
     if os.environ.get('DATA') == '0':
         # a segment without data claims (frame code): no lane invariants
         allocs = {c: [] for c in range(K + 1)}
