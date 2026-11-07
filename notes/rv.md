@@ -80,23 +80,25 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
 * `lakefile.toml` of the merge adds tool targets; not synced to `/root/kt-rv` while builds run (rsync
   `--exclude lakefile.toml`), to avoid any reconfiguration of the running builds.
 
-## Status (18:20 UTC)
-* DONE (axioms propext, Classical.choice, Quot.sound + bv_decide certificates, no sorry):
-  - rv64_x1 (`Rv64X1.All.rv64_x1_all`, `kernel vlmax`, `kernel_ch vlmax ch`) — f17c881
-  - zbb_x1 (`ZbbX1.All`) and the VLEN-128 library `RvLib2` (`lib2`, `lib2ch`) — 4dfade0
-  - rvv at VLEN 256 (`RvvV4.All`) — f421edc; rvv_zvkb at VLEN 256 (`RvvZvkbV4.All`) — 0ed3a64; `RvLib4` builds
-* Remaining builds (remote queues): rvv_zvkb VLEN 256 (`/root/kt-rv-rvvq.log`, then auto-stopped by
-  `/root/kt-rv-q1stop.sh`), rvv VLEN 512 (`/root/kt-rv-rvvq2.log`), rvv_zvkb VLEN 512 (`/root/kt-rv-rvvq3.log`);
-  then `lake build Keccaktree.Kernels.RvLib4 Keccaktree.Kernels.RvLib8` and copy the generated `All.lean` files.
-  - rvv at VLEN 128 (`RvvV2.All.all`, `all_ch`, `kernel`, `kernel_ch`) — a9b4d97 / 4d16931
-  - rvv_zvkb at VLEN 128 (`RvvZvkbV2.All`) — 0d21c16
-* vl-choice layer (M11) DONE: `Asm/RiscvChoice.lean` (`isaCh`, `LegalVl`, `legal_min`, `run_min`, `run_ch_scalar`,
-  `run_ch_of_pathOk`, `SliceCert.run_ch`, `run_ovr_ann_ch`, `LibRv.mkKernelRvCh`, `LibRv.lib_rv_ch`); RVV frame lemmas
-  are stated for `isaCh V ch`; each RVV `All` proves `all_ch` (any legal choice, `8 + P·nb ch c c` steps) and derives
-  the deterministic `all` (`nb_min`: `⌈c/V⌉` batches).  Scalar kernels: `kernel_ch` via `run_ch_scalar`.
-* Building: rv64_x1 body (slices 16–24 left, P=1, ~11 min each under CPU load), zbb_x1 (all 25 slices, ~1 min each),
-  RVV queue (v4 then v8 variants; generation of the v8 variants still running).
-* `RvLib.lean`: tables `table<V>` / `table<V>ch` and `lib<V>` / `lib<V>ch` for V ∈ {2,4,8} (needs all kernels built).
+## Status (22:55 UTC): COMPLETE
+Every RISC-V kernel is proved for every count, with the library tables for every VLEN the model covers.
+`lake build Keccaktree.Kernels.RvLib` (913 jobs) green on `/root/kt-rv`; `#print axioms` of every theorem below:
+`propext`, `Classical.choice`, `Quot.sound` + `bv_decide` certificates, no `sorryAx`.
+
+| kernel | module | theorems | commit |
+|---|---|---|---|
+| rv64_x1 | `Kernels/Rv64X1/All.lean` | `rv64_x1_all` (`32 + 5374·c` steps), `kernel vlmax`, `kernel_ch vlmax ch` (every vlmax / vl choice) | f17c881 |
+| zbb_x1 | `Kernels/ZbbX1/All.lean` | `zbb_x1_all` (`32 + 3443·c`), `kernel`, `kernel_ch` | 4dfade0 |
+| rvv VLEN 128/256/512 | `Kernels/RvvV{2,4,8}/All.lean` (generated) | `all` (`8 + 5773·⌈c/V⌉`), `all_ch` (any legal vl choice, `8 + 5773·nb ch c c`), `kernel`, `kernel_ch` | a9b4d97/4d16931, f421edc, this |
+| rvv_zvkb VLEN 128/256/512 | `Kernels/RvvZvkbV{2,4,8}/All.lean` (generated) | same, 3166 steps per batch | 0d21c16, 0ed3a64, cfaf5b9 |
+| library | `Kernels/RvLib{2,4,8}.lean`, `RvLib.lean` | `lib<V>` (`LibTable.lib_rv V`), `lib<V>ch` (`LibRv.lib_rv_ch`) | 4dfade0, 5e28364, this |
+
+Model assumptions / coverage: buffers 8-byte aligned (region offsets `64·off`/`32·off`; misaligned paths not
+modelled); VLEN ∈ {128, 256, 512} for RVV (VLEN ≥ 1024 not covered: 8-lane register model); vector shift
+counts are `li` constants < 64 (M9 guard); `64·(off + count) ≤ 2^54`.
+
+Reproduce (remote): segments `gen_segments_rv.sh` (scalar) / `gen_segments_rvv.sh` (RVV body variants),
+bodies `build_plan.sh`, kernel files `gen_all_rv1.py` / `gen_all_rvv.py`, then `lake build Keccaktree.Kernels.RvLib`.
 
 ## Status (older) (18:00 UTC)
 * rv64_x1: GenSE/GenSX built; GenSB slices 0–12 built, 13–24 building (P=1: 8–12 GB, ~8 min each).
