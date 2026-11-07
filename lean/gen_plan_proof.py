@@ -402,21 +402,52 @@ def AAt (A : Fin {count} → Spec.State) : Nat → (Fin {count} → Spec.State)
   | 0 => A
   | c + 1 => sched (AAt A c) c
 
+/-! `envAt` has literal arms (compiled by well-founded recursion, not reducible): its equations. -/
+theorem envAt_0 (env0 : Nat → BitVec 64) : envAt env0 0 = env0 := by simp only [envAt]
+''' + ''.join(f'''theorem envAt_{c + 1} (env0 : Nat → BitVec 64) : envAt env0 {c + 1} = fun i => E.eval (envAt env0 {c}) (readVar result{c} i) := by
+  simp only [envAt]
+''' for c in range(K)) + f'''
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 /-- **The plan computes the rounds of its schedule on every node.** -/
 theorem chain (env0 : Nat → BitVec 64) (A : Fin {count} → Spec.State) (h0 : Inv0 env0 A) :
     Inv{K} (envAt env0 {K}) (AAt A {K}) := by
-''' + ''.join(f'  have h{c + 1} := step{c} _ _ h{c}\n' for c in range(K)) + f'''  exact h{K}
+''' + f'''  have h0' : Inv0 (envAt env0 0) (AAt A 0) := by rw [envAt_0]; exact h0
+''' + ''.join(f"  have h{c + 1} : Inv{c + 1} (envAt env0 {c + 1}) (AAt A {c + 1}) := by rw [envAt_{c + 1}]; exact step{c} (envAt env0 {c}) (AAt A {c}) h{c}{chr(39) if c == 0 else ''}\n" for c in range(K)) + f'''  exact h{K}
+
+''')
+        # the per-node states along the plan, one bound at a time (unfolding `AAt A K` at once
+        # duplicates `AAt A c n` in both branches of every `sched` step: exponential)
+        f.write(f'''theorem sched_act (A : Fin {count} → Spec.State) (c : Nat) (n : Fin {count}) (h : act c n.val = true) :
+    sched A c n = Spec.round (sched.rndSlice c) (A n) := by
+  simp only [sched, h, ↓reduceIte]
+
+theorem sched_nact (A : Fin {count} → Spec.State) (c : Nat) (n : Fin {count}) (h : act c n.val = false) :
+    sched A c n = A n := by
+  simp only [sched, h, Bool.false_eq_true, ↓reduceIte]
+
+theorem rounds_succ (r : Nat) (X : Spec.State) : Spec.round r (Spec.rounds r X) = Spec.rounds (r + 1) X := by
+  simp only [Spec.rounds, Spec.memo_eq]
 
 ''')
         for n in range(count):
-            r = rounds_end[n]
             f.write(f'''set_option maxRecDepth 100000 in
-theorem aat_{n} (A : Fin {count} → Spec.State) : AAt A {K} ⟨{n}, by decide⟩ = Spec.rounds {r} (A ⟨{n}, by decide⟩) := by
-  simp +decide only [AAt, sched, act, rndAt, sched.rndSlice, Spec.rounds, Spec.memo_eq]
-
+theorem aat_{n} (A : Fin {count} → Spec.State) : AAt A {K} ⟨{n}, by decide⟩ = Spec.rounds {rounds_end[n]} (A ⟨{n}, by decide⟩) := by
+  have h0 : AAt A 0 ⟨{n}, by decide⟩ = Spec.rounds 0 (A ⟨{n}, by decide⟩) := rfl
 ''')
+            for c in range(K):
+                r0, r1 = PLAN['rounds'][c][n], PLAN['rounds'][c + 1][n]
+                if r1 == r0 + 1:
+                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} (A ⟨{n}, by decide⟩) := by
+    show sched (AAt A {c}) {c} ⟨{n}, by decide⟩ = _
+    rw [sched_act (AAt A {c}) {c} ⟨{n}, by decide⟩ (by decide), h{c}, show sched.rndSlice {c} = {r0} from rfl, rounds_succ]
+''')
+                else:
+                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} (A ⟨{n}, by decide⟩) := by
+    show sched (AAt A {c}) {c} ⟨{n}, by decide⟩ = _
+    rw [sched_nact (AAt A {c}) {c} ⟨{n}, by decide⟩ (by decide), h{c}]
+''')
+            f.write(f'  exact h{K}\n\n')
         f.write(f'end Keccaktree.Kernels.{ns}\n')
     with open(os.path.join(outdir, 'Final.lean'), 'w') as f:
         f.write(f'''import Keccaktree.Kernels.{nsdir}.{GEN}.Batch
@@ -457,7 +488,7 @@ def Ok (S : State (BitVec 64)) : Prop := S.err = false ∧ S.halted = false ∧ 
 ''' if nxt is not None else f'''  refine ⟨h1, ?_, ?_, ?_⟩
   · rw [hT, herr]; exact hctrl.2.2.2.2.2.2.2.2.2.1
   · rw [hT, hhalted]; exact hctrl.2.2.2.2.2.2.2.2.2.2.1
-  · rw [hT, htail]
+  · rw [hT, htail]; rfl
 '''))
             if nxt is not None:
                 f.write(f'''  · show cutOf ctl{nxt} (stateAt S0 {c + 1}) = cutOf ctl{nxt} sc{nxt}
@@ -579,7 +610,7 @@ theorem entry_inv (input : Int → BitVec 64) :
 /-- The output word `4n+w` of a state satisfying the final invariant, for any states `A`. -/
 theorem invK_word (Sf : State (BitVec 64)) (A : Fin {count} → Spec.State) (h : Inv{K} (envOf Sf) A)
     (n w : Nat) (hn : n ∈ {done}) (hw : w < 4) :
-    Sf.mem rOutput (Int.ofNat (4 * n + w)) = L (A ⟨n, by simp only [List.mem_cons, List.mem_nil_iff] at hn; omega⟩) w := by
+    Sf.mem rOutput (Int.ofNat (4 * n + w)) = L (A ⟨n, by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn; omega⟩) w := by
   simp only [Inv{K}, {SPEC_UNFOLD}, rotl0, envOf_mem] at h
   simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
   rcases w with _ | _ | _ | _ | w <;> (try omega) <;> rcases hn with ''' + ' | '.join('rfl' for _ in done) + '''

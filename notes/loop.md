@@ -28,8 +28,39 @@ Branch `loop` (worktree `src/wt-loop`), remote workspace `/root/kt-loop` (rsync 
   library run from any kernel's entry state finishes every node.
 
 ## Status
-* Loop.lean, Library.lean: compile (axiom-free, relocation facts are hypotheses).
-* gen_plan_proof.py: validating on X86X1 count 2 (two one-node batches) — see log /root/kt-loop-t1.log.
+* `Asm/Loop.lean`, `Asm/Library.lean`: build on the remote (axiom-free; relocation facts are hypotheses).
+* Plan generator validated end to end: **X86X1 count 2** (two iterations of the batch loop, 49 slices,
+  schedule: node 0 rounds 1..24 then node 1) — `Keccaktree.Kernels.X86X1.C2.kernel_keccak256` proved
+  (both digests; axioms propext, Classical.choice, Quot.sound + 1397 bv_decide certificates).
+* Running: X86X1 counts 1, 3; Avx2X4 count 5 (batch + tail call to avx2_x2), count 8 (two batches).
+
+## Lessons (generator)
+* `envAt` with literal arms is compiled by well-founded recursion (irreducible): chain with
+  per-bound equation lemmas `envAt_c` (`simp only [envAt]`) and an ascribed `have` per step; an
+  unascribed 49-step chain made the final defeq check blow up (70 GB, OOM).
+* `AAt A K` must never be unfolded at once (`sched` duplicates `AAt A c n` in both `if` branches):
+  per-node facts `aat_n` are proved one bound at a time (`sched_act`/`sched_nact`, `rounds_succ`).
+* Builds of plan modules run under `systemd-run --scope -p MemoryMax=40G` (shared machine).
+
+## Integration with `reloc` (what remains)
+* `RelocFacts` is the exact interface Loop.lean needs; `Reloc.lean` must provide an instance per ISA
+  (`X86.isa`, `Arm.isa`, `Riscv.isa v`): `relocState`, `relocE`, `shiftVar`/`unshiftVar` (memVar of
+  rInput/rOutput shifted by the batch offset in words), `execTrace_reloc`/`pathOk_reloc` under
+  `BranchSafe`, `readVar_reloc`, `eval_reloc`, `err_reloc`.
+* Generator (next step): for a kernel with batch size N, emit the loop-body segment once (the plan's
+  slices of iteration 0, from loop head to loop head) as `SliceFacts` values (`path` = the existing
+  kernel-checked `path{c}`, `glue` from `ctrl{c}`/`ctlv{c}` + `RelocFacts`), an `IterFacts` with
+  `step` = shift by N nodes, and the per-count-class entry/exit/tail segments (proved per value of
+  the remaining count r < N, plus the entry policy classes) — then `KernelThm.thm` for every count from
+  `IterFacts.run` (m = count / N iterations) + the exit plan for r = count % N.
+* The lane invariants (`Inv`, `step`) are per-node and position independent except for the
+  input/output memory variables, which relocation shifts: the iteration's `chain` at iteration k is
+  the base chain under `envShift` (`eval_reloc`), so the digest facts of iteration k follow from the
+  base ones with node index n + k·N.
+
+## Integration with `paths`
+* The plan finder needs, per kernel, the loop head / exit / tail instruction indices; `paths`' JSON
+  (segments per count class) replaces `find_plan.py`'s whole-run scan for the segment generator.
 
 ## Commands
     rsync -az --exclude .lake --exclude .git --exclude 'Gen*/' ./ root@2.28.133.253:/root/kt-loop/
