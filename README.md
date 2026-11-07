@@ -78,6 +78,20 @@ runners and attests their provenance. All bindings link these libraries.
   in-place and direct `ByteBuffer` variants. `java/build-native.sh` builds
   the JNI library from `lib/`.
 
+## Formal verification
+
+`lean/` holds a Lean 4 proof that the portable kernel
+(`src/keccak256_generic.c`, and its pure-Go twin `keccak256_1_generic.go`)
+computes keccak256 as FIPS 202 defines it, for every 64-byte node and
+every batch: the C round loop is Keccak-f[1600] step by step (including the
+in-place rho/pi walk along pi's cycle, whose resulting lane permutation the
+kernel computes), the padding lanes and the byte order are the sponge's,
+and the hard-coded rho offsets and round constants are the ones the
+standard derives.  `cd lean && lake build` checks it (about 15 s, no
+Mathlib); see `lean/README.md` for the theorems and the trust base.  The
+assembly kernels are not covered by the proof; they are tested against the
+portable kernel.
+
 ## Contributing
 
 CI tests pull requests against the libraries committed in `lib/`, so a pull

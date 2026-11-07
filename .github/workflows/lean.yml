@@ -1,0 +1,19 @@
+name: Lean proofs
+on:
+  push:
+    paths: ['lean/**', 'src/keccak256_generic.c', 'keccak256_1_generic.go', '.github/workflows/lean.yml']
+  pull_request:
+    paths: ['lean/**', 'src/keccak256_generic.c', 'keccak256_1_generic.go', '.github/workflows/lean.yml']
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: lean
+          use-mathlib-cache: false
+          build-args: "--wfail"
+      - name: Model tables match the C and Go sources
+        run: python3 lean/check_tables.py .
