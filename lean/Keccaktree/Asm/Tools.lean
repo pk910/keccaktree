@@ -417,7 +417,9 @@ def sliceLit (prog : Array T.Instr) (rodata : Array (BitVec 64)) (entry count a 
     rs := T.exec rodata ins rs
   for (reg, q) in cells.eraseDups do
     IO.println s!"VAR {memVar reg q} {E.toLean (res.mem reg q)}"
-  for i in ctl do
+  -- `KT_CELLS=i,j,..`: further memory variables to report (cells a later cut labels; unwritten ones are bare variables)
+  let extraCells := ((← IO.getEnv "KT_CELLS").getD "").splitOn "," |>.filterMap (·.toNat?)
+  for i in (ctl ++ extraCells).eraseDups do
     if i ≥ 288 && !(cells.contains (memVarRegion i, memVarIndex i)) then
       IO.println s!"VAR {i} {E.toLean (res.mem (memVarRegion i) (memVarIndex i))}"
 
@@ -479,6 +481,7 @@ def matchesAt (prog : Array T.Instr) (rodata : Array (BitVec 64)) (entry count n
     s2 := s2.step T prog
   for (loc, m) in matchAll t1 spec2 locs s1 s2 do
     IO.println s!"{loc.toLean} {m.node} {m.round} {m.kind} {m.rot}"
-  IO.println s!"CONTROL g={s1.s.g.toList.map addrToLean} gd={s1.s.gd.toList.map hex} k={s1.s.k.toList} zf={s1.s.zf} cf={s1.s.cf} nf={s1.s.nf} vf={s1.s.vf} vl={s1.s.vl} pc={s1.s.pc} depth={s1.s.depth}"
+  let tailS := s1.s.tail.getD ""
+  IO.println s!"CONTROL g={s1.s.g.toList.map addrToLean} gd={s1.s.gd.toList.map hex} k={s1.s.k.toList} zf={s1.s.zf} cf={s1.s.cf} nf={s1.s.nf} vf={s1.s.vf} vl={s1.s.vl} pc={s1.s.pc} depth={s1.s.depth} halted={s1.s.halted} tail={tailS}"
 
 end Keccaktree.Asm.X86.Tools
