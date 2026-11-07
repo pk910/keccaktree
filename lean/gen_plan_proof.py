@@ -137,7 +137,12 @@ def var_id(v):
     return 288 + 8 * enc + r
 
 
-SIMP_SPEC = '''specQuantity, ''' + ', '.join(f'round_lane_{k}' for k in range(25)) + ''', Spec.RC'''
+# unfolding `specQuantity`: after the restructuring of Cut.lean (`specQuantity` dispatches to `specQuantity0`
+# and `specQuantityCol`), the dispatcher's arithmetic must be reduced too; detected from the source
+_CUT = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Keccaktree', 'Asm', 'Cut.lean')).read()
+SPEC_UNFOLD = ('specQuantity, specQuantity0, specQuantityCol, Nat.reduceLT, ↓reduceIte, Nat.reduceSub, Nat.reduceDiv, '
+               'Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul') if 'def specQuantity0' in _CUT else 'specQuantity'
+SIMP_SPEC = SPEC_UNFOLD + ', ' + ', '.join(f'round_lane_{k}' for k in range(25)) + ', Spec.RC'
 
 
 def const_val(k):
@@ -337,7 +342,7 @@ theorem lane{c}_g{g_} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State)
   all_goals decide +kernel
 
 ''' if 75 <= kind < 99 else f'''  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
-  {"simp only [specQuantity, Spec.RC]" + at_h if hnames else "skip"}
+  {"simp only [" + SPEC_UNFOLD + ", Spec.RC]" + at_h if hnames else "skip"}
   simp only [{SIMP_SPEC}]
   bv_decide (config := {{ timeout := 1800 }})
 
@@ -563,7 +568,7 @@ set_option maxHeartbeats 40000000 in
 theorem entry_inv (input : Int → BitVec 64) :
     Inv0 (envOf (entryState input)) (fun n => absorbNode (nodeWords input n)) := by
   refine ⟨''' + ', '.join(
-      [f'(by rw [entry_mem_input]; simp only [specQuantity, absorbNode_lane{w}, nodeWords, rotl0]; try rfl)' for n in range(count) for w in range(8)] +
+      [f'(by rw [entry_mem_input]; simp only [{SPEC_UNFOLD}, absorbNode_lane{w}, nodeWords, rotl0]; try rfl)' for n in range(count) for w in range(8)] +
       [f'(absorbNode_lane{k_} _)' for n in range(count) for k_ in range(8, 25)]) + f'''⟩
 
 ''')
@@ -575,7 +580,7 @@ theorem entry_inv (input : Int → BitVec 64) :
 theorem invK_word (Sf : State (BitVec 64)) (A : Fin {count} → Spec.State) (h : Inv{K} (envOf Sf) A)
     (n w : Nat) (hn : n ∈ {done}) (hw : w < 4) :
     Sf.mem rOutput (Int.ofNat (4 * n + w)) = L (A ⟨n, by simp only [List.mem_cons, List.mem_nil_iff] at hn; omega⟩) w := by
-  simp only [Inv{K}, specQuantity, rotl0, envOf_mem] at h
+  simp only [Inv{K}, {SPEC_UNFOLD}, rotl0, envOf_mem] at h
   simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
   rcases w with _ | _ | _ | _ | w <;> (try omega) <;> rcases hn with ''' + ' | '.join('rfl' for _ in done) + '''
 ''' + ''.join(f'  · exact h{"".join(".2" for _ in range(pos[(n, w)]))}{".1" if pos[(n, w)] + 1 < len(outs) else ""}\n'
