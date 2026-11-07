@@ -90,6 +90,23 @@ def ctl_case(w, v):
     raise SystemExit(f'GenB{w}: unexpected start control word {v}')
 
 
+def runch(w, K=25):
+    at = lambda c: 'H' if c == 0 else f'(GenB{w}.segAt{c} H)'
+    L = [f'  have hrunch : (RVc ch).run rodata prog GenB{w}.segLen H = GenB{w}.segAt{K} H := by',
+         f'    have s0 := (GenB{w}.cert0).step (rho (off + j)) hρ hw0 H hc0 hHok']
+    for c in range(1, K):
+        L.append(f'    have s{c} := (GenB{w}.cert{c}).step (rho (off + j)) hρ hw0 {at(c)} s{c - 1}.2.2.2 s{c - 1}.2.2.1')
+    L.append(f'    show (RVc ch).run rodata prog (' + ' + '.join(f'(GenB{w}.cert{c}).idx.length' for c in range(K)) + ') H = _')
+    L.append('    repeat rw [Isa.run_add]')
+    parts = []
+    for c in range(K):
+        hc = 'hc0 hHok' if c == 0 else f's{c - 1}.2.2.2 s{c - 1}.2.2.1'
+        parts.append(f'(GenB{w}.cert{c}).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 {at(c)} {hc}, s{c}.1, '
+                     f'show (Riscv.isa {V}).execTrace rodata (GenB{w}.cert{c}).slice {at(c)} = GenB{w}.segAt{c + 1} H from rfl')
+    L.append('    rw [' + ',\n      '.join(parts) + ']')
+    return '\n'.join(L)
+
+
 def batch(w):
     c0 = ctl0(w)
     ninv, inv0 = inv0_proof(w)
@@ -128,9 +145,9 @@ set_option maxHeartbeats 40000000 in
 /-- **A batch of `{w}` node(s)** (`vl = {w}`): from the loop head after `j` nodes with `min (c - j) {V} = {w}`,
 `{P}` steps (head, body, back edge) hash nodes `off + j .. off + j + {w - 1}` and reach the loop head
 after `j + {w}` nodes, or the exit if none is left. -/
-theorem batch{w} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat)
-    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j + {w} ≤ c) (hw : min (c - j) {V} = {w}) :
-    Mid off c input S0 (RV.run rodata prog {P} S) (j + {w}) (if c - j - {w} = 0 then {s + 2} else 7) := by
+theorem batch{w} (ch : Nat → Nat) (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat)
+    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j + {w} ≤ c) (hw : ch (c - j) = {w}) :
+    Mid off c input S0 ((RVc ch).run rodata prog {P} S) (j + {w}) (if c - j - {w} = 0 then {s + 2} else 7) := by
   have hb' : 64 * (off + c) ≤ 18014398509481984 := by
     have : (2 : Nat) ^ 54 = 18014398509481984 := rfl
     omega
@@ -143,13 +160,13 @@ theorem batch{w} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec
     show 0 ≤ 32 * ((off + j : Nat) : Int) ∧ 32 * ((off + j : Nat) : Int) < 2 ^ 55
     rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
   -- head: `mv t3, a2; beqz a7; vsetvli; bnez a7`
-  have hhd := run_head {V} rodata prog prog_7 prog_8 prog_12 prog_13 S ((c : Int) - j) hM.ok.2.1 hM.ctrl.2.2.2.2.2.2.1
-    hM.a2 hM.a7 hr0 hr1
-  have hf := H4_facts {V} S ((c : Int) - j)
-  have hwn : min ((c : Int) - j).toNat {V} = {w} := by omega
-  rw [hwn] at hf
-  have hHenv : ∀ i, i ≠ 261 → i ≠ 284 → envOf (H4 {V} S ((c : Int) - j)) i = envOf S i := fun i a b => H4_env _ _ _ i a b
-  generalize hH : H4 {V} S ((c : Int) - j) = H at hhd hf hHenv
+  have ht : ((c : Int) - j).toNat = c - j := by omega
+  have hhd := run_head {V} ch rodata prog prog_7 prog_8 prog_12 prog_13 S ((c : Int) - j) hM.ok.2.1 hM.ctrl.2.2.2.2.2.2.1
+    hM.a2 hM.a7 hr0 hr1 (by rw [ht, hw]; omega)
+  rw [ht, hw] at hhd
+  have hf := H4_facts {w} S ((c : Int) - j)
+  have hHenv : ∀ i, i ≠ 261 → i ≠ 284 → envOf (H4 {w} S ((c : Int) - j)) i = envOf S i := fun i a b => H4_env _ _ _ i a b
+  generalize hH : H4 {w} S ((c : Int) - j) = H at hhd hf hHenv
   obtain ⟨hf14, hfvl, hf5, hfg, hfk, hfz, hfc, hfn, hfv, hfd, hfh, hfe, hft, hfm⟩ := hf
   have hHok : SliceCert.Ok H := ⟨hfe.trans hM.ok.1, hfh.trans hM.ok.2.1, hft.trans hM.ok.2.2⟩
   have hHin : ∀ q, H.mem rInput q = input q := fun q => by rw [hfm]; exact hM.inp q
@@ -179,7 +196,9 @@ theorem batch{w} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec
   have fr := GenB{w}.seg_frame (rho (off + j)) hρ hw0 H hc0 hHok
   have dat := GenB{w}.seg_data (rho (off + j)) hρ hw0 H hc0 hHok _ (inv0_{w} input H (off + j) hHin)
   have mv := GenB{w}.seg_moves (rho (off + j)) hρ hw0 H hc0 hHok 268 268 (by simp)
-  generalize hSb : GenB{w}.segAt25 H = Sb at sr fr dat mv
+  -- the body under the choice `ch`: the same run (no `vsetvli` on its path)
+{runch(w)}
+  generalize hSb : GenB{w}.segAt25 H = Sb at sr fr dat mv hrunch
   obtain ⟨hrun, hokb, hcutb⟩ := sr
   have fb := cut_fields _ _ _ _ hcutb
   have word : ∀ v, v ∈ GenB{w}.ctl25 → v < 288 → cutVar GenB{w}.ctl25 Sb v = E.reloc (rho (off + j)) (cutVar GenB{w}.ctl25 GenB{w}.sc25 v) :=
@@ -211,15 +230,15 @@ theorem batch{w} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec
     rw [← envOf_gdVar Sb 12 (by decide), mv, hHenv 268 (by decide) (by decide), envOf_gdVar S 12 (by decide), hM.a2]
   have hpcb : Sb.pc = {s} := fb.2.2.2.2.2.2.2.1.trans (by decide +kernel)
   -- back edge: `sub a2, a2, t0; bnez a2, 7`
-  have htl := run_tail {V} rodata prog {s} prog_{s} prog_{s + 1} Sb ((c : Int) - j) {w} hokb.2.1 hpcb hb12 hb5 (by omega)
+  have htl := run_tail {V} ch rodata prog {s} prog_{s} prog_{s + 1} Sb ((c : Int) - j) {w} hokb.2.1 hpcb hb12 hb5 (by omega)
     (by rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; omega)
   have hUf := T2_facts Sb ((c : Int) - j) {w}
   have hUg : ∀ n, n ≠ 12 → (T2 Sb ((c : Int) - j) {w}).getGD n = Sb.getGD n := fun n hn => T2_getGD _ _ _ n hn
   have hUpc := T2_pc Sb ((c : Int) - j) {w} {s} hpcb
   generalize hU : T2 Sb ((c : Int) - j) {w} = U at htl hUf hUg hUpc
   obtain ⟨hU12, hUg', hUk, hUz, hUc, hUn, hUv, hUd, hUh, hUe, hUt, hUmem⟩ := hUf
-  have hrunall : RV.run rodata prog {P} S = U := by
-    rw [show {P} = 4 + GenB{w}.segLen + 2 by rw [body_len{w}], Isa.run_add, Isa.run_add, hhd, hrun, htl]
+  have hrunall : (RVc ch).run rodata prog {P} S = U := by
+    rw [show {P} = 4 + GenB{w}.segLen + 2 by rw [body_len{w}], Isa.run_add, Isa.run_add, hhd, hrunch, htl]
   rw [hrunall]
   obtain ⟨g1, k1, z1, c1, n1, v1, _, _, d1⟩ := fb
   refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨hUe.trans hokb.1, hUh.trans hokb.2.1, hUt.trans hokb.2.2⟩,
@@ -289,6 +308,9 @@ open Keccaktree.Kernels.{pns} (prog rodata)
 
 abbrev RV : Isa := Riscv.isa {V}
 
+/-- The instruction set with the vector-length choice `ch` at `vsetvli`. -/
+abbrev RVc (ch : Nat → Nat) : Isa := Riscv.isaCh {V} ch
+
 theorem prog_1 : prog.getD 1 .nop = .br .eq 12 0 ({s} + 3) := by decide +kernel
 theorem prog_2 : prog.getD 2 .nop = .opi 2 2 .addi 0xfffffffffffffe00#64 := by decide +kernel
 theorem prog_3 : prog.getD 3 .nop = .li 30 0x1#64 := by decide +kernel
@@ -314,59 +336,85 @@ theorem prog_{s + 3} : prog.getD ({s} + 3) .nop = .ret := by decide +kernel
         with open(os.path.join(kdir, 'AllPart.lean'), 'w') as f:
             f.write(''.join(parts).replace(f'namespace Keccaktree.Kernels.{ns}.All', f'namespace Keccaktree.Kernels.{ns}.AllPart').replace(f'end Keccaktree.Kernels.{ns}.All', f'end Keccaktree.Kernels.{ns}.AllPart'))
         return
-    cases = '\n'.join(f'  · exact batch{w} off c input S0 S j hb hM (by omega) (by omega)' for w in range(1, V + 1))
-    parts.append(f'''
+    cases = '\n'.join(f'  · exact batch{w} ch off c input S0 S j hb hM (by omega) hwc' for w in range(1, V + 1))
+    parts.append(f"""
 /-! ## The loop -/
 
-/-- A batch of any width `w = min (c - j) {V}`. -/
-theorem batch_any (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j w : Nat)
-    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j < c) (hw : w = min (c - j) {V}) :
-    Mid off c input S0 (RV.run rodata prog {P} S) (j + w) (if c - j - w = 0 then {s + 2} else 7) := by
+/-- A batch of any width `w = ch (c - j)`. -/
+theorem batch_any (ch : Nat → Nat) (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j w : Nat)
+    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hw1 : 1 ≤ w) (hw2 : w ≤ {V}) (hj : j + w ≤ c)
+    (hwc : ch (c - j) = w) :
+    Mid off c input S0 ((RVc ch).run rodata prog {P} S) (j + w) (if c - j - w = 0 then {s + 2} else 7) := by
   rcases (show {' ∨ '.join(f'w = {w}' for w in range(1, V + 1))} by omega) with {' | '.join('rfl' for _ in range(V))}
 {cases}
 
-/-- **The loop**: from the loop head after `j` nodes with `{V}·d < c - j ≤ {V}·(d+1)`, `d + 1` batches reach
-the exit with every node done. -/
-theorem loop (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54) :
-    ∀ d j (S : State (BitVec 64)), Mid off c input S0 S j 7 → {V} * d < c - j → c - j ≤ {V} * (d + 1) →
-      Mid off c input S0 (RV.run rodata prog ({P} * (d + 1)) S) c {s + 2} := by
-  intro d
-  induction d with
-  | zero =>
+/-- The number of batches for `r` nodes left under the choice `ch` (fuel `f ≥ r`). -/
+def nb (ch : Nat → Nat) : Nat → Nat → Nat
+  | 0, _ => 0
+  | f + 1, r => if r = 0 then 0 else 1 + nb ch f (r - ch r)
+
+theorem nb_zero (ch : Nat → Nat) (f : Nat) : nb ch f 0 = 0 := by cases f <;> rfl
+
+/-- **The loop under any legal choice**: from the loop head after `j < c` nodes, `nb ch f (c - j)` batches
+(fuel `f ≥ c - j`) reach the exit with every node done. -/
+theorem loop (ch : Nat → Nat) (hch : Riscv.LegalVl {V} ch) (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64))
+    (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    ∀ f j (S : State (BitVec 64)), Mid off c input S0 S j 7 → j < c → c - j ≤ f →
+      Mid off c input S0 ((RVc ch).run rodata prog ({P} * nb ch f (c - j)) S) c {s + 2} := by
+  intro f
+  induction f with
+  | zero => intro j S hM h1 h2; omega
+  | succ f ih =>
     intro j S hM h1 h2
-    have h := batch_any off c input S0 S j (c - j) hb hM (by omega) (by omega)
-    rw [show j + (c - j) = c by omega, if_pos (by omega)] at h
-    rw [show {P} * (0 + 1) = {P} from rfl]; exact h
-  | succ d ih =>
-    intro j S hM h1 h2
-    have h := batch_any off c input S0 S j {V} hb hM (by omega) (by omega)
-    rw [if_neg (by omega)] at h
-    rw [show {P} * (d + 1 + 1) = {P} + {P} * (d + 1) by omega, Isa.run_add]
-    exact ih (j + {V}) _ h (by omega) (by omega)
+    obtain ⟨b1, b2, b3⟩ := hch.bounds (by decide) (c - j) (by omega)
+    have hstep := batch_any ch off c input S0 S j (ch (c - j)) hb hM b1 b3 (by omega) rfl
+    have hnb : nb ch (f + 1) (c - j) = 1 + nb ch f (c - j - ch (c - j)) := by
+      show (if c - j = 0 then 0 else 1 + nb ch f (c - j - ch (c - j))) = _
+      rw [if_neg (by omega)]
+    rw [hnb, show {P} * (1 + nb ch f (c - j - ch (c - j))) = {P} + {P} * nb ch f (c - j - ch (c - j)) by omega, Isa.run_add]
+    by_cases hz : c - j - ch (c - j) = 0
+    · rw [if_pos hz, show j + ch (c - j) = c by omega] at hstep
+      rw [hz, nb_zero, Nat.mul_zero, show (RVc ch).run rodata prog 0 _ = _ from rfl]
+      exact hstep
+    · rw [if_neg hz] at hstep
+      rw [show c - j - ch (c - j) = c - (j + ch (c - j)) by omega]
+      exact ih (j + ch (c - j)) _ hstep (by omega) (by omega)
+
+theorem nb_min : ∀ f r, r ≤ f → nb (fun a => min a {V}) f r = (r + {V - 1}) / {V} := by
+  intro f
+  induction f with
+  | zero => intro r h; rw [show r = 0 by omega]; rfl
+  | succ f ih =>
+    intro r h
+    show (if r = 0 then 0 else 1 + nb (fun a => min a {V}) f (r - min r {V})) = _
+    by_cases hr : r = 0
+    · rw [if_pos hr, hr]
+    · rw [if_neg hr, ih _ (by omega)]
+      omega
 
 /-! ## The whole call -/
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
-/-- **The kernel on any number of nodes.** -/
-theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (hE : Entry off c input S)
-    (hb : 64 * (off + c) ≤ 2 ^ 54) :
-    (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).halted = true ∧
-    (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).err = false ∧
-    (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).tail = none ∧
-    (∀ q : Int, q < 4 * (off : Int) → (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).mem rOutput q = S.mem rOutput q) ∧
-    ∀ n, n < c → Digest input (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S) (off + n) := by
+/-- **The kernel on any number of nodes, under any legal vector-length choice** (RVV 1.0 §6.3). -/
+theorem all_ch (ch : Nat → Nat) (hch : Riscv.LegalVl {V} ch) (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
+    (hE : Entry off c input S) (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    ((RVc ch).run rodata prog (8 + {P} * nb ch c c) S).halted = true ∧
+    ((RVc ch).run rodata prog (8 + {P} * nb ch c c) S).err = false ∧
+    ((RVc ch).run rodata prog (8 + {P} * nb ch c c) S).tail = none ∧
+    (∀ q : Int, q < 4 * (off : Int) → ((RVc ch).run rodata prog (8 + {P} * nb ch c c) S).mem rOutput q = S.mem rOutput q) ∧
+    ∀ n, n < c → Digest input ((RVc ch).run rodata prog (8 + {P} * nb ch c c) S) (off + n) := by
   rcases Nat.eq_zero_or_pos c with hc | hc
   · subst hc
-    have h0 := entry_zero {V} rodata prog {s} prog_1 prog_{s + 3} off input S hE
-    rw [show 8 + {P} * ((0 + {V - 1}) / {V}) = 2 + 6 by decide, Isa.run_add, h0, Isa.run_halted _ _ _ _ _ rfl]
+    have h0 := entry_zero {V} ch rodata prog {s} prog_1 prog_{s + 3} off input S hE
+    rw [nb_zero, Nat.mul_zero, show 8 + 0 = 2 + 6 from rfl, Isa.run_add, h0, Isa.run_halted _ _ _ _ _ rfl]
     exact ⟨rfl, hE.ok.1, hE.ok.2.2, fun q _ => rfl, fun n hn => absurd hn (Nat.not_lt_zero _)⟩
-  · have hM0 := entry_pos {V} rodata prog {s} prog_1 prog_2 prog_3 prog_4 prog_5 prog_6 off c input S hE hc hb
-    have hl := loop off c input S hb ((c - 1) / {V}) 0 _ hM0 (by omega) (by omega)
-    generalize hX : RV.run rodata prog ({P} * ((c - 1) / {V} + 1)) (RV.run rodata prog 6 S) = X at hl
-    have hx := run_exit {V} rodata prog {s} prog_{s + 2} prog_{s + 3} X hl.ok.2.1 hl.ctrl.2.2.2.2.2.2.1
-    have hsteps : 8 + {P} * ((c + {V - 1}) / {V}) = 6 + {P} * ((c - 1) / {V} + 1) + 2 := by omega
-    rw [hsteps, Isa.run_add, Isa.run_add, hX, hx]
+  · have hM0 := entry_pos {V} ch rodata prog {s} prog_1 prog_2 prog_3 prog_4 prog_5 prog_6 off c input S hE hc hb
+    have hl := loop ch hch off c input S hb c 0 _ hM0 hc (by omega)
+    rw [Nat.sub_zero] at hl
+    generalize hX : (RVc ch).run rodata prog ({P} * nb ch c c) ((RVc ch).run rodata prog 6 S) = X at hl
+    have hx := run_exit {V} ch rodata prog {s} prog_{s + 2} prog_{s + 3} X hl.ok.2.1 hl.ctrl.2.2.2.2.2.2.1
+    rw [show 8 + {P} * nb ch c c = 6 + {P} * nb ch c c + 2 by omega, Isa.run_add, Isa.run_add, hX, hx]
     refine ⟨rfl, ?_, ?_, ?_, ?_⟩
     · simp only [Riscv.next_err, Riscv.setR_err]; exact hl.ok.1
     · simp only [Riscv.next_tail, Riscv.setR_tail]; exact hl.ok.2.2
@@ -374,10 +422,22 @@ theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (h
     · intro n hn
       exact digest_congr input X _ _ (fun t _ => by simp only [Riscv.next_mem, Riscv.setR_mem']) (hl.dig n hn)
 
+/-- **The kernel on any number of nodes** (the deterministic model `Riscv.isa {V}`: `vl = min(avl, {V})`),
+`8 + {P}·⌈c/{V}⌉` steps. -/
+theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (hE : Entry off c input S)
+    (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).halted = true ∧
+    (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).err = false ∧
+    (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).tail = none ∧
+    (∀ q : Int, q < 4 * (off : Int) → (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S).mem rOutput q = S.mem rOutput q) ∧
+    ∀ n, n < c → Digest input (RV.run rodata prog (8 + {P} * ((c + {V - 1}) / {V})) S) (off + n) := by
+  have h := all_ch (fun a => min a {V}) (Riscv.legal_min {V}) off c input S hE hb
+  rw [nb_min c c (Nat.le_refl c), Riscv.run_min] at h
+  exact h
+
 /-! ## In the library -/
 
-/-- What the library needs (`LibRv.NormThmRv`): from the library's entry state (normalised control
-part, `pc` at the entry), the run halts with every digest and no tail call. -/
+/-- What the library needs (`LibRv.NormThmRv`), deterministic model. -/
 theorem norm_thm : LibRv.NormThmRv {V} rodata prog 1 (fun _ c => 8 + {P} * ((c + {V - 1}) / {V})) [] := by
   intro off count input S hE hb hpc
   obtain ⟨⟨g, k, z, cf, n, v, _, d⟩, hok, ha2, _, ha1, ha0, hin⟩ := hE
@@ -385,14 +445,28 @@ theorem norm_thm : LibRv.NormThmRv {V} rodata prog 1 (fun _ c => 8 + {P} * ((c +
   obtain ⟨hh, he, ht, hp, hd⟩ := all off count input S hE' hb
   exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
 
+/-- What the library needs under any legal choice (`LibRv.NormThmRvCh`). -/
+theorem norm_thm_ch (ch : Nat → Nat) (hch : Riscv.LegalVl {V} ch) :
+    LibRv.NormThmRvCh {V} ch rodata prog 1 (fun _ c => 8 + {P} * nb ch c c) [] := by
+  intro off count input S hE hb hpc
+  obtain ⟨⟨g, k, z, cf, n, v, _, d⟩, hok, ha2, _, ha1, ha0, hin⟩ := hE
+  have hE' : Entry off count input S := ⟨⟨g, k, z, cf, n, v, hpc, d⟩, hok, ha2, ha1, ha0, hin⟩
+  obtain ⟨hh, he, ht, hp, hd⟩ := all_ch ch hch off count input S hE' hb
+  exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
+
 /-- The kernel as a kernel of the RISC-V library at `vlmax = {V}` (VLEN = {64 * V}; rank 0: it hands
-nothing over; any `vl` at entry). -/
+nothing over; any `vl` at entry), deterministic model. -/
 def kernel : Library.KernelThm RV LibTable.EntryRv Digest :=
   LibRv.mkKernelRv {V} (LibTable.sym "{base}") 0 [] rodata prog 1 (fun _ c => 8 + {P} * ((c + {V - 1}) / {V}))
     (Riscv.vlAnn RvVl.{base}) RvVl.{base}_ok RvVl.entries.{entsel} norm_thm
 
+/-- The kernel in the RISC-V library under the legal vector-length choice `ch`. -/
+def kernel_ch (ch : Nat → Nat) (hch : Riscv.LegalVl {V} ch) : Library.KernelThm (RVc ch) LibTable.EntryRv Digest :=
+  LibRv.mkKernelRvCh {V} ch (LibTable.sym "{base}") 0 [] rodata prog 1 (fun _ c => 8 + {P} * nb ch c c)
+    (Riscv.vlAnn RvVl.{base}) RvVl.{base}_ok RvVl.entries.{entsel} (norm_thm_ch ch hch)
+
 end Keccaktree.Kernels.{ns}.All
-''')
+""")
     with open(os.path.join(kdir, 'All.lean'), 'w') as f:
         f.write(''.join(parts))
 

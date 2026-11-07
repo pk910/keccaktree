@@ -25,6 +25,9 @@ open Keccaktree.Kernels.Rvv (prog rodata)
 
 abbrev RV : Isa := Riscv.isa 2
 
+/-- The instruction set with the vector-length choice `ch` at `vsetvli`. -/
+abbrev RVc (ch : Nat → Nat) : Isa := Riscv.isaCh 2 ch
+
 theorem prog_1 : prog.getD 1 .nop = .br .eq 12 0 (380 + 3) := by decide +kernel
 theorem prog_2 : prog.getD 2 .nop = .opi 2 2 .addi 0xfffffffffffffe00#64 := by decide +kernel
 theorem prog_3 : prog.getD 3 .nop = .li 30 0x1#64 := by decide +kernel
@@ -122,9 +125,9 @@ set_option maxHeartbeats 40000000 in
 /-- **A batch of `1` node(s)** (`vl = 1`): from the loop head after `j` nodes with `min (c - j) 2 = 1`,
 `5773` steps (head, body, back edge) hash nodes `off + j .. off + j + 0` and reach the loop head
 after `j + 1` nodes, or the exit if none is left. -/
-theorem batch1 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat)
-    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j + 1 ≤ c) (hw : min (c - j) 2 = 1) :
-    Mid off c input S0 (RV.run rodata prog 5773 S) (j + 1) (if c - j - 1 = 0 then 382 else 7) := by
+theorem batch1 (ch : Nat → Nat) (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat)
+    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j + 1 ≤ c) (hw : ch (c - j) = 1) :
+    Mid off c input S0 ((RVc ch).run rodata prog 5773 S) (j + 1) (if c - j - 1 = 0 then 382 else 7) := by
   have hb' : 64 * (off + c) ≤ 18014398509481984 := by
     have : (2 : Nat) ^ 54 = 18014398509481984 := rfl
     omega
@@ -137,13 +140,13 @@ theorem batch1 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 6
     show 0 ≤ 32 * ((off + j : Nat) : Int) ∧ 32 * ((off + j : Nat) : Int) < 2 ^ 55
     rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
   -- head: `mv t3, a2; beqz a7; vsetvli; bnez a7`
-  have hhd := run_head 2 rodata prog prog_7 prog_8 prog_12 prog_13 S ((c : Int) - j) hM.ok.2.1 hM.ctrl.2.2.2.2.2.2.1
-    hM.a2 hM.a7 hr0 hr1
-  have hf := H4_facts 2 S ((c : Int) - j)
-  have hwn : min ((c : Int) - j).toNat 2 = 1 := by omega
-  rw [hwn] at hf
-  have hHenv : ∀ i, i ≠ 261 → i ≠ 284 → envOf (H4 2 S ((c : Int) - j)) i = envOf S i := fun i a b => H4_env _ _ _ i a b
-  generalize hH : H4 2 S ((c : Int) - j) = H at hhd hf hHenv
+  have ht : ((c : Int) - j).toNat = c - j := by omega
+  have hhd := run_head 2 ch rodata prog prog_7 prog_8 prog_12 prog_13 S ((c : Int) - j) hM.ok.2.1 hM.ctrl.2.2.2.2.2.2.1
+    hM.a2 hM.a7 hr0 hr1 (by rw [ht, hw]; omega)
+  rw [ht, hw] at hhd
+  have hf := H4_facts 1 S ((c : Int) - j)
+  have hHenv : ∀ i, i ≠ 261 → i ≠ 284 → envOf (H4 1 S ((c : Int) - j)) i = envOf S i := fun i a b => H4_env _ _ _ i a b
+  generalize hH : H4 1 S ((c : Int) - j) = H at hhd hf hHenv
   obtain ⟨hf14, hfvl, hf5, hfg, hfk, hfz, hfc, hfn, hfv, hfd, hfh, hfe, hft, hfm⟩ := hf
   have hHok : SliceCert.Ok H := ⟨hfe.trans hM.ok.1, hfh.trans hM.ok.2.1, hft.trans hM.ok.2.2⟩
   have hHin : ∀ q, H.mem rInput q = input q := fun q => by rw [hfm]; exact hM.inp q
@@ -191,7 +194,61 @@ theorem batch1 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 6
   have fr := GenB1.seg_frame (rho (off + j)) hρ hw0 H hc0 hHok
   have dat := GenB1.seg_data (rho (off + j)) hρ hw0 H hc0 hHok _ (inv0_1 input H (off + j) hHin)
   have mv := GenB1.seg_moves (rho (off + j)) hρ hw0 H hc0 hHok 268 268 (by simp)
-  generalize hSb : GenB1.segAt25 H = Sb at sr fr dat mv
+  -- the body under the choice `ch`: the same run (no `vsetvli` on its path)
+  have hrunch : (RVc ch).run rodata prog GenB1.segLen H = GenB1.segAt25 H := by
+    have s0 := (GenB1.cert0).step (rho (off + j)) hρ hw0 H hc0 hHok
+    have s1 := (GenB1.cert1).step (rho (off + j)) hρ hw0 (GenB1.segAt1 H) s0.2.2.2 s0.2.2.1
+    have s2 := (GenB1.cert2).step (rho (off + j)) hρ hw0 (GenB1.segAt2 H) s1.2.2.2 s1.2.2.1
+    have s3 := (GenB1.cert3).step (rho (off + j)) hρ hw0 (GenB1.segAt3 H) s2.2.2.2 s2.2.2.1
+    have s4 := (GenB1.cert4).step (rho (off + j)) hρ hw0 (GenB1.segAt4 H) s3.2.2.2 s3.2.2.1
+    have s5 := (GenB1.cert5).step (rho (off + j)) hρ hw0 (GenB1.segAt5 H) s4.2.2.2 s4.2.2.1
+    have s6 := (GenB1.cert6).step (rho (off + j)) hρ hw0 (GenB1.segAt6 H) s5.2.2.2 s5.2.2.1
+    have s7 := (GenB1.cert7).step (rho (off + j)) hρ hw0 (GenB1.segAt7 H) s6.2.2.2 s6.2.2.1
+    have s8 := (GenB1.cert8).step (rho (off + j)) hρ hw0 (GenB1.segAt8 H) s7.2.2.2 s7.2.2.1
+    have s9 := (GenB1.cert9).step (rho (off + j)) hρ hw0 (GenB1.segAt9 H) s8.2.2.2 s8.2.2.1
+    have s10 := (GenB1.cert10).step (rho (off + j)) hρ hw0 (GenB1.segAt10 H) s9.2.2.2 s9.2.2.1
+    have s11 := (GenB1.cert11).step (rho (off + j)) hρ hw0 (GenB1.segAt11 H) s10.2.2.2 s10.2.2.1
+    have s12 := (GenB1.cert12).step (rho (off + j)) hρ hw0 (GenB1.segAt12 H) s11.2.2.2 s11.2.2.1
+    have s13 := (GenB1.cert13).step (rho (off + j)) hρ hw0 (GenB1.segAt13 H) s12.2.2.2 s12.2.2.1
+    have s14 := (GenB1.cert14).step (rho (off + j)) hρ hw0 (GenB1.segAt14 H) s13.2.2.2 s13.2.2.1
+    have s15 := (GenB1.cert15).step (rho (off + j)) hρ hw0 (GenB1.segAt15 H) s14.2.2.2 s14.2.2.1
+    have s16 := (GenB1.cert16).step (rho (off + j)) hρ hw0 (GenB1.segAt16 H) s15.2.2.2 s15.2.2.1
+    have s17 := (GenB1.cert17).step (rho (off + j)) hρ hw0 (GenB1.segAt17 H) s16.2.2.2 s16.2.2.1
+    have s18 := (GenB1.cert18).step (rho (off + j)) hρ hw0 (GenB1.segAt18 H) s17.2.2.2 s17.2.2.1
+    have s19 := (GenB1.cert19).step (rho (off + j)) hρ hw0 (GenB1.segAt19 H) s18.2.2.2 s18.2.2.1
+    have s20 := (GenB1.cert20).step (rho (off + j)) hρ hw0 (GenB1.segAt20 H) s19.2.2.2 s19.2.2.1
+    have s21 := (GenB1.cert21).step (rho (off + j)) hρ hw0 (GenB1.segAt21 H) s20.2.2.2 s20.2.2.1
+    have s22 := (GenB1.cert22).step (rho (off + j)) hρ hw0 (GenB1.segAt22 H) s21.2.2.2 s21.2.2.1
+    have s23 := (GenB1.cert23).step (rho (off + j)) hρ hw0 (GenB1.segAt23 H) s22.2.2.2 s22.2.2.1
+    have s24 := (GenB1.cert24).step (rho (off + j)) hρ hw0 (GenB1.segAt24 H) s23.2.2.2 s23.2.2.1
+    show (RVc ch).run rodata prog ((GenB1.cert0).idx.length + (GenB1.cert1).idx.length + (GenB1.cert2).idx.length + (GenB1.cert3).idx.length + (GenB1.cert4).idx.length + (GenB1.cert5).idx.length + (GenB1.cert6).idx.length + (GenB1.cert7).idx.length + (GenB1.cert8).idx.length + (GenB1.cert9).idx.length + (GenB1.cert10).idx.length + (GenB1.cert11).idx.length + (GenB1.cert12).idx.length + (GenB1.cert13).idx.length + (GenB1.cert14).idx.length + (GenB1.cert15).idx.length + (GenB1.cert16).idx.length + (GenB1.cert17).idx.length + (GenB1.cert18).idx.length + (GenB1.cert19).idx.length + (GenB1.cert20).idx.length + (GenB1.cert21).idx.length + (GenB1.cert22).idx.length + (GenB1.cert23).idx.length + (GenB1.cert24).idx.length) H = _
+    repeat rw [Isa.run_add]
+    rw [(GenB1.cert0).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 H hc0 hHok, s0.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert0).slice H = GenB1.segAt1 H from rfl,
+      (GenB1.cert1).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt1 H) s0.2.2.2 s0.2.2.1, s1.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert1).slice (GenB1.segAt1 H) = GenB1.segAt2 H from rfl,
+      (GenB1.cert2).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt2 H) s1.2.2.2 s1.2.2.1, s2.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert2).slice (GenB1.segAt2 H) = GenB1.segAt3 H from rfl,
+      (GenB1.cert3).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt3 H) s2.2.2.2 s2.2.2.1, s3.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert3).slice (GenB1.segAt3 H) = GenB1.segAt4 H from rfl,
+      (GenB1.cert4).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt4 H) s3.2.2.2 s3.2.2.1, s4.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert4).slice (GenB1.segAt4 H) = GenB1.segAt5 H from rfl,
+      (GenB1.cert5).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt5 H) s4.2.2.2 s4.2.2.1, s5.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert5).slice (GenB1.segAt5 H) = GenB1.segAt6 H from rfl,
+      (GenB1.cert6).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt6 H) s5.2.2.2 s5.2.2.1, s6.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert6).slice (GenB1.segAt6 H) = GenB1.segAt7 H from rfl,
+      (GenB1.cert7).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt7 H) s6.2.2.2 s6.2.2.1, s7.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert7).slice (GenB1.segAt7 H) = GenB1.segAt8 H from rfl,
+      (GenB1.cert8).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt8 H) s7.2.2.2 s7.2.2.1, s8.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert8).slice (GenB1.segAt8 H) = GenB1.segAt9 H from rfl,
+      (GenB1.cert9).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt9 H) s8.2.2.2 s8.2.2.1, s9.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert9).slice (GenB1.segAt9 H) = GenB1.segAt10 H from rfl,
+      (GenB1.cert10).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt10 H) s9.2.2.2 s9.2.2.1, s10.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert10).slice (GenB1.segAt10 H) = GenB1.segAt11 H from rfl,
+      (GenB1.cert11).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt11 H) s10.2.2.2 s10.2.2.1, s11.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert11).slice (GenB1.segAt11 H) = GenB1.segAt12 H from rfl,
+      (GenB1.cert12).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt12 H) s11.2.2.2 s11.2.2.1, s12.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert12).slice (GenB1.segAt12 H) = GenB1.segAt13 H from rfl,
+      (GenB1.cert13).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt13 H) s12.2.2.2 s12.2.2.1, s13.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert13).slice (GenB1.segAt13 H) = GenB1.segAt14 H from rfl,
+      (GenB1.cert14).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt14 H) s13.2.2.2 s13.2.2.1, s14.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert14).slice (GenB1.segAt14 H) = GenB1.segAt15 H from rfl,
+      (GenB1.cert15).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt15 H) s14.2.2.2 s14.2.2.1, s15.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert15).slice (GenB1.segAt15 H) = GenB1.segAt16 H from rfl,
+      (GenB1.cert16).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt16 H) s15.2.2.2 s15.2.2.1, s16.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert16).slice (GenB1.segAt16 H) = GenB1.segAt17 H from rfl,
+      (GenB1.cert17).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt17 H) s16.2.2.2 s16.2.2.1, s17.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert17).slice (GenB1.segAt17 H) = GenB1.segAt18 H from rfl,
+      (GenB1.cert18).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt18 H) s17.2.2.2 s17.2.2.1, s18.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert18).slice (GenB1.segAt18 H) = GenB1.segAt19 H from rfl,
+      (GenB1.cert19).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt19 H) s18.2.2.2 s18.2.2.1, s19.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert19).slice (GenB1.segAt19 H) = GenB1.segAt20 H from rfl,
+      (GenB1.cert20).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt20 H) s19.2.2.2 s19.2.2.1, s20.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert20).slice (GenB1.segAt20 H) = GenB1.segAt21 H from rfl,
+      (GenB1.cert21).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt21 H) s20.2.2.2 s20.2.2.1, s21.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert21).slice (GenB1.segAt21 H) = GenB1.segAt22 H from rfl,
+      (GenB1.cert22).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt22 H) s21.2.2.2 s21.2.2.1, s22.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert22).slice (GenB1.segAt22 H) = GenB1.segAt23 H from rfl,
+      (GenB1.cert23).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt23 H) s22.2.2.2 s22.2.2.1, s23.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert23).slice (GenB1.segAt23 H) = GenB1.segAt24 H from rfl,
+      (GenB1.cert24).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB1.segAt24 H) s23.2.2.2 s23.2.2.1, s24.1, show (Riscv.isa 2).execTrace rodata (GenB1.cert24).slice (GenB1.segAt24 H) = GenB1.segAt25 H from rfl]
+  generalize hSb : GenB1.segAt25 H = Sb at sr fr dat mv hrunch
   obtain ⟨hrun, hokb, hcutb⟩ := sr
   have fb := cut_fields _ _ _ _ hcutb
   have word : ∀ v, v ∈ GenB1.ctl25 → v < 288 → cutVar GenB1.ctl25 Sb v = E.reloc (rho (off + j)) (cutVar GenB1.ctl25 GenB1.sc25 v) :=
@@ -223,15 +280,15 @@ theorem batch1 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 6
     rw [← envOf_gdVar Sb 12 (by decide), mv, hHenv 268 (by decide) (by decide), envOf_gdVar S 12 (by decide), hM.a2]
   have hpcb : Sb.pc = 380 := fb.2.2.2.2.2.2.2.1.trans (by decide +kernel)
   -- back edge: `sub a2, a2, t0; bnez a2, 7`
-  have htl := run_tail 2 rodata prog 380 prog_380 prog_381 Sb ((c : Int) - j) 1 hokb.2.1 hpcb hb12 hb5 (by omega)
+  have htl := run_tail 2 ch rodata prog 380 prog_380 prog_381 Sb ((c : Int) - j) 1 hokb.2.1 hpcb hb12 hb5 (by omega)
     (by rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; omega)
   have hUf := T2_facts Sb ((c : Int) - j) 1
   have hUg : ∀ n, n ≠ 12 → (T2 Sb ((c : Int) - j) 1).getGD n = Sb.getGD n := fun n hn => T2_getGD _ _ _ n hn
   have hUpc := T2_pc Sb ((c : Int) - j) 1 380 hpcb
   generalize hU : T2 Sb ((c : Int) - j) 1 = U at htl hUf hUg hUpc
   obtain ⟨hU12, hUg', hUk, hUz, hUc, hUn, hUv, hUd, hUh, hUe, hUt, hUmem⟩ := hUf
-  have hrunall : RV.run rodata prog 5773 S = U := by
-    rw [show 5773 = 4 + GenB1.segLen + 2 by rw [body_len1], Isa.run_add, Isa.run_add, hhd, hrun, htl]
+  have hrunall : (RVc ch).run rodata prog 5773 S = U := by
+    rw [show 5773 = 4 + GenB1.segLen + 2 by rw [body_len1], Isa.run_add, Isa.run_add, hhd, hrunch, htl]
   rw [hrunall]
   obtain ⟨g1, k1, z1, c1, n1, v1, _, _, d1⟩ := fb
   refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨hUe.trans hokb.1, hUh.trans hokb.2.1, hUt.trans hokb.2.2⟩,
@@ -427,9 +484,9 @@ set_option maxHeartbeats 40000000 in
 /-- **A batch of `2` node(s)** (`vl = 2`): from the loop head after `j` nodes with `min (c - j) 2 = 2`,
 `5773` steps (head, body, back edge) hash nodes `off + j .. off + j + 1` and reach the loop head
 after `j + 2` nodes, or the exit if none is left. -/
-theorem batch2 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat)
-    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j + 2 ≤ c) (hw : min (c - j) 2 = 2) :
-    Mid off c input S0 (RV.run rodata prog 5773 S) (j + 2) (if c - j - 2 = 0 then 382 else 7) := by
+theorem batch2 (ch : Nat → Nat) (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat)
+    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j + 2 ≤ c) (hw : ch (c - j) = 2) :
+    Mid off c input S0 ((RVc ch).run rodata prog 5773 S) (j + 2) (if c - j - 2 = 0 then 382 else 7) := by
   have hb' : 64 * (off + c) ≤ 18014398509481984 := by
     have : (2 : Nat) ^ 54 = 18014398509481984 := rfl
     omega
@@ -442,11 +499,11 @@ theorem batch2 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 6
     show 0 ≤ 32 * ((off + j : Nat) : Int) ∧ 32 * ((off + j : Nat) : Int) < 2 ^ 55
     rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
   -- head: `mv t3, a2; beqz a7; vsetvli; bnez a7`
-  have hhd := run_head 2 rodata prog prog_7 prog_8 prog_12 prog_13 S ((c : Int) - j) hM.ok.2.1 hM.ctrl.2.2.2.2.2.2.1
-    hM.a2 hM.a7 hr0 hr1
+  have ht : ((c : Int) - j).toNat = c - j := by omega
+  have hhd := run_head 2 ch rodata prog prog_7 prog_8 prog_12 prog_13 S ((c : Int) - j) hM.ok.2.1 hM.ctrl.2.2.2.2.2.2.1
+    hM.a2 hM.a7 hr0 hr1 (by rw [ht, hw]; omega)
+  rw [ht, hw] at hhd
   have hf := H4_facts 2 S ((c : Int) - j)
-  have hwn : min ((c : Int) - j).toNat 2 = 2 := by omega
-  rw [hwn] at hf
   have hHenv : ∀ i, i ≠ 261 → i ≠ 284 → envOf (H4 2 S ((c : Int) - j)) i = envOf S i := fun i a b => H4_env _ _ _ i a b
   generalize hH : H4 2 S ((c : Int) - j) = H at hhd hf hHenv
   obtain ⟨hf14, hfvl, hf5, hfg, hfk, hfz, hfc, hfn, hfv, hfd, hfh, hfe, hft, hfm⟩ := hf
@@ -496,7 +553,61 @@ theorem batch2 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 6
   have fr := GenB2.seg_frame (rho (off + j)) hρ hw0 H hc0 hHok
   have dat := GenB2.seg_data (rho (off + j)) hρ hw0 H hc0 hHok _ (inv0_2 input H (off + j) hHin)
   have mv := GenB2.seg_moves (rho (off + j)) hρ hw0 H hc0 hHok 268 268 (by simp)
-  generalize hSb : GenB2.segAt25 H = Sb at sr fr dat mv
+  -- the body under the choice `ch`: the same run (no `vsetvli` on its path)
+  have hrunch : (RVc ch).run rodata prog GenB2.segLen H = GenB2.segAt25 H := by
+    have s0 := (GenB2.cert0).step (rho (off + j)) hρ hw0 H hc0 hHok
+    have s1 := (GenB2.cert1).step (rho (off + j)) hρ hw0 (GenB2.segAt1 H) s0.2.2.2 s0.2.2.1
+    have s2 := (GenB2.cert2).step (rho (off + j)) hρ hw0 (GenB2.segAt2 H) s1.2.2.2 s1.2.2.1
+    have s3 := (GenB2.cert3).step (rho (off + j)) hρ hw0 (GenB2.segAt3 H) s2.2.2.2 s2.2.2.1
+    have s4 := (GenB2.cert4).step (rho (off + j)) hρ hw0 (GenB2.segAt4 H) s3.2.2.2 s3.2.2.1
+    have s5 := (GenB2.cert5).step (rho (off + j)) hρ hw0 (GenB2.segAt5 H) s4.2.2.2 s4.2.2.1
+    have s6 := (GenB2.cert6).step (rho (off + j)) hρ hw0 (GenB2.segAt6 H) s5.2.2.2 s5.2.2.1
+    have s7 := (GenB2.cert7).step (rho (off + j)) hρ hw0 (GenB2.segAt7 H) s6.2.2.2 s6.2.2.1
+    have s8 := (GenB2.cert8).step (rho (off + j)) hρ hw0 (GenB2.segAt8 H) s7.2.2.2 s7.2.2.1
+    have s9 := (GenB2.cert9).step (rho (off + j)) hρ hw0 (GenB2.segAt9 H) s8.2.2.2 s8.2.2.1
+    have s10 := (GenB2.cert10).step (rho (off + j)) hρ hw0 (GenB2.segAt10 H) s9.2.2.2 s9.2.2.1
+    have s11 := (GenB2.cert11).step (rho (off + j)) hρ hw0 (GenB2.segAt11 H) s10.2.2.2 s10.2.2.1
+    have s12 := (GenB2.cert12).step (rho (off + j)) hρ hw0 (GenB2.segAt12 H) s11.2.2.2 s11.2.2.1
+    have s13 := (GenB2.cert13).step (rho (off + j)) hρ hw0 (GenB2.segAt13 H) s12.2.2.2 s12.2.2.1
+    have s14 := (GenB2.cert14).step (rho (off + j)) hρ hw0 (GenB2.segAt14 H) s13.2.2.2 s13.2.2.1
+    have s15 := (GenB2.cert15).step (rho (off + j)) hρ hw0 (GenB2.segAt15 H) s14.2.2.2 s14.2.2.1
+    have s16 := (GenB2.cert16).step (rho (off + j)) hρ hw0 (GenB2.segAt16 H) s15.2.2.2 s15.2.2.1
+    have s17 := (GenB2.cert17).step (rho (off + j)) hρ hw0 (GenB2.segAt17 H) s16.2.2.2 s16.2.2.1
+    have s18 := (GenB2.cert18).step (rho (off + j)) hρ hw0 (GenB2.segAt18 H) s17.2.2.2 s17.2.2.1
+    have s19 := (GenB2.cert19).step (rho (off + j)) hρ hw0 (GenB2.segAt19 H) s18.2.2.2 s18.2.2.1
+    have s20 := (GenB2.cert20).step (rho (off + j)) hρ hw0 (GenB2.segAt20 H) s19.2.2.2 s19.2.2.1
+    have s21 := (GenB2.cert21).step (rho (off + j)) hρ hw0 (GenB2.segAt21 H) s20.2.2.2 s20.2.2.1
+    have s22 := (GenB2.cert22).step (rho (off + j)) hρ hw0 (GenB2.segAt22 H) s21.2.2.2 s21.2.2.1
+    have s23 := (GenB2.cert23).step (rho (off + j)) hρ hw0 (GenB2.segAt23 H) s22.2.2.2 s22.2.2.1
+    have s24 := (GenB2.cert24).step (rho (off + j)) hρ hw0 (GenB2.segAt24 H) s23.2.2.2 s23.2.2.1
+    show (RVc ch).run rodata prog ((GenB2.cert0).idx.length + (GenB2.cert1).idx.length + (GenB2.cert2).idx.length + (GenB2.cert3).idx.length + (GenB2.cert4).idx.length + (GenB2.cert5).idx.length + (GenB2.cert6).idx.length + (GenB2.cert7).idx.length + (GenB2.cert8).idx.length + (GenB2.cert9).idx.length + (GenB2.cert10).idx.length + (GenB2.cert11).idx.length + (GenB2.cert12).idx.length + (GenB2.cert13).idx.length + (GenB2.cert14).idx.length + (GenB2.cert15).idx.length + (GenB2.cert16).idx.length + (GenB2.cert17).idx.length + (GenB2.cert18).idx.length + (GenB2.cert19).idx.length + (GenB2.cert20).idx.length + (GenB2.cert21).idx.length + (GenB2.cert22).idx.length + (GenB2.cert23).idx.length + (GenB2.cert24).idx.length) H = _
+    repeat rw [Isa.run_add]
+    rw [(GenB2.cert0).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 H hc0 hHok, s0.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert0).slice H = GenB2.segAt1 H from rfl,
+      (GenB2.cert1).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt1 H) s0.2.2.2 s0.2.2.1, s1.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert1).slice (GenB2.segAt1 H) = GenB2.segAt2 H from rfl,
+      (GenB2.cert2).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt2 H) s1.2.2.2 s1.2.2.1, s2.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert2).slice (GenB2.segAt2 H) = GenB2.segAt3 H from rfl,
+      (GenB2.cert3).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt3 H) s2.2.2.2 s2.2.2.1, s3.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert3).slice (GenB2.segAt3 H) = GenB2.segAt4 H from rfl,
+      (GenB2.cert4).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt4 H) s3.2.2.2 s3.2.2.1, s4.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert4).slice (GenB2.segAt4 H) = GenB2.segAt5 H from rfl,
+      (GenB2.cert5).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt5 H) s4.2.2.2 s4.2.2.1, s5.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert5).slice (GenB2.segAt5 H) = GenB2.segAt6 H from rfl,
+      (GenB2.cert6).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt6 H) s5.2.2.2 s5.2.2.1, s6.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert6).slice (GenB2.segAt6 H) = GenB2.segAt7 H from rfl,
+      (GenB2.cert7).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt7 H) s6.2.2.2 s6.2.2.1, s7.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert7).slice (GenB2.segAt7 H) = GenB2.segAt8 H from rfl,
+      (GenB2.cert8).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt8 H) s7.2.2.2 s7.2.2.1, s8.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert8).slice (GenB2.segAt8 H) = GenB2.segAt9 H from rfl,
+      (GenB2.cert9).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt9 H) s8.2.2.2 s8.2.2.1, s9.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert9).slice (GenB2.segAt9 H) = GenB2.segAt10 H from rfl,
+      (GenB2.cert10).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt10 H) s9.2.2.2 s9.2.2.1, s10.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert10).slice (GenB2.segAt10 H) = GenB2.segAt11 H from rfl,
+      (GenB2.cert11).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt11 H) s10.2.2.2 s10.2.2.1, s11.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert11).slice (GenB2.segAt11 H) = GenB2.segAt12 H from rfl,
+      (GenB2.cert12).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt12 H) s11.2.2.2 s11.2.2.1, s12.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert12).slice (GenB2.segAt12 H) = GenB2.segAt13 H from rfl,
+      (GenB2.cert13).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt13 H) s12.2.2.2 s12.2.2.1, s13.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert13).slice (GenB2.segAt13 H) = GenB2.segAt14 H from rfl,
+      (GenB2.cert14).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt14 H) s13.2.2.2 s13.2.2.1, s14.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert14).slice (GenB2.segAt14 H) = GenB2.segAt15 H from rfl,
+      (GenB2.cert15).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt15 H) s14.2.2.2 s14.2.2.1, s15.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert15).slice (GenB2.segAt15 H) = GenB2.segAt16 H from rfl,
+      (GenB2.cert16).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt16 H) s15.2.2.2 s15.2.2.1, s16.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert16).slice (GenB2.segAt16 H) = GenB2.segAt17 H from rfl,
+      (GenB2.cert17).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt17 H) s16.2.2.2 s16.2.2.1, s17.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert17).slice (GenB2.segAt17 H) = GenB2.segAt18 H from rfl,
+      (GenB2.cert18).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt18 H) s17.2.2.2 s17.2.2.1, s18.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert18).slice (GenB2.segAt18 H) = GenB2.segAt19 H from rfl,
+      (GenB2.cert19).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt19 H) s18.2.2.2 s18.2.2.1, s19.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert19).slice (GenB2.segAt19 H) = GenB2.segAt20 H from rfl,
+      (GenB2.cert20).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt20 H) s19.2.2.2 s19.2.2.1, s20.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert20).slice (GenB2.segAt20 H) = GenB2.segAt21 H from rfl,
+      (GenB2.cert21).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt21 H) s20.2.2.2 s20.2.2.1, s21.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert21).slice (GenB2.segAt21 H) = GenB2.segAt22 H from rfl,
+      (GenB2.cert22).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt22 H) s21.2.2.2 s21.2.2.1, s22.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert22).slice (GenB2.segAt22 H) = GenB2.segAt23 H from rfl,
+      (GenB2.cert23).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt23 H) s22.2.2.2 s22.2.2.1, s23.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert23).slice (GenB2.segAt23 H) = GenB2.segAt24 H from rfl,
+      (GenB2.cert24).run_ch ch (by decide +kernel) (rho (off + j)) hρ hw0 (GenB2.segAt24 H) s23.2.2.2 s23.2.2.1, s24.1, show (Riscv.isa 2).execTrace rodata (GenB2.cert24).slice (GenB2.segAt24 H) = GenB2.segAt25 H from rfl]
+  generalize hSb : GenB2.segAt25 H = Sb at sr fr dat mv hrunch
   obtain ⟨hrun, hokb, hcutb⟩ := sr
   have fb := cut_fields _ _ _ _ hcutb
   have word : ∀ v, v ∈ GenB2.ctl25 → v < 288 → cutVar GenB2.ctl25 Sb v = E.reloc (rho (off + j)) (cutVar GenB2.ctl25 GenB2.sc25 v) :=
@@ -528,15 +639,15 @@ theorem batch2 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 6
     rw [← envOf_gdVar Sb 12 (by decide), mv, hHenv 268 (by decide) (by decide), envOf_gdVar S 12 (by decide), hM.a2]
   have hpcb : Sb.pc = 380 := fb.2.2.2.2.2.2.2.1.trans (by decide +kernel)
   -- back edge: `sub a2, a2, t0; bnez a2, 7`
-  have htl := run_tail 2 rodata prog 380 prog_380 prog_381 Sb ((c : Int) - j) 2 hokb.2.1 hpcb hb12 hb5 (by omega)
+  have htl := run_tail 2 ch rodata prog 380 prog_380 prog_381 Sb ((c : Int) - j) 2 hokb.2.1 hpcb hb12 hb5 (by omega)
     (by rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; omega)
   have hUf := T2_facts Sb ((c : Int) - j) 2
   have hUg : ∀ n, n ≠ 12 → (T2 Sb ((c : Int) - j) 2).getGD n = Sb.getGD n := fun n hn => T2_getGD _ _ _ n hn
   have hUpc := T2_pc Sb ((c : Int) - j) 2 380 hpcb
   generalize hU : T2 Sb ((c : Int) - j) 2 = U at htl hUf hUg hUpc
   obtain ⟨hU12, hUg', hUk, hUz, hUc, hUn, hUv, hUd, hUh, hUe, hUt, hUmem⟩ := hUf
-  have hrunall : RV.run rodata prog 5773 S = U := by
-    rw [show 5773 = 4 + GenB2.segLen + 2 by rw [body_len2], Isa.run_add, Isa.run_add, hhd, hrun, htl]
+  have hrunall : (RVc ch).run rodata prog 5773 S = U := by
+    rw [show 5773 = 4 + GenB2.segLen + 2 by rw [body_len2], Isa.run_add, Isa.run_add, hhd, hrunch, htl]
   rw [hrunall]
   obtain ⟨g1, k1, z1, c1, n1, v1, _, _, d1⟩ := fb
   refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨hUe.trans hokb.1, hUh.trans hokb.2.1, hUt.trans hokb.2.2⟩,
@@ -596,56 +707,82 @@ theorem batch2 (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 6
 
 /-! ## The loop -/
 
-/-- A batch of any width `w = min (c - j) 2`. -/
-theorem batch_any (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j w : Nat)
-    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hj : j < c) (hw : w = min (c - j) 2) :
-    Mid off c input S0 (RV.run rodata prog 5773 S) (j + w) (if c - j - w = 0 then 382 else 7) := by
+/-- A batch of any width `w = ch (c - j)`. -/
+theorem batch_any (ch : Nat → Nat) (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j w : Nat)
+    (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : Mid off c input S0 S j 7) (hw1 : 1 ≤ w) (hw2 : w ≤ 2) (hj : j + w ≤ c)
+    (hwc : ch (c - j) = w) :
+    Mid off c input S0 ((RVc ch).run rodata prog 5773 S) (j + w) (if c - j - w = 0 then 382 else 7) := by
   rcases (show w = 1 ∨ w = 2 by omega) with rfl | rfl
-  · exact batch1 off c input S0 S j hb hM (by omega) (by omega)
-  · exact batch2 off c input S0 S j hb hM (by omega) (by omega)
+  · exact batch1 ch off c input S0 S j hb hM (by omega) hwc
+  · exact batch2 ch off c input S0 S j hb hM (by omega) hwc
 
-/-- **The loop**: from the loop head after `j` nodes with `2·d < c - j ≤ 2·(d+1)`, `d + 1` batches reach
-the exit with every node done. -/
-theorem loop (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54) :
-    ∀ d j (S : State (BitVec 64)), Mid off c input S0 S j 7 → 2 * d < c - j → c - j ≤ 2 * (d + 1) →
-      Mid off c input S0 (RV.run rodata prog (5773 * (d + 1)) S) c 382 := by
-  intro d
-  induction d with
-  | zero =>
+/-- The number of batches for `r` nodes left under the choice `ch` (fuel `f ≥ r`). -/
+def nb (ch : Nat → Nat) : Nat → Nat → Nat
+  | 0, _ => 0
+  | f + 1, r => if r = 0 then 0 else 1 + nb ch f (r - ch r)
+
+theorem nb_zero (ch : Nat → Nat) (f : Nat) : nb ch f 0 = 0 := by cases f <;> rfl
+
+/-- **The loop under any legal choice**: from the loop head after `j < c` nodes, `nb ch f (c - j)` batches
+(fuel `f ≥ c - j`) reach the exit with every node done. -/
+theorem loop (ch : Nat → Nat) (hch : Riscv.LegalVl 2 ch) (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64))
+    (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    ∀ f j (S : State (BitVec 64)), Mid off c input S0 S j 7 → j < c → c - j ≤ f →
+      Mid off c input S0 ((RVc ch).run rodata prog (5773 * nb ch f (c - j)) S) c 382 := by
+  intro f
+  induction f with
+  | zero => intro j S hM h1 h2; omega
+  | succ f ih =>
     intro j S hM h1 h2
-    have h := batch_any off c input S0 S j (c - j) hb hM (by omega) (by omega)
-    rw [show j + (c - j) = c by omega, if_pos (by omega)] at h
-    rw [show 5773 * (0 + 1) = 5773 from rfl]; exact h
-  | succ d ih =>
-    intro j S hM h1 h2
-    have h := batch_any off c input S0 S j 2 hb hM (by omega) (by omega)
-    rw [if_neg (by omega)] at h
-    rw [show 5773 * (d + 1 + 1) = 5773 + 5773 * (d + 1) by omega, Isa.run_add]
-    exact ih (j + 2) _ h (by omega) (by omega)
+    obtain ⟨b1, b2, b3⟩ := hch.bounds (by decide) (c - j) (by omega)
+    have hstep := batch_any ch off c input S0 S j (ch (c - j)) hb hM b1 b3 (by omega) rfl
+    have hnb : nb ch (f + 1) (c - j) = 1 + nb ch f (c - j - ch (c - j)) := by
+      show (if c - j = 0 then 0 else 1 + nb ch f (c - j - ch (c - j))) = _
+      rw [if_neg (by omega)]
+    rw [hnb, show 5773 * (1 + nb ch f (c - j - ch (c - j))) = 5773 + 5773 * nb ch f (c - j - ch (c - j)) by omega, Isa.run_add]
+    by_cases hz : c - j - ch (c - j) = 0
+    · rw [if_pos hz, show j + ch (c - j) = c by omega] at hstep
+      rw [hz, nb_zero, Nat.mul_zero, show (RVc ch).run rodata prog 0 _ = _ from rfl]
+      exact hstep
+    · rw [if_neg hz] at hstep
+      rw [show c - j - ch (c - j) = c - (j + ch (c - j)) by omega]
+      exact ih (j + ch (c - j)) _ hstep (by omega) (by omega)
+
+theorem nb_min : ∀ f r, r ≤ f → nb (fun a => min a 2) f r = (r + 1) / 2 := by
+  intro f
+  induction f with
+  | zero => intro r h; rw [show r = 0 by omega]; rfl
+  | succ f ih =>
+    intro r h
+    show (if r = 0 then 0 else 1 + nb (fun a => min a 2) f (r - min r 2)) = _
+    by_cases hr : r = 0
+    · rw [if_pos hr, hr]
+    · rw [if_neg hr, ih _ (by omega)]
+      omega
 
 /-! ## The whole call -/
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
-/-- **The kernel on any number of nodes.** -/
-theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (hE : Entry off c input S)
-    (hb : 64 * (off + c) ≤ 2 ^ 54) :
-    (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).halted = true ∧
-    (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).err = false ∧
-    (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).tail = none ∧
-    (∀ q : Int, q < 4 * (off : Int) → (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).mem rOutput q = S.mem rOutput q) ∧
-    ∀ n, n < c → Digest input (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S) (off + n) := by
+/-- **The kernel on any number of nodes, under any legal vector-length choice** (RVV 1.0 §6.3). -/
+theorem all_ch (ch : Nat → Nat) (hch : Riscv.LegalVl 2 ch) (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
+    (hE : Entry off c input S) (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    ((RVc ch).run rodata prog (8 + 5773 * nb ch c c) S).halted = true ∧
+    ((RVc ch).run rodata prog (8 + 5773 * nb ch c c) S).err = false ∧
+    ((RVc ch).run rodata prog (8 + 5773 * nb ch c c) S).tail = none ∧
+    (∀ q : Int, q < 4 * (off : Int) → ((RVc ch).run rodata prog (8 + 5773 * nb ch c c) S).mem rOutput q = S.mem rOutput q) ∧
+    ∀ n, n < c → Digest input ((RVc ch).run rodata prog (8 + 5773 * nb ch c c) S) (off + n) := by
   rcases Nat.eq_zero_or_pos c with hc | hc
   · subst hc
-    have h0 := entry_zero 2 rodata prog 380 prog_1 prog_383 off input S hE
-    rw [show 8 + 5773 * ((0 + 1) / 2) = 2 + 6 by decide, Isa.run_add, h0, Isa.run_halted _ _ _ _ _ rfl]
+    have h0 := entry_zero 2 ch rodata prog 380 prog_1 prog_383 off input S hE
+    rw [nb_zero, Nat.mul_zero, show 8 + 0 = 2 + 6 from rfl, Isa.run_add, h0, Isa.run_halted _ _ _ _ _ rfl]
     exact ⟨rfl, hE.ok.1, hE.ok.2.2, fun q _ => rfl, fun n hn => absurd hn (Nat.not_lt_zero _)⟩
-  · have hM0 := entry_pos 2 rodata prog 380 prog_1 prog_2 prog_3 prog_4 prog_5 prog_6 off c input S hE hc hb
-    have hl := loop off c input S hb ((c - 1) / 2) 0 _ hM0 (by omega) (by omega)
-    generalize hX : RV.run rodata prog (5773 * ((c - 1) / 2 + 1)) (RV.run rodata prog 6 S) = X at hl
-    have hx := run_exit 2 rodata prog 380 prog_382 prog_383 X hl.ok.2.1 hl.ctrl.2.2.2.2.2.2.1
-    have hsteps : 8 + 5773 * ((c + 1) / 2) = 6 + 5773 * ((c - 1) / 2 + 1) + 2 := by omega
-    rw [hsteps, Isa.run_add, Isa.run_add, hX, hx]
+  · have hM0 := entry_pos 2 ch rodata prog 380 prog_1 prog_2 prog_3 prog_4 prog_5 prog_6 off c input S hE hc hb
+    have hl := loop ch hch off c input S hb c 0 _ hM0 hc (by omega)
+    rw [Nat.sub_zero] at hl
+    generalize hX : (RVc ch).run rodata prog (5773 * nb ch c c) ((RVc ch).run rodata prog 6 S) = X at hl
+    have hx := run_exit 2 ch rodata prog 380 prog_382 prog_383 X hl.ok.2.1 hl.ctrl.2.2.2.2.2.2.1
+    rw [show 8 + 5773 * nb ch c c = 6 + 5773 * nb ch c c + 2 by omega, Isa.run_add, Isa.run_add, hX, hx]
     refine ⟨rfl, ?_, ?_, ?_, ?_⟩
     · simp only [Riscv.next_err, Riscv.setR_err]; exact hl.ok.1
     · simp only [Riscv.next_tail, Riscv.setR_tail]; exact hl.ok.2.2
@@ -653,10 +790,22 @@ theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (h
     · intro n hn
       exact digest_congr input X _ _ (fun t _ => by simp only [Riscv.next_mem, Riscv.setR_mem']) (hl.dig n hn)
 
+/-- **The kernel on any number of nodes** (the deterministic model `Riscv.isa 2`: `vl = min(avl, 2)`),
+`8 + 5773·⌈c/2⌉` steps. -/
+theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (hE : Entry off c input S)
+    (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).halted = true ∧
+    (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).err = false ∧
+    (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).tail = none ∧
+    (∀ q : Int, q < 4 * (off : Int) → (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S).mem rOutput q = S.mem rOutput q) ∧
+    ∀ n, n < c → Digest input (RV.run rodata prog (8 + 5773 * ((c + 1) / 2)) S) (off + n) := by
+  have h := all_ch (fun a => min a 2) (Riscv.legal_min 2) off c input S hE hb
+  rw [nb_min c c (Nat.le_refl c), Riscv.run_min] at h
+  exact h
+
 /-! ## In the library -/
 
-/-- What the library needs (`LibRv.NormThmRv`): from the library's entry state (normalised control
-part, `pc` at the entry), the run halts with every digest and no tail call. -/
+/-- What the library needs (`LibRv.NormThmRv`), deterministic model. -/
 theorem norm_thm : LibRv.NormThmRv 2 rodata prog 1 (fun _ c => 8 + 5773 * ((c + 1) / 2)) [] := by
   intro off count input S hE hb hpc
   obtain ⟨⟨g, k, z, cf, n, v, _, d⟩, hok, ha2, _, ha1, ha0, hin⟩ := hE
@@ -664,10 +813,24 @@ theorem norm_thm : LibRv.NormThmRv 2 rodata prog 1 (fun _ c => 8 + 5773 * ((c + 
   obtain ⟨hh, he, ht, hp, hd⟩ := all off count input S hE' hb
   exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
 
+/-- What the library needs under any legal choice (`LibRv.NormThmRvCh`). -/
+theorem norm_thm_ch (ch : Nat → Nat) (hch : Riscv.LegalVl 2 ch) :
+    LibRv.NormThmRvCh 2 ch rodata prog 1 (fun _ c => 8 + 5773 * nb ch c c) [] := by
+  intro off count input S hE hb hpc
+  obtain ⟨⟨g, k, z, cf, n, v, _, d⟩, hok, ha2, _, ha1, ha0, hin⟩ := hE
+  have hE' : Entry off count input S := ⟨⟨g, k, z, cf, n, v, hpc, d⟩, hok, ha2, ha1, ha0, hin⟩
+  obtain ⟨hh, he, ht, hp, hd⟩ := all_ch ch hch off count input S hE' hb
+  exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
+
 /-- The kernel as a kernel of the RISC-V library at `vlmax = 2` (VLEN = 128; rank 0: it hands
-nothing over; any `vl` at entry). -/
+nothing over; any `vl` at entry), deterministic model. -/
 def kernel : Library.KernelThm RV LibTable.EntryRv Digest :=
   LibRv.mkKernelRv 2 (LibTable.sym "rvv") 0 [] rodata prog 1 (fun _ c => 8 + 5773 * ((c + 1) / 2))
     (Riscv.vlAnn RvVl.rvv) RvVl.rvv_ok RvVl.entries.2.2.1 norm_thm
+
+/-- The kernel in the RISC-V library under the legal vector-length choice `ch`. -/
+def kernel_ch (ch : Nat → Nat) (hch : Riscv.LegalVl 2 ch) : Library.KernelThm (RVc ch) LibTable.EntryRv Digest :=
+  LibRv.mkKernelRvCh 2 ch (LibTable.sym "rvv") 0 [] rodata prog 1 (fun _ c => 8 + 5773 * nb ch c c)
+    (Riscv.vlAnn RvVl.rvv) RvVl.rvv_ok RvVl.entries.2.2.1 (norm_thm_ch ch hch)
 
 end Keccaktree.Kernels.RvvV2.All
