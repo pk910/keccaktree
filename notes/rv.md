@@ -83,6 +83,11 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
 ## Status (18:20 UTC)
 * DONE (axioms propext, Classical.choice, Quot.sound + bv_decide certificates, no sorry):
   - rv64_x1 (`Rv64X1.All.rv64_x1_all`, `kernel vlmax`, `kernel_ch vlmax ch`) — f17c881
+  - zbb_x1 (`ZbbX1.All`) and the VLEN-128 library `RvLib2` (`lib2`, `lib2ch`) — 4dfade0
+  - rvv at VLEN 256 (`RvvV4.All`) — f421edc
+* Remaining builds (remote queues): rvv_zvkb VLEN 256 (`/root/kt-rv-rvvq.log`, then auto-stopped by
+  `/root/kt-rv-q1stop.sh`), rvv VLEN 512 (`/root/kt-rv-rvvq2.log`), rvv_zvkb VLEN 512 (`/root/kt-rv-rvvq3.log`);
+  then `lake build Keccaktree.Kernels.RvLib4 Keccaktree.Kernels.RvLib8` and copy the generated `All.lean` files.
   - rvv at VLEN 128 (`RvvV2.All.all`, `all_ch`, `kernel`, `kernel_ch`) — a9b4d97 / 4d16931
   - rvv_zvkb at VLEN 128 (`RvvZvkbV2.All`) — 0d21c16
 * vl-choice layer (M11) DONE: `Asm/RiscvChoice.lean` (`isaCh`, `LegalVl`, `legal_min`, `run_min`, `run_ch_scalar`,
