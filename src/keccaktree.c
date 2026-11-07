@@ -151,8 +151,13 @@ static void keccaktree_avx2_tail_calibrate(void) {
     uint64_t best[2] = {UINT64_MAX, UINT64_MAX};
     for (int i = 0; i < 2 * 64; i++) buf[i] = (unsigned char)(i * 131 + 7);
     keccaktree_avx2_small_tail(1); /* x4 pads the 2 nodes */
-    for (int i = 0; i < 2; i++) fns[i](buf, buf, 2);
-    for (int r = 0; r < CALIB_REPS; r++) {
+    /* warm both paths with the timed loop itself before timing: after a
+     * single call the padded batch (more code, the tail buffers of the
+     * frame) was still slower than the pairs in 20..50% of fresh
+     * processes on Golden Cove, where it is 11% faster warm */
+    for (int i = 0; i < 2; i++)
+        for (int k = 0; k < 8; k++) fns[i](buf, buf, 2);
+    for (int r = 0; r < CALIB_REPS + 2; r++) {
         for (int i = 0; i < 2; i++) {
             uint64_t t0 = keccaktree_ticks();
             for (int k = 0; k < 8; k++) fns[i](buf, buf, 2);
