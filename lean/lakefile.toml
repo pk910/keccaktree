@@ -11,3 +11,11 @@ name = "Tools"
 [[lean_exe]]
 name = "kttool"
 root = "Tools.Main"
+
+[[lean_exe]]
+name = "difftool"
+root = "Tools.Diff"
+
+[[lean_exe]]
+name = "alignaudit"
+root = "Tools.AlignAudit"

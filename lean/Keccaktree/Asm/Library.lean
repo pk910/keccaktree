@@ -36,7 +36,6 @@ def Outcome (EntryAt : String → Nat → Nat → (Int → BitVec 64) → State 
   ((Sf.tail = none ∧ ∀ n, n < count → Digest input Sf (off + n)) ∨
    ∃ (next : String) (done : Nat), Sf.tail = some next ∧ next ∈ targets ∧ done ≤ count ∧
      (∀ n, n < done → Digest input Sf (off + n)) ∧
-     (done = 0 → count > 0) ∧
      EntryAt next (off + done) (count - done) input { Sf with halted := false, tail := none })
 
 /-- A kernel of the library with its all-count theorem.  `thm` is what the generated proofs
@@ -128,7 +127,7 @@ theorem lib_step (T : Table isa EntryAt Digest) (maxRank : Nat)
     LibOk T K off count input S := by
   have h := K.thm off count input S hS
   obtain ⟨hh, he, hpres, hout⟩ := h
-  rcases hout with ⟨hnone, hd⟩ | ⟨next, done, htail, hmem, hdone, hd, hpos, hnext⟩
+  rcases hout with ⟨hnone, hd⟩ | ⟨next, done, htail, hmem, hdone, hd, hnext⟩
   · exact ⟨_, LibRun.stop K hK off count S hnone, hh, he, hpres, hd⟩
   · obtain ⟨K', hK', hname, hlt'⟩ := hranks K hK next hmem
     have hlt : done = 0 → K'.rank < K.rank := fun _ => hlt'
