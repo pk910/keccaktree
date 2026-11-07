@@ -27,7 +27,7 @@ theorem norm_thm : NormThm rodata prog 0 (fun _ c => 21 + 4269 * c) [] := by
 
 /-- `keccaktree_keccak256_x86_x1` as a kernel of the library (rank 0: it hands nothing over). -/
 def kernel : Library.KernelThm X86.isa EntryX86 Digest :=
-  mkKernel "x86_x1" 0 [] rodata prog 0 (fun _ c => 21 + 4269 * c) 8 (by decide +kernel) (by decide +kernel)
+  mkKernel "keccaktree_keccak256_x86_x1" 0 [] rodata prog 0 (fun _ c => 21 + 4269 * c) 8 (by decide +kernel) (by decide +kernel)
     (fun _ _ => by omega) norm_thm
 
 theorem ranks_ok : Library.RanksOk [kernel] := Library.ranksOk_of_shape _ (by decide +kernel)
@@ -36,7 +36,7 @@ theorem ranks_ok : Library.RanksOk [kernel] := Library.ranksOk_of_shape _ (by de
 flags, masks and vector length — the run halts without a model fault with every node's digest
 in place. -/
 theorem lib_x86_x1 (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
-    (hS : EntryX86 "x86_x1" off count input S) : Library.LibOk [kernel] kernel off count input S :=
+    (hS : EntryX86 "keccaktree_keccak256_x86_x1" off count input S) : Library.LibOk [kernel] kernel off count input S :=
   Library.lib_correct [kernel] 0 (by simp [kernel, mkKernel]) ranks_ok digest_local _ kernel (by simp) off count input S
     (Nat.le_refl _) hS
 
