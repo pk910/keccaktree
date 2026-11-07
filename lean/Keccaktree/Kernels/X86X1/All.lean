@@ -337,7 +337,7 @@ theorem iter (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) 
       exact ctrl_after U Sb GenSB.sc25 GenSB.sc0 fb hUc (by decide +kernel)
         (by rw [hUzf, hz]; decide +kernel) (by rw [hUcf, fb.2.2.2.1]; decide +kernel)
         (by rw [hUpc, hz]; decide +kernel)
-    · rw [hUmem, memStore_same]; congr 2; push_cast; omega
+    · rw [hUmem, memStore_same]; congr 2; omega
   · -- the last iteration: on to the epilogue
     have hz : decide ((c : Int) - k - 1 = 0) = true := decide_eq_true (by omega)
     refine ⟨?_, hUok, hpre', ?_⟩
