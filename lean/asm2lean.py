@@ -426,6 +426,8 @@ class Arm:
         if op == 'csel': return '.csel %d %d %d .%s' % (X(args[0]), X(args[1]), X(args[2]), args[3])
         if op == 'ldr':
             if args[1].startswith('['):
+                # a post-index offset is a separate argument after the split on commas: `[x1], #8`
+                assert len(args) == 2, 'ldr with post-index writeback is not modelled: ' + text
                 b, o, wb = self.memop(args[1]); assert wb == 0
                 return '.ldr %s %d (%d)' % (self.lreg(args[0]), b, o)
             m = re.match(r'^([0-9a-f]+) <', args[1]); a = int(m.group(1), 16)
@@ -433,10 +435,14 @@ class Arm:
             if r.startswith('(.q'): return '.ldrlit %s (0x%016x#64) (0x%016x#64)' % (r, self.word64(a), self.word64(a + 8))
             return '.ldrlit %s (0x%016x#64) (0#64)' % (r, self.word64(a))
         if op == 'str':
+            assert len(args) == 2, 'str with post-index writeback is not modelled: ' + text
             b, o, wb = self.memop(args[1]); assert wb == 0
             return '.str %s %d (%d)' % (self.lreg(args[0]), b, o)
         if op in ('ldp', 'stp'):
-            b, o, wb = self.memop(args[2])
+            # post-index `[sp], #128` is split into two arguments by the comma split: join them again
+            # (before this fix the immediate was dropped: `ldp x29, x30, [sp], #128` lost its writeback)
+            assert len(args) in (3, 4), text
+            b, o, wb = self.memop(', '.join(args[2:]))
             return '.%s %s %s %d (%d) %d' % (op, self.lreg(args[0]), self.lreg(args[1]), b, o, wb)
         if op == 'cbz': return '.cbz %d %d' % (X(args[0]), self.target(args[1]))
         if op.startswith('b.'):
