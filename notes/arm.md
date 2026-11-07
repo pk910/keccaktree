@@ -32,15 +32,27 @@ Branch `all-arm` (worktree `src/wt-arm`, off `lean-verification` f3a7dc5), remot
   at count 0).  The condition is not used by `lib_step` (`hpos` unused) — it should be dropped (agent `lib`).
 * Tail names are the symbols (`keccaktree_keccak256_scalar_x1`); the AArch64 kernels use them as `KernelThm.name`.
 
-## Integration with agent `lib` (branch all-lib)
+## Generator lessons
+* Body plans take the per-node rounds from `find_plan.py` (three-node kernels interleave a NEON pair and a scalar
+  node: their round-r completions differ, 48 cuts); the round-24 cut of a node is delayed until its four digest
+  words are present (`settle_digest_cuts`: `find_plan` counts *any* four round-24 lanes, and sha3_x2 applies the
+  iota of lane 0 right before the store — the old cut left that lane without a hypothesis and `bv_decide` found a
+  counterexample in the last slice).
+* `All.lean` of the two-/three-node kernels is rendered on the remote after the segments (slice counts from the
+  plans): `/root/kt-arm-pipe.sh <kernel> <Ns> <P> <segs…>` = gen_segments_arm.py + gen_all_arm.py + builds.
+
+## Integration with agent `lib` (merged: lean-verification 8e53c82 → all-arm 7cdeb3a)
 `lib` provides `LibTable.EntryA` (same fields as `Arm.Entry`: ctrl/ok/x2/sp/x1/x0/inp, but flags = false and no
 `pc`), `LibTable.EntryArm name := EntryA (normCtl S) ∧ bound`, `LibArm.NormThmArm` (kernel theorem from `EntryA`
 with `S.pc = entry`, conclusion `Library.Outcome EntryArm Digest targets …`) and `mkKernelArm` (+ its own flag
 annotations `Kernels/ArmFlags.lean`).  Our theorems are stronger on the entry side (any flags, `Arm.Entry`), so
 `NormThmArm k` follows: `EntryA S ∧ S.pc = 0 → Arm.Entry`; the hand-over `Arm.Entry … {Sf with halted := false,
 tail := none, pc := 0}` gives `EntryA (normCtl …)`.  `Digest`: `Nodes.Digest` and `LibX86.Digest` have the same
-body (unfold).  **Blocker in `lib`'s `Outcome`: `(done = 0 → count > 0)`** — false for sha3_x3/neon_x3/sha3_x3r at
-count 0 (and the x86 kernels that tail-call at count 0); unused by `lib_step`, must be dropped.
+body — now one definition: `Nodes` uses `LibX86.Digest`/`nodeWords`.  `Library.Outcome` lost its unused
+`(done = 0 → count > 0)` clause (7cdeb3a; false for sha3_x3/neon_x3/sha3_x3r at count 0 and for the x86 kernels
+that tail-call at count 0; `lib_step` never used it; LibX86/LibArm/LibRv patterns adjusted).
+Each AArch64 `All.lean` ends with `norm_thm : LibArm.NormThmArm …` (from `all` via `Arm.entry_of_entryA`, hand-over
+via `Arm.entryA_of_entry`) and `kernel := LibArm.mkKernelArm … (Arm.flagAnn ArmFlags.<k>) ArmFlags.<k>_ok …`.
 
 ## New/changed files (core changes are additive)
 * `Asm/ArmFootprint.lean`: `Arm.writes`, `Arm.exec_frame`, `Arm.isaFoot`.
