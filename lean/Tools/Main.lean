@@ -76,7 +76,14 @@ def main (args : List String) : IO UInt32 := do
     match kernels.find? (·.1 == k) with
     | none => IO.eprintln s!"unknown kernel {k}"; return 1
     | some (_, K) =>
-      let T := K.T; let prog := K.prog; let rodata := K.rodata; let entry := K.entry
+      let T := K.T; let prog := K.prog; let entry := K.entry
+      -- `KT_PATCH=word:value,..`: override words of the constant image (the runtime-settable `.data`
+      -- thresholds, e.g. avx2_x4's small-tail maximum, to explore the code paths of every setting)
+      let patches := ((← IO.getEnv "KT_PATCH").getD "").splitOn "," |>.filterMap fun p =>
+        match p.splitOn ":" with
+        | [a, b] => (a.toNat?).bind fun i => (b.toNat?).map fun v => (i, v)
+        | _ => none
+      let rodata := patches.foldl (fun (r : Array (BitVec 64)) (i, v) => r.set! i (BitVec.ofNat 64 v)) K.rodata
       let count := a.toNat!
       match cmd with
       | "scan" => scan T prog rodata entry count b.toNat! c.toNat! (windows count); return 0
@@ -87,6 +94,20 @@ def main (args : List String) : IO UInt32 := do
       | "scanregs" => scan T prog rodata entry count b.toNat! c.toNat! []; return 0
       | "scanmem" => scan T prog rodata entry count b.toNat! 0 (windows count); return 0
       | "matches" => matchesAt T prog rodata entry count b.toNat! c.toNat! (windows count); return 0
+      | "paths" =>
+        -- code-path inventory: for every count 0..a run the model on the test message (fuel b) and print the
+        -- executed instruction indices, the halting state, the hand-over and which digests the kernel wrote
+        for c in [0:count + 1] do
+          let mut s : State (BitVec 64) := T.initState seqWord 0 c entry
+          let mut pcs : Array Nat := #[]
+          for _ in [0:b.toNat!] do
+            if s.halted then break
+            pcs := pcs.push s.pc
+            s := T.step rodata prog s
+          let oks := (List.range c).map fun n => (List.range 4).all fun w => s.mem rOutput (Int.ofNat (4 * n + w)) == expectWord n w
+          IO.println s!"COUNT {c} halted={s.halted} err={s.err} tail={s.tail} rem={T.countOf s} steps={pcs.size} gd={s.gd.toList.map hex} ok={oks}"
+          IO.println s!"PATH {c} {pcs.toList}"
+        return 0
       | "run" =>
         -- pure execution speed: step the model `n` times, no matching
         let mut r := Run.init T rodata (randInput 1) count entry

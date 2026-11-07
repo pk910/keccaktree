@@ -1,0 +1,6548 @@
+{
+ "kernel": "rvv_v2",
+ "nodes": 2,
+ "isa": "riscv",
+ "count_range": [
+  0,
+  68
+ ],
+ "loop_head": {
+  "index": 7,
+  "instruction": ".mv 28 12"
+ },
+ "batch_region": {
+  "kind": "loop body",
+  "start": 7,
+  "end": 381,
+  "instructions": 361
+ },
+ "classes": [
+  {
+   "id": 0,
+   "counts": [
+    0
+   ],
+   "iterations": {
+    "0": 0
+   },
+   "tail": null,
+   "entry_len": 2,
+   "body_variants": [],
+   "exit_len": 0
+  },
+  {
+   "id": 1,
+   "counts": [
+    1,
+    2
+   ],
+   "iterations": {
+    "1": 0,
+    "2": 0
+   },
+   "tail": null,
+   "entry_len": 6,
+   "body_variants": [],
+   "exit_len": 5775
+  },
+  {
+   "id": 2,
+   "counts": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68
+   ],
+   "iterations": {
+    "3": 1,
+    "4": 1,
+    "5": 2,
+    "6": 2,
+    "7": 3,
+    "8": 3,
+    "9": 4,
+    "10": 4,
+    "11": 5,
+    "12": 5,
+    "13": 6,
+    "14": 6,
+    "15": 7,
+    "16": 7,
+    "17": 8,
+    "18": 8,
+    "19": 9,
+    "20": 9,
+    "21": 10,
+    "22": 10,
+    "23": 11,
+    "24": 11,
+    "25": 12,
+    "26": 12,
+    "27": 13,
+    "28": 13,
+    "29": 14,
+    "30": 14,
+    "31": 15,
+    "32": 15,
+    "33": 16,
+    "34": 16,
+    "35": 17,
+    "36": 17,
+    "37": 18,
+    "38": 18,
+    "39": 19,
+    "40": 19,
+    "41": 20,
+    "42": 20,
+    "43": 21,
+    "44": 21,
+    "45": 22,
+    "46": 22,
+    "47": 23,
+    "48": 23,
+    "49": 24,
+    "50": 24,
+    "51": 25,
+    "52": 25,
+    "53": 26,
+    "54": 26,
+    "55": 27,
+    "56": 27,
+    "57": 28,
+    "58": 28,
+    "59": 29,
+    "60": 29,
+    "61": 30,
+    "62": 30,
+    "63": 31,
+    "64": 31,
+    "65": 32,
+    "66": 32,
+    "67": 33,
+    "68": 33
+   },
+   "tail": null,
+   "entry_len": 6,
+   "body_variants": [
+    5773
+   ],
+   "exit_len": 5775
+  }
+ ],
+ "per_count": [
+  {
+   "count": 0,
+   "steps": 2,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     2
+    ],
+    "loop": null,
+    "exit": null
+   }
+  },
+  {
+   "count": 1,
+   "steps": 5781,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 1,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     6
+    ],
+    "exit": [
+     6,
+     5781
+    ]
+   }
+  },
+  {
+   "count": 2,
+   "steps": 5781,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 2,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     6
+    ],
+    "exit": [
+     6,
+     5781
+    ]
+   }
+  },
+  {
+   "count": 3,
+   "steps": 11554,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 3,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     5779
+    ],
+    "exit": [
+     5779,
+     11554
+    ]
+   }
+  },
+  {
+   "count": 4,
+   "steps": 11554,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 4,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     5779
+    ],
+    "exit": [
+     5779,
+     11554
+    ]
+   }
+  },
+  {
+   "count": 5,
+   "steps": 17327,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 5,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     11552
+    ],
+    "exit": [
+     11552,
+     17327
+    ]
+   }
+  },
+  {
+   "count": 6,
+   "steps": 17327,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 6,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     11552
+    ],
+    "exit": [
+     11552,
+     17327
+    ]
+   }
+  },
+  {
+   "count": 7,
+   "steps": 23100,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 7,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     17325
+    ],
+    "exit": [
+     17325,
+     23100
+    ]
+   }
+  },
+  {
+   "count": 8,
+   "steps": 23100,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     17325
+    ],
+    "exit": [
+     17325,
+     23100
+    ]
+   }
+  },
+  {
+   "count": 9,
+   "steps": 28873,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 9,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     23098
+    ],
+    "exit": [
+     23098,
+     28873
+    ]
+   }
+  },
+  {
+   "count": 10,
+   "steps": 28873,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 10,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     23098
+    ],
+    "exit": [
+     23098,
+     28873
+    ]
+   }
+  },
+  {
+   "count": 11,
+   "steps": 34646,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 11,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     28871
+    ],
+    "exit": [
+     28871,
+     34646
+    ]
+   }
+  },
+  {
+   "count": 12,
+   "steps": 34646,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 12,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     28871
+    ],
+    "exit": [
+     28871,
+     34646
+    ]
+   }
+  },
+  {
+   "count": 13,
+   "steps": 40419,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 13,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     34644
+    ],
+    "exit": [
+     34644,
+     40419
+    ]
+   }
+  },
+  {
+   "count": 14,
+   "steps": 40419,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 14,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     34644
+    ],
+    "exit": [
+     34644,
+     40419
+    ]
+   }
+  },
+  {
+   "count": 15,
+   "steps": 46192,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 15,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     40417
+    ],
+    "exit": [
+     40417,
+     46192
+    ]
+   }
+  },
+  {
+   "count": 16,
+   "steps": 46192,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     40417
+    ],
+    "exit": [
+     40417,
+     46192
+    ]
+   }
+  },
+  {
+   "count": 17,
+   "steps": 51965,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 17,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     46190
+    ],
+    "exit": [
+     46190,
+     51965
+    ]
+   }
+  },
+  {
+   "count": 18,
+   "steps": 51965,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 18,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     46190
+    ],
+    "exit": [
+     46190,
+     51965
+    ]
+   }
+  },
+  {
+   "count": 19,
+   "steps": 57738,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 19,
+   "digests_ok": true,
+   "loop_head_visits": 10,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     51963
+    ],
+    "exit": [
+     51963,
+     57738
+    ]
+   }
+  },
+  {
+   "count": 20,
+   "steps": 57738,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 20,
+   "digests_ok": true,
+   "loop_head_visits": 10,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     51963
+    ],
+    "exit": [
+     51963,
+     57738
+    ]
+   }
+  },
+  {
+   "count": 21,
+   "steps": 63511,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 21,
+   "digests_ok": true,
+   "loop_head_visits": 11,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     57736
+    ],
+    "exit": [
+     57736,
+     63511
+    ]
+   }
+  },
+  {
+   "count": 22,
+   "steps": 63511,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 22,
+   "digests_ok": true,
+   "loop_head_visits": 11,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     57736
+    ],
+    "exit": [
+     57736,
+     63511
+    ]
+   }
+  },
+  {
+   "count": 23,
+   "steps": 69284,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 23,
+   "digests_ok": true,
+   "loop_head_visits": 12,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     63509
+    ],
+    "exit": [
+     63509,
+     69284
+    ]
+   }
+  },
+  {
+   "count": 24,
+   "steps": 69284,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 12,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     63509
+    ],
+    "exit": [
+     63509,
+     69284
+    ]
+   }
+  },
+  {
+   "count": 25,
+   "steps": 75057,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 25,
+   "digests_ok": true,
+   "loop_head_visits": 13,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     69282
+    ],
+    "exit": [
+     69282,
+     75057
+    ]
+   }
+  },
+  {
+   "count": 26,
+   "steps": 75057,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 26,
+   "digests_ok": true,
+   "loop_head_visits": 13,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     69282
+    ],
+    "exit": [
+     69282,
+     75057
+    ]
+   }
+  },
+  {
+   "count": 27,
+   "steps": 80830,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 27,
+   "digests_ok": true,
+   "loop_head_visits": 14,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     75055
+    ],
+    "exit": [
+     75055,
+     80830
+    ]
+   }
+  },
+  {
+   "count": 28,
+   "steps": 80830,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 28,
+   "digests_ok": true,
+   "loop_head_visits": 14,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     75055
+    ],
+    "exit": [
+     75055,
+     80830
+    ]
+   }
+  },
+  {
+   "count": 29,
+   "steps": 86603,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 29,
+   "digests_ok": true,
+   "loop_head_visits": 15,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     80828
+    ],
+    "exit": [
+     80828,
+     86603
+    ]
+   }
+  },
+  {
+   "count": 30,
+   "steps": 86603,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 30,
+   "digests_ok": true,
+   "loop_head_visits": 15,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     80828
+    ],
+    "exit": [
+     80828,
+     86603
+    ]
+   }
+  },
+  {
+   "count": 31,
+   "steps": 92376,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 31,
+   "digests_ok": true,
+   "loop_head_visits": 16,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     86601
+    ],
+    "exit": [
+     86601,
+     92376
+    ]
+   }
+  },
+  {
+   "count": 32,
+   "steps": 92376,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 16,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     86601
+    ],
+    "exit": [
+     86601,
+     92376
+    ]
+   }
+  },
+  {
+   "count": 33,
+   "steps": 98149,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 33,
+   "digests_ok": true,
+   "loop_head_visits": 17,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     92374
+    ],
+    "exit": [
+     92374,
+     98149
+    ]
+   }
+  },
+  {
+   "count": 34,
+   "steps": 98149,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 34,
+   "digests_ok": true,
+   "loop_head_visits": 17,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     92374
+    ],
+    "exit": [
+     92374,
+     98149
+    ]
+   }
+  },
+  {
+   "count": 35,
+   "steps": 103922,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 35,
+   "digests_ok": true,
+   "loop_head_visits": 18,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     98147
+    ],
+    "exit": [
+     98147,
+     103922
+    ]
+   }
+  },
+  {
+   "count": 36,
+   "steps": 103922,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 36,
+   "digests_ok": true,
+   "loop_head_visits": 18,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     98147
+    ],
+    "exit": [
+     98147,
+     103922
+    ]
+   }
+  },
+  {
+   "count": 37,
+   "steps": 109695,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 37,
+   "digests_ok": true,
+   "loop_head_visits": 19,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     103920
+    ],
+    "exit": [
+     103920,
+     109695
+    ]
+   }
+  },
+  {
+   "count": 38,
+   "steps": 109695,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 38,
+   "digests_ok": true,
+   "loop_head_visits": 19,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     103920
+    ],
+    "exit": [
+     103920,
+     109695
+    ]
+   }
+  },
+  {
+   "count": 39,
+   "steps": 115468,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 39,
+   "digests_ok": true,
+   "loop_head_visits": 20,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     109693
+    ],
+    "exit": [
+     109693,
+     115468
+    ]
+   }
+  },
+  {
+   "count": 40,
+   "steps": 115468,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 20,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     109693
+    ],
+    "exit": [
+     109693,
+     115468
+    ]
+   }
+  },
+  {
+   "count": 41,
+   "steps": 121241,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 41,
+   "digests_ok": true,
+   "loop_head_visits": 21,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     115466
+    ],
+    "exit": [
+     115466,
+     121241
+    ]
+   }
+  },
+  {
+   "count": 42,
+   "steps": 121241,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 42,
+   "digests_ok": true,
+   "loop_head_visits": 21,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     115466
+    ],
+    "exit": [
+     115466,
+     121241
+    ]
+   }
+  },
+  {
+   "count": 43,
+   "steps": 127014,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 43,
+   "digests_ok": true,
+   "loop_head_visits": 22,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     121239
+    ],
+    "exit": [
+     121239,
+     127014
+    ]
+   }
+  },
+  {
+   "count": 44,
+   "steps": 127014,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 44,
+   "digests_ok": true,
+   "loop_head_visits": 22,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     121239
+    ],
+    "exit": [
+     121239,
+     127014
+    ]
+   }
+  },
+  {
+   "count": 45,
+   "steps": 132787,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 45,
+   "digests_ok": true,
+   "loop_head_visits": 23,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     127012
+    ],
+    "exit": [
+     127012,
+     132787
+    ]
+   }
+  },
+  {
+   "count": 46,
+   "steps": 132787,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 46,
+   "digests_ok": true,
+   "loop_head_visits": 23,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     127012
+    ],
+    "exit": [
+     127012,
+     132787
+    ]
+   }
+  },
+  {
+   "count": 47,
+   "steps": 138560,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 47,
+   "digests_ok": true,
+   "loop_head_visits": 24,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     132785
+    ],
+    "exit": [
+     132785,
+     138560
+    ]
+   }
+  },
+  {
+   "count": 48,
+   "steps": 138560,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 24,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     132785
+    ],
+    "exit": [
+     132785,
+     138560
+    ]
+   }
+  },
+  {
+   "count": 49,
+   "steps": 144333,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 49,
+   "digests_ok": true,
+   "loop_head_visits": 25,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     138558
+    ],
+    "exit": [
+     138558,
+     144333
+    ]
+   }
+  },
+  {
+   "count": 50,
+   "steps": 144333,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 50,
+   "digests_ok": true,
+   "loop_head_visits": 25,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     138558
+    ],
+    "exit": [
+     138558,
+     144333
+    ]
+   }
+  },
+  {
+   "count": 51,
+   "steps": 150106,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 51,
+   "digests_ok": true,
+   "loop_head_visits": 26,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     144331
+    ],
+    "exit": [
+     144331,
+     150106
+    ]
+   }
+  },
+  {
+   "count": 52,
+   "steps": 150106,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 52,
+   "digests_ok": true,
+   "loop_head_visits": 26,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     144331
+    ],
+    "exit": [
+     144331,
+     150106
+    ]
+   }
+  },
+  {
+   "count": 53,
+   "steps": 155879,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 53,
+   "digests_ok": true,
+   "loop_head_visits": 27,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     150104
+    ],
+    "exit": [
+     150104,
+     155879
+    ]
+   }
+  },
+  {
+   "count": 54,
+   "steps": 155879,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 54,
+   "digests_ok": true,
+   "loop_head_visits": 27,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     150104
+    ],
+    "exit": [
+     150104,
+     155879
+    ]
+   }
+  },
+  {
+   "count": 55,
+   "steps": 161652,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 55,
+   "digests_ok": true,
+   "loop_head_visits": 28,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     155877
+    ],
+    "exit": [
+     155877,
+     161652
+    ]
+   }
+  },
+  {
+   "count": 56,
+   "steps": 161652,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 28,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     155877
+    ],
+    "exit": [
+     155877,
+     161652
+    ]
+   }
+  },
+  {
+   "count": 57,
+   "steps": 167425,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 57,
+   "digests_ok": true,
+   "loop_head_visits": 29,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     161650
+    ],
+    "exit": [
+     161650,
+     167425
+    ]
+   }
+  },
+  {
+   "count": 58,
+   "steps": 167425,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 58,
+   "digests_ok": true,
+   "loop_head_visits": 29,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     161650
+    ],
+    "exit": [
+     161650,
+     167425
+    ]
+   }
+  },
+  {
+   "count": 59,
+   "steps": 173198,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 59,
+   "digests_ok": true,
+   "loop_head_visits": 30,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     167423
+    ],
+    "exit": [
+     167423,
+     173198
+    ]
+   }
+  },
+  {
+   "count": 60,
+   "steps": 173198,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 60,
+   "digests_ok": true,
+   "loop_head_visits": 30,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     167423
+    ],
+    "exit": [
+     167423,
+     173198
+    ]
+   }
+  },
+  {
+   "count": 61,
+   "steps": 178971,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 61,
+   "digests_ok": true,
+   "loop_head_visits": 31,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     173196
+    ],
+    "exit": [
+     173196,
+     178971
+    ]
+   }
+  },
+  {
+   "count": 62,
+   "steps": 178971,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 62,
+   "digests_ok": true,
+   "loop_head_visits": 31,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     173196
+    ],
+    "exit": [
+     173196,
+     178971
+    ]
+   }
+  },
+  {
+   "count": 63,
+   "steps": 184744,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 63,
+   "digests_ok": true,
+   "loop_head_visits": 32,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     178969
+    ],
+    "exit": [
+     178969,
+     184744
+    ]
+   }
+  },
+  {
+   "count": 64,
+   "steps": 184744,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 32,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     178969
+    ],
+    "exit": [
+     178969,
+     184744
+    ]
+   }
+  },
+  {
+   "count": 65,
+   "steps": 190517,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 65,
+   "digests_ok": true,
+   "loop_head_visits": 33,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     184742
+    ],
+    "exit": [
+     184742,
+     190517
+    ]
+   }
+  },
+  {
+   "count": 66,
+   "steps": 190517,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 66,
+   "digests_ok": true,
+   "loop_head_visits": 33,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     184742
+    ],
+    "exit": [
+     184742,
+     190517
+    ]
+   }
+  },
+  {
+   "count": 67,
+   "steps": 196290,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 67,
+   "digests_ok": true,
+   "loop_head_visits": 34,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     190515
+    ],
+    "exit": [
+     190515,
+     196290
+    ]
+   }
+  },
+  {
+   "count": 68,
+   "steps": 196290,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 68,
+   "digests_ok": true,
+   "loop_head_visits": 34,
+   "segments": {
+    "entry": [
+     0,
+     6
+    ],
+    "loop": [
+     6,
+     190515
+    ],
+    "exit": [
+     190515,
+     196290
+    ]
+   }
+  }
+ ],
+ "count_dependent_branches": [
+  {
+   "index": 1,
+   "instruction": ".br .eq 12 0 383",
+   "region": "frame"
+  },
+  {
+   "index": 381,
+   "instruction": ".br .ne 12 0 7",
+   "region": "batch"
+  }
+ ],
+ "count_readers": [
+  {
+   "index": 1,
+   "instruction": ".br .eq 12 0 383",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 7,
+   "instruction": ".mv 28 12",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 12,
+   "instruction": ".vsetvli 5 28",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 14,
+   "instruction": ".vlseg 0 11 8",
+   "reads": [
+    "address",
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 22,
+   "instruction": ".vmvi 8 (0x1#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 23,
+   "instruction": ".vmvi 9 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 24,
+   "instruction": ".vmvi 10 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 25,
+   "instruction": ".vmvi 11 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 26,
+   "instruction": ".vmvi 12 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 27,
+   "instruction": ".vmvi 13 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 28,
+   "instruction": ".vmvi 14 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 29,
+   "instruction": ".vmvi 15 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 30,
+   "instruction": ".vmvx 16 30",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 31,
+   "instruction": ".vmvi 17 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 32,
+   "instruction": ".vmvi 18 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 33,
+   "instruction": ".vmvi 19 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 34,
+   "instruction": ".vmvi 20 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 35,
+   "instruction": ".vmvi 21 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 36,
+   "instruction": ".vmvi 22 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 37,
+   "instruction": ".vmvi 23 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 38,
+   "instruction": ".vmvi 24 (0x0#64)",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 43,
+   "instruction": ".vop 25 0 5 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 44,
+   "instruction": ".vop 26 1 6 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 45,
+   "instruction": ".vop 27 2 7 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 46,
+   "instruction": ".vop 28 3 8 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 47,
+   "instruction": ".vop 29 4 9 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 48,
+   "instruction": ".vop 25 25 10 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 49,
+   "instruction": ".vop 26 26 11 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 50,
+   "instruction": ".vop 27 27 12 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 51,
+   "instruction": ".vop 28 28 13 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 52,
+   "instruction": ".vop 29 29 14 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 53,
+   "instruction": ".vop 25 25 15 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 54,
+   "instruction": ".vop 26 26 16 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 55,
+   "instruction": ".vop 27 27 17 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 56,
+   "instruction": ".vop 28 28 18 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 57,
+   "instruction": ".vop 29 29 19 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 58,
+   "instruction": ".vop 25 25 20 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 59,
+   "instruction": ".vop 26 26 21 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 60,
+   "instruction": ".vop 27 27 22 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 61,
+   "instruction": ".vop 28 28 23 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 62,
+   "instruction": ".vop 29 29 24 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 64,
+   "instruction": ".vshifti 31 26 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 65,
+   "instruction": ".vshiftx 30 26 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 66,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 67,
+   "instruction": ".vop 30 30 29 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 68,
+   "instruction": ".vop 0 0 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 69,
+   "instruction": ".vop 5 5 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 70,
+   "instruction": ".vop 10 10 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 71,
+   "instruction": ".vop 15 15 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 72,
+   "instruction": ".vop 20 20 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 74,
+   "instruction": ".vshifti 30 27 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 75,
+   "instruction": ".vshiftx 31 27 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 76,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 77,
+   "instruction": ".vop 31 31 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 78,
+   "instruction": ".vop 1 1 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 79,
+   "instruction": ".vop 6 6 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 80,
+   "instruction": ".vop 11 11 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 81,
+   "instruction": ".vop 16 16 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 82,
+   "instruction": ".vop 21 21 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 84,
+   "instruction": ".vshifti 31 28 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 85,
+   "instruction": ".vshiftx 30 28 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 86,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 87,
+   "instruction": ".vop 30 30 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 88,
+   "instruction": ".vop 2 2 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 89,
+   "instruction": ".vop 7 7 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 90,
+   "instruction": ".vop 12 12 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 91,
+   "instruction": ".vop 17 17 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 92,
+   "instruction": ".vop 22 22 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 94,
+   "instruction": ".vshifti 30 29 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 95,
+   "instruction": ".vshiftx 31 29 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 96,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 97,
+   "instruction": ".vop 31 31 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 98,
+   "instruction": ".vop 3 3 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 99,
+   "instruction": ".vop 8 8 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 100,
+   "instruction": ".vop 13 13 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 101,
+   "instruction": ".vop 18 18 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 102,
+   "instruction": ".vop 23 23 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 104,
+   "instruction": ".vshifti 31 25 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 105,
+   "instruction": ".vshiftx 30 25 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 106,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 107,
+   "instruction": ".vop 30 30 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 108,
+   "instruction": ".vop 4 4 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 109,
+   "instruction": ".vop 9 9 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 110,
+   "instruction": ".vop 14 14 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 111,
+   "instruction": ".vop 19 19 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 112,
+   "instruction": ".vop 24 24 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 113,
+   "instruction": ".vmvv 25 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 115,
+   "instruction": ".vshiftx 30 6 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 116,
+   "instruction": ".vshifti 1 6 .srl 20",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 117,
+   "instruction": ".vop 1 1 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 119,
+   "instruction": ".vshifti 31 9 .sll 20",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 120,
+   "instruction": ".vshiftx 6 9 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 121,
+   "instruction": ".vop 6 6 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 123,
+   "instruction": ".vshiftx 30 22 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 124,
+   "instruction": ".vshifti 9 22 .srl 3",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 125,
+   "instruction": ".vop 9 9 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 127,
+   "instruction": ".vshiftx 31 14 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 128,
+   "instruction": ".vshifti 22 14 .srl 25",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 129,
+   "instruction": ".vop 22 22 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 131,
+   "instruction": ".vshifti 30 20 .sll 18",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 132,
+   "instruction": ".vshiftx 14 20 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 133,
+   "instruction": ".vop 14 14 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 135,
+   "instruction": ".vshiftx 31 2 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 136,
+   "instruction": ".vshifti 20 2 .srl 2",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 137,
+   "instruction": ".vop 20 20 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 139,
+   "instruction": ".vshiftx 30 12 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 140,
+   "instruction": ".vshifti 2 12 .srl 21",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 141,
+   "instruction": ".vop 2 2 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 143,
+   "instruction": ".vshifti 31 13 .sll 25",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 144,
+   "instruction": ".vshiftx 12 13 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 145,
+   "instruction": ".vop 12 12 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 147,
+   "instruction": ".vshifti 30 19 .sll 8",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 148,
+   "instruction": ".vshiftx 13 19 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 149,
+   "instruction": ".vop 13 13 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 151,
+   "instruction": ".vshiftx 31 23 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 152,
+   "instruction": ".vshifti 19 23 .srl 8",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 153,
+   "instruction": ".vop 19 19 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 155,
+   "instruction": ".vshiftx 30 15 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 156,
+   "instruction": ".vshifti 23 15 .srl 23",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 157,
+   "instruction": ".vop 23 23 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 159,
+   "instruction": ".vshifti 31 4 .sll 27",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 160,
+   "instruction": ".vshiftx 15 4 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 161,
+   "instruction": ".vop 15 15 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 163,
+   "instruction": ".vshifti 30 24 .sll 14",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 164,
+   "instruction": ".vshiftx 4 24 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 165,
+   "instruction": ".vop 4 4 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 167,
+   "instruction": ".vshifti 31 21 .sll 2",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 168,
+   "instruction": ".vshiftx 24 21 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 169,
+   "instruction": ".vop 24 24 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 171,
+   "instruction": ".vshiftx 30 8 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 172,
+   "instruction": ".vshifti 21 8 .srl 9",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 173,
+   "instruction": ".vop 21 21 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 175,
+   "instruction": ".vshiftx 31 16 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 176,
+   "instruction": ".vshifti 8 16 .srl 19",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 177,
+   "instruction": ".vop 8 8 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 179,
+   "instruction": ".vshiftx 30 5 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 180,
+   "instruction": ".vshifti 16 5 .srl 28",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 181,
+   "instruction": ".vop 16 16 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 183,
+   "instruction": ".vshifti 31 3 .sll 28",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 184,
+   "instruction": ".vshiftx 5 3 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 185,
+   "instruction": ".vop 5 5 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 187,
+   "instruction": ".vshifti 30 18 .sll 21",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 188,
+   "instruction": ".vshiftx 3 18 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 189,
+   "instruction": ".vop 3 3 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 191,
+   "instruction": ".vshifti 31 17 .sll 15",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 192,
+   "instruction": ".vshiftx 18 17 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 193,
+   "instruction": ".vop 18 18 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 195,
+   "instruction": ".vshifti 30 11 .sll 10",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 196,
+   "instruction": ".vshiftx 17 11 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 197,
+   "instruction": ".vop 17 17 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 199,
+   "instruction": ".vshifti 31 7 .sll 6",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 200,
+   "instruction": ".vshiftx 11 7 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 201,
+   "instruction": ".vop 11 11 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 203,
+   "instruction": ".vshifti 30 10 .sll 3",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 204,
+   "instruction": ".vshiftx 7 10 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 205,
+   "instruction": ".vop 7 7 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 207,
+   "instruction": ".vshifti 31 25 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 208,
+   "instruction": ".vshiftx 10 25 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 209,
+   "instruction": ".vop 10 10 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 210,
+   "instruction": ".vnot 25 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 211,
+   "instruction": ".vop 25 25 2 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 212,
+   "instruction": ".vnot 26 2",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 213,
+   "instruction": ".vop 26 26 3 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 214,
+   "instruction": ".vnot 27 3",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 215,
+   "instruction": ".vop 27 27 4 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 216,
+   "instruction": ".vnot 28 4",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 217,
+   "instruction": ".vop 28 28 0 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 218,
+   "instruction": ".vnot 29 0",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 219,
+   "instruction": ".vop 29 29 1 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 220,
+   "instruction": ".vop 0 0 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 221,
+   "instruction": ".vop 1 1 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 222,
+   "instruction": ".vop 2 2 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 223,
+   "instruction": ".vop 3 3 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 224,
+   "instruction": ".vop 4 4 29 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 225,
+   "instruction": ".vxorx 0 0 28",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 226,
+   "instruction": ".vnot 25 6",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 227,
+   "instruction": ".vop 25 25 7 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 228,
+   "instruction": ".vnot 26 7",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 229,
+   "instruction": ".vop 26 26 8 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 230,
+   "instruction": ".vnot 27 8",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 231,
+   "instruction": ".vop 27 27 9 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 232,
+   "instruction": ".vnot 28 9",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 233,
+   "instruction": ".vop 28 28 5 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 234,
+   "instruction": ".vnot 29 5",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 235,
+   "instruction": ".vop 29 29 6 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 236,
+   "instruction": ".vop 5 5 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 237,
+   "instruction": ".vop 6 6 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 238,
+   "instruction": ".vop 7 7 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 239,
+   "instruction": ".vop 8 8 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 240,
+   "instruction": ".vop 9 9 29 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 241,
+   "instruction": ".vnot 25 11",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 242,
+   "instruction": ".vop 25 25 12 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 243,
+   "instruction": ".vnot 26 12",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 244,
+   "instruction": ".vop 26 26 13 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 245,
+   "instruction": ".vnot 27 13",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 246,
+   "instruction": ".vop 27 27 14 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 247,
+   "instruction": ".vnot 28 14",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 248,
+   "instruction": ".vop 28 28 10 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 249,
+   "instruction": ".vnot 29 10",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 250,
+   "instruction": ".vop 29 29 11 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 251,
+   "instruction": ".vop 10 10 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 252,
+   "instruction": ".vop 11 11 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 253,
+   "instruction": ".vop 12 12 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 254,
+   "instruction": ".vop 13 13 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 255,
+   "instruction": ".vop 14 14 29 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 256,
+   "instruction": ".vnot 25 16",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 257,
+   "instruction": ".vop 25 25 17 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 258,
+   "instruction": ".vnot 26 17",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 259,
+   "instruction": ".vop 26 26 18 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 260,
+   "instruction": ".vnot 27 18",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 261,
+   "instruction": ".vop 27 27 19 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 262,
+   "instruction": ".vnot 28 19",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 263,
+   "instruction": ".vop 28 28 15 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 264,
+   "instruction": ".vnot 29 15",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 265,
+   "instruction": ".vop 29 29 16 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 266,
+   "instruction": ".vop 15 15 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 267,
+   "instruction": ".vop 16 16 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 268,
+   "instruction": ".vop 17 17 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 269,
+   "instruction": ".vop 18 18 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 270,
+   "instruction": ".vop 19 19 29 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 271,
+   "instruction": ".vnot 25 21",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 272,
+   "instruction": ".vop 25 25 22 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 273,
+   "instruction": ".vnot 26 22",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 274,
+   "instruction": ".vop 26 26 23 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 275,
+   "instruction": ".vnot 27 23",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 276,
+   "instruction": ".vop 27 27 24 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 277,
+   "instruction": ".vnot 28 24",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 278,
+   "instruction": ".vop 28 28 20 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 279,
+   "instruction": ".vnot 29 20",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 280,
+   "instruction": ".vop 29 29 21 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 281,
+   "instruction": ".vop 20 20 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 282,
+   "instruction": ".vop 21 21 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 283,
+   "instruction": ".vop 22 22 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 284,
+   "instruction": ".vop 23 23 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 285,
+   "instruction": ".vop 24 24 29 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 289,
+   "instruction": ".vop 25 0 5 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 290,
+   "instruction": ".vop 26 1 6 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 291,
+   "instruction": ".vop 27 2 7 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 292,
+   "instruction": ".vop 28 3 8 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 293,
+   "instruction": ".vop 29 4 9 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 294,
+   "instruction": ".vop 25 25 10 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 295,
+   "instruction": ".vop 26 26 11 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 296,
+   "instruction": ".vop 27 27 12 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 297,
+   "instruction": ".vop 28 28 13 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 298,
+   "instruction": ".vop 29 29 14 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 299,
+   "instruction": ".vop 25 25 15 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 300,
+   "instruction": ".vop 26 26 16 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 301,
+   "instruction": ".vop 27 27 17 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 302,
+   "instruction": ".vop 28 28 18 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 303,
+   "instruction": ".vop 29 29 19 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 304,
+   "instruction": ".vop 25 25 20 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 305,
+   "instruction": ".vop 26 26 21 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 306,
+   "instruction": ".vop 27 27 22 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 307,
+   "instruction": ".vop 28 28 23 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 308,
+   "instruction": ".vop 29 29 24 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 310,
+   "instruction": ".vshifti 31 26 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 311,
+   "instruction": ".vshiftx 30 26 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 312,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 313,
+   "instruction": ".vop 30 30 29 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 314,
+   "instruction": ".vop 0 0 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 316,
+   "instruction": ".vshifti 30 27 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 317,
+   "instruction": ".vshiftx 31 27 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 318,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 319,
+   "instruction": ".vop 31 31 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 320,
+   "instruction": ".vop 6 6 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 322,
+   "instruction": ".vshiftx 30 6 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 323,
+   "instruction": ".vshifti 1 6 .srl 20",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 324,
+   "instruction": ".vop 1 1 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 326,
+   "instruction": ".vshifti 31 28 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 327,
+   "instruction": ".vshiftx 30 28 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 328,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 329,
+   "instruction": ".vop 30 30 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 330,
+   "instruction": ".vop 12 12 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 332,
+   "instruction": ".vshiftx 31 12 .sll 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 333,
+   "instruction": ".vshifti 2 12 .srl 21",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 334,
+   "instruction": ".vop 2 2 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 336,
+   "instruction": ".vshifti 30 29 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 337,
+   "instruction": ".vshiftx 31 29 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 338,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 339,
+   "instruction": ".vop 31 31 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 340,
+   "instruction": ".vop 18 18 31 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 342,
+   "instruction": ".vshifti 30 18 .sll 21",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 343,
+   "instruction": ".vshiftx 3 18 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 344,
+   "instruction": ".vop 3 3 30 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 346,
+   "instruction": ".vshifti 31 25 .sll 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 347,
+   "instruction": ".vshiftx 30 25 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 348,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 349,
+   "instruction": ".vop 30 30 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 350,
+   "instruction": ".vop 24 24 30 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 352,
+   "instruction": ".vshifti 31 24 .sll 14",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 353,
+   "instruction": ".vshiftx 4 24 .srl 29",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 354,
+   "instruction": ".vop 4 4 31 .or",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 355,
+   "instruction": ".vnot 25 1",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 356,
+   "instruction": ".vop 25 25 2 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 357,
+   "instruction": ".vnot 26 2",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 358,
+   "instruction": ".vop 26 26 3 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 359,
+   "instruction": ".vnot 27 3",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 360,
+   "instruction": ".vop 27 27 4 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 361,
+   "instruction": ".vnot 28 4",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 362,
+   "instruction": ".vop 28 28 0 .and",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 363,
+   "instruction": ".vop 0 0 25 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 364,
+   "instruction": ".vop 1 1 26 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 365,
+   "instruction": ".vop 2 2 27 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 366,
+   "instruction": ".vop 3 3 28 .xor",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 367,
+   "instruction": ".vxorx 0 0 28",
+   "reads": [
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 369,
+   "instruction": ".vsseg 0 10 4",
+   "reads": [
+    "address",
+    "vl"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 376,
+   "instruction": ".opi 28 5 .slli (0x6#64)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 377,
+   "instruction": ".op 11 11 28 .add",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 378,
+   "instruction": ".opi 28 5 .slli (0x5#64)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 379,
+   "instruction": ".op 10 10 28 .add",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 380,
+   "instruction": ".op 12 12 5 .sub",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  },
+  {
+   "index": 381,
+   "instruction": ".br .ne 12 0 7",
+   "reads": [
+    "gpr"
+   ],
+   "region": "batch"
+  }
+ ],
+ "batch_count_readers": [
+  {
+   "index": 7,
+   "instruction": ".mv 28 12",
+   "reads": [
+    "gpr"
+   ]
+  },
+  {
+   "index": 12,
+   "instruction": ".vsetvli 5 28",
+   "reads": [
+    "gpr"
+   ]
+  },
+  {
+   "index": 14,
+   "instruction": ".vlseg 0 11 8",
+   "reads": [
+    "address",
+    "vl"
+   ]
+  },
+  {
+   "index": 22,
+   "instruction": ".vmvi 8 (0x1#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 23,
+   "instruction": ".vmvi 9 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 24,
+   "instruction": ".vmvi 10 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 25,
+   "instruction": ".vmvi 11 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 26,
+   "instruction": ".vmvi 12 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 27,
+   "instruction": ".vmvi 13 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 28,
+   "instruction": ".vmvi 14 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 29,
+   "instruction": ".vmvi 15 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 30,
+   "instruction": ".vmvx 16 30",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 31,
+   "instruction": ".vmvi 17 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 32,
+   "instruction": ".vmvi 18 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 33,
+   "instruction": ".vmvi 19 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 34,
+   "instruction": ".vmvi 20 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 35,
+   "instruction": ".vmvi 21 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 36,
+   "instruction": ".vmvi 22 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 37,
+   "instruction": ".vmvi 23 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 38,
+   "instruction": ".vmvi 24 (0x0#64)",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 43,
+   "instruction": ".vop 25 0 5 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 44,
+   "instruction": ".vop 26 1 6 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 45,
+   "instruction": ".vop 27 2 7 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 46,
+   "instruction": ".vop 28 3 8 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 47,
+   "instruction": ".vop 29 4 9 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 48,
+   "instruction": ".vop 25 25 10 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 49,
+   "instruction": ".vop 26 26 11 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 50,
+   "instruction": ".vop 27 27 12 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 51,
+   "instruction": ".vop 28 28 13 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 52,
+   "instruction": ".vop 29 29 14 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 53,
+   "instruction": ".vop 25 25 15 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 54,
+   "instruction": ".vop 26 26 16 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 55,
+   "instruction": ".vop 27 27 17 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 56,
+   "instruction": ".vop 28 28 18 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 57,
+   "instruction": ".vop 29 29 19 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 58,
+   "instruction": ".vop 25 25 20 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 59,
+   "instruction": ".vop 26 26 21 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 60,
+   "instruction": ".vop 27 27 22 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 61,
+   "instruction": ".vop 28 28 23 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 62,
+   "instruction": ".vop 29 29 24 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 64,
+   "instruction": ".vshifti 31 26 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 65,
+   "instruction": ".vshiftx 30 26 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 66,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 67,
+   "instruction": ".vop 30 30 29 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 68,
+   "instruction": ".vop 0 0 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 69,
+   "instruction": ".vop 5 5 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 70,
+   "instruction": ".vop 10 10 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 71,
+   "instruction": ".vop 15 15 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 72,
+   "instruction": ".vop 20 20 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 74,
+   "instruction": ".vshifti 30 27 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 75,
+   "instruction": ".vshiftx 31 27 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 76,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 77,
+   "instruction": ".vop 31 31 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 78,
+   "instruction": ".vop 1 1 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 79,
+   "instruction": ".vop 6 6 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 80,
+   "instruction": ".vop 11 11 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 81,
+   "instruction": ".vop 16 16 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 82,
+   "instruction": ".vop 21 21 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 84,
+   "instruction": ".vshifti 31 28 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 85,
+   "instruction": ".vshiftx 30 28 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 86,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 87,
+   "instruction": ".vop 30 30 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 88,
+   "instruction": ".vop 2 2 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 89,
+   "instruction": ".vop 7 7 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 90,
+   "instruction": ".vop 12 12 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 91,
+   "instruction": ".vop 17 17 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 92,
+   "instruction": ".vop 22 22 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 94,
+   "instruction": ".vshifti 30 29 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 95,
+   "instruction": ".vshiftx 31 29 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 96,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 97,
+   "instruction": ".vop 31 31 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 98,
+   "instruction": ".vop 3 3 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 99,
+   "instruction": ".vop 8 8 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 100,
+   "instruction": ".vop 13 13 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 101,
+   "instruction": ".vop 18 18 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 102,
+   "instruction": ".vop 23 23 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 104,
+   "instruction": ".vshifti 31 25 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 105,
+   "instruction": ".vshiftx 30 25 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 106,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 107,
+   "instruction": ".vop 30 30 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 108,
+   "instruction": ".vop 4 4 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 109,
+   "instruction": ".vop 9 9 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 110,
+   "instruction": ".vop 14 14 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 111,
+   "instruction": ".vop 19 19 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 112,
+   "instruction": ".vop 24 24 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 113,
+   "instruction": ".vmvv 25 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 115,
+   "instruction": ".vshiftx 30 6 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 116,
+   "instruction": ".vshifti 1 6 .srl 20",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 117,
+   "instruction": ".vop 1 1 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 119,
+   "instruction": ".vshifti 31 9 .sll 20",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 120,
+   "instruction": ".vshiftx 6 9 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 121,
+   "instruction": ".vop 6 6 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 123,
+   "instruction": ".vshiftx 30 22 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 124,
+   "instruction": ".vshifti 9 22 .srl 3",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 125,
+   "instruction": ".vop 9 9 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 127,
+   "instruction": ".vshiftx 31 14 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 128,
+   "instruction": ".vshifti 22 14 .srl 25",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 129,
+   "instruction": ".vop 22 22 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 131,
+   "instruction": ".vshifti 30 20 .sll 18",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 132,
+   "instruction": ".vshiftx 14 20 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 133,
+   "instruction": ".vop 14 14 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 135,
+   "instruction": ".vshiftx 31 2 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 136,
+   "instruction": ".vshifti 20 2 .srl 2",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 137,
+   "instruction": ".vop 20 20 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 139,
+   "instruction": ".vshiftx 30 12 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 140,
+   "instruction": ".vshifti 2 12 .srl 21",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 141,
+   "instruction": ".vop 2 2 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 143,
+   "instruction": ".vshifti 31 13 .sll 25",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 144,
+   "instruction": ".vshiftx 12 13 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 145,
+   "instruction": ".vop 12 12 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 147,
+   "instruction": ".vshifti 30 19 .sll 8",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 148,
+   "instruction": ".vshiftx 13 19 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 149,
+   "instruction": ".vop 13 13 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 151,
+   "instruction": ".vshiftx 31 23 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 152,
+   "instruction": ".vshifti 19 23 .srl 8",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 153,
+   "instruction": ".vop 19 19 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 155,
+   "instruction": ".vshiftx 30 15 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 156,
+   "instruction": ".vshifti 23 15 .srl 23",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 157,
+   "instruction": ".vop 23 23 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 159,
+   "instruction": ".vshifti 31 4 .sll 27",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 160,
+   "instruction": ".vshiftx 15 4 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 161,
+   "instruction": ".vop 15 15 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 163,
+   "instruction": ".vshifti 30 24 .sll 14",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 164,
+   "instruction": ".vshiftx 4 24 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 165,
+   "instruction": ".vop 4 4 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 167,
+   "instruction": ".vshifti 31 21 .sll 2",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 168,
+   "instruction": ".vshiftx 24 21 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 169,
+   "instruction": ".vop 24 24 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 171,
+   "instruction": ".vshiftx 30 8 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 172,
+   "instruction": ".vshifti 21 8 .srl 9",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 173,
+   "instruction": ".vop 21 21 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 175,
+   "instruction": ".vshiftx 31 16 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 176,
+   "instruction": ".vshifti 8 16 .srl 19",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 177,
+   "instruction": ".vop 8 8 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 179,
+   "instruction": ".vshiftx 30 5 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 180,
+   "instruction": ".vshifti 16 5 .srl 28",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 181,
+   "instruction": ".vop 16 16 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 183,
+   "instruction": ".vshifti 31 3 .sll 28",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 184,
+   "instruction": ".vshiftx 5 3 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 185,
+   "instruction": ".vop 5 5 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 187,
+   "instruction": ".vshifti 30 18 .sll 21",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 188,
+   "instruction": ".vshiftx 3 18 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 189,
+   "instruction": ".vop 3 3 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 191,
+   "instruction": ".vshifti 31 17 .sll 15",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 192,
+   "instruction": ".vshiftx 18 17 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 193,
+   "instruction": ".vop 18 18 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 195,
+   "instruction": ".vshifti 30 11 .sll 10",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 196,
+   "instruction": ".vshiftx 17 11 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 197,
+   "instruction": ".vop 17 17 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 199,
+   "instruction": ".vshifti 31 7 .sll 6",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 200,
+   "instruction": ".vshiftx 11 7 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 201,
+   "instruction": ".vop 11 11 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 203,
+   "instruction": ".vshifti 30 10 .sll 3",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 204,
+   "instruction": ".vshiftx 7 10 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 205,
+   "instruction": ".vop 7 7 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 207,
+   "instruction": ".vshifti 31 25 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 208,
+   "instruction": ".vshiftx 10 25 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 209,
+   "instruction": ".vop 10 10 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 210,
+   "instruction": ".vnot 25 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 211,
+   "instruction": ".vop 25 25 2 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 212,
+   "instruction": ".vnot 26 2",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 213,
+   "instruction": ".vop 26 26 3 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 214,
+   "instruction": ".vnot 27 3",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 215,
+   "instruction": ".vop 27 27 4 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 216,
+   "instruction": ".vnot 28 4",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 217,
+   "instruction": ".vop 28 28 0 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 218,
+   "instruction": ".vnot 29 0",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 219,
+   "instruction": ".vop 29 29 1 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 220,
+   "instruction": ".vop 0 0 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 221,
+   "instruction": ".vop 1 1 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 222,
+   "instruction": ".vop 2 2 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 223,
+   "instruction": ".vop 3 3 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 224,
+   "instruction": ".vop 4 4 29 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 225,
+   "instruction": ".vxorx 0 0 28",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 226,
+   "instruction": ".vnot 25 6",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 227,
+   "instruction": ".vop 25 25 7 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 228,
+   "instruction": ".vnot 26 7",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 229,
+   "instruction": ".vop 26 26 8 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 230,
+   "instruction": ".vnot 27 8",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 231,
+   "instruction": ".vop 27 27 9 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 232,
+   "instruction": ".vnot 28 9",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 233,
+   "instruction": ".vop 28 28 5 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 234,
+   "instruction": ".vnot 29 5",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 235,
+   "instruction": ".vop 29 29 6 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 236,
+   "instruction": ".vop 5 5 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 237,
+   "instruction": ".vop 6 6 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 238,
+   "instruction": ".vop 7 7 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 239,
+   "instruction": ".vop 8 8 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 240,
+   "instruction": ".vop 9 9 29 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 241,
+   "instruction": ".vnot 25 11",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 242,
+   "instruction": ".vop 25 25 12 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 243,
+   "instruction": ".vnot 26 12",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 244,
+   "instruction": ".vop 26 26 13 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 245,
+   "instruction": ".vnot 27 13",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 246,
+   "instruction": ".vop 27 27 14 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 247,
+   "instruction": ".vnot 28 14",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 248,
+   "instruction": ".vop 28 28 10 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 249,
+   "instruction": ".vnot 29 10",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 250,
+   "instruction": ".vop 29 29 11 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 251,
+   "instruction": ".vop 10 10 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 252,
+   "instruction": ".vop 11 11 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 253,
+   "instruction": ".vop 12 12 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 254,
+   "instruction": ".vop 13 13 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 255,
+   "instruction": ".vop 14 14 29 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 256,
+   "instruction": ".vnot 25 16",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 257,
+   "instruction": ".vop 25 25 17 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 258,
+   "instruction": ".vnot 26 17",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 259,
+   "instruction": ".vop 26 26 18 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 260,
+   "instruction": ".vnot 27 18",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 261,
+   "instruction": ".vop 27 27 19 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 262,
+   "instruction": ".vnot 28 19",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 263,
+   "instruction": ".vop 28 28 15 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 264,
+   "instruction": ".vnot 29 15",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 265,
+   "instruction": ".vop 29 29 16 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 266,
+   "instruction": ".vop 15 15 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 267,
+   "instruction": ".vop 16 16 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 268,
+   "instruction": ".vop 17 17 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 269,
+   "instruction": ".vop 18 18 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 270,
+   "instruction": ".vop 19 19 29 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 271,
+   "instruction": ".vnot 25 21",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 272,
+   "instruction": ".vop 25 25 22 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 273,
+   "instruction": ".vnot 26 22",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 274,
+   "instruction": ".vop 26 26 23 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 275,
+   "instruction": ".vnot 27 23",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 276,
+   "instruction": ".vop 27 27 24 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 277,
+   "instruction": ".vnot 28 24",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 278,
+   "instruction": ".vop 28 28 20 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 279,
+   "instruction": ".vnot 29 20",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 280,
+   "instruction": ".vop 29 29 21 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 281,
+   "instruction": ".vop 20 20 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 282,
+   "instruction": ".vop 21 21 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 283,
+   "instruction": ".vop 22 22 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 284,
+   "instruction": ".vop 23 23 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 285,
+   "instruction": ".vop 24 24 29 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 289,
+   "instruction": ".vop 25 0 5 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 290,
+   "instruction": ".vop 26 1 6 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 291,
+   "instruction": ".vop 27 2 7 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 292,
+   "instruction": ".vop 28 3 8 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 293,
+   "instruction": ".vop 29 4 9 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 294,
+   "instruction": ".vop 25 25 10 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 295,
+   "instruction": ".vop 26 26 11 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 296,
+   "instruction": ".vop 27 27 12 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 297,
+   "instruction": ".vop 28 28 13 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 298,
+   "instruction": ".vop 29 29 14 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 299,
+   "instruction": ".vop 25 25 15 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 300,
+   "instruction": ".vop 26 26 16 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 301,
+   "instruction": ".vop 27 27 17 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 302,
+   "instruction": ".vop 28 28 18 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 303,
+   "instruction": ".vop 29 29 19 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 304,
+   "instruction": ".vop 25 25 20 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 305,
+   "instruction": ".vop 26 26 21 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 306,
+   "instruction": ".vop 27 27 22 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 307,
+   "instruction": ".vop 28 28 23 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 308,
+   "instruction": ".vop 29 29 24 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 310,
+   "instruction": ".vshifti 31 26 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 311,
+   "instruction": ".vshiftx 30 26 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 312,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 313,
+   "instruction": ".vop 30 30 29 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 314,
+   "instruction": ".vop 0 0 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 316,
+   "instruction": ".vshifti 30 27 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 317,
+   "instruction": ".vshiftx 31 27 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 318,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 319,
+   "instruction": ".vop 31 31 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 320,
+   "instruction": ".vop 6 6 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 322,
+   "instruction": ".vshiftx 30 6 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 323,
+   "instruction": ".vshifti 1 6 .srl 20",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 324,
+   "instruction": ".vop 1 1 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 326,
+   "instruction": ".vshifti 31 28 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 327,
+   "instruction": ".vshiftx 30 28 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 328,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 329,
+   "instruction": ".vop 30 30 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 330,
+   "instruction": ".vop 12 12 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 332,
+   "instruction": ".vshiftx 31 12 .sll 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 333,
+   "instruction": ".vshifti 2 12 .srl 21",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 334,
+   "instruction": ".vop 2 2 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 336,
+   "instruction": ".vshifti 30 29 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 337,
+   "instruction": ".vshiftx 31 29 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 338,
+   "instruction": ".vop 31 31 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 339,
+   "instruction": ".vop 31 31 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 340,
+   "instruction": ".vop 18 18 31 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 342,
+   "instruction": ".vshifti 30 18 .sll 21",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 343,
+   "instruction": ".vshiftx 3 18 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 344,
+   "instruction": ".vop 3 3 30 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 346,
+   "instruction": ".vshifti 31 25 .sll 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 347,
+   "instruction": ".vshiftx 30 25 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 348,
+   "instruction": ".vop 30 30 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 349,
+   "instruction": ".vop 30 30 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 350,
+   "instruction": ".vop 24 24 30 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 352,
+   "instruction": ".vshifti 31 24 .sll 14",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 353,
+   "instruction": ".vshiftx 4 24 .srl 29",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 354,
+   "instruction": ".vop 4 4 31 .or",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 355,
+   "instruction": ".vnot 25 1",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 356,
+   "instruction": ".vop 25 25 2 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 357,
+   "instruction": ".vnot 26 2",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 358,
+   "instruction": ".vop 26 26 3 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 359,
+   "instruction": ".vnot 27 3",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 360,
+   "instruction": ".vop 27 27 4 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 361,
+   "instruction": ".vnot 28 4",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 362,
+   "instruction": ".vop 28 28 0 .and",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 363,
+   "instruction": ".vop 0 0 25 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 364,
+   "instruction": ".vop 1 1 26 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 365,
+   "instruction": ".vop 2 2 27 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 366,
+   "instruction": ".vop 3 3 28 .xor",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 367,
+   "instruction": ".vxorx 0 0 28",
+   "reads": [
+    "vl"
+   ]
+  },
+  {
+   "index": 369,
+   "instruction": ".vsseg 0 10 4",
+   "reads": [
+    "address",
+    "vl"
+   ]
+  },
+  {
+   "index": 376,
+   "instruction": ".opi 28 5 .slli (0x6#64)",
+   "reads": [
+    "gpr"
+   ]
+  },
+  {
+   "index": 377,
+   "instruction": ".op 11 11 28 .add",
+   "reads": [
+    "gpr"
+   ]
+  },
+  {
+   "index": 378,
+   "instruction": ".opi 28 5 .slli (0x5#64)",
+   "reads": [
+    "gpr"
+   ]
+  },
+  {
+   "index": 379,
+   "instruction": ".op 10 10 28 .add",
+   "reads": [
+    "gpr"
+   ]
+  },
+  {
+   "index": 380,
+   "instruction": ".op 12 12 5 .sub",
+   "reads": [
+    "gpr"
+   ]
+  },
+  {
+   "index": 381,
+   "instruction": ".br .ne 12 0 7",
+   "reads": [
+    "gpr"
+   ]
+  }
+ ],
+ "batch_count_data_readers": [],
+ "batch_count_address_readers": [
+  14,
+  369
+ ],
+ "batch_count_vl_readers": 303,
+ "tail_targets": [],
+ "failing_counts": [],
+ "inconsistent_handovers": []
+}
