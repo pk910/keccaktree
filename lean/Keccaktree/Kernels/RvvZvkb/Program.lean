@@ -22,9 +22,9 @@ def prog : Array Instr := #[
   .vlseg 0 11 8,  -- 14
   .j 22,  -- 15
   .opi 28 5 .slli (0x6#64),  -- 16
-  .unsupported "vsetvli e8 m8",  -- 17
-  .unsupported "vle8.v",  -- 18
-  .unsupported "vse8.v",  -- 19
+  .vsetvlie8 0 28 8,  -- 17
+  .vle8 24 11,  -- 18
+  .vse8 24 2,  -- 19
   .vsetvli 0 5,  -- 20
   .vlseg 0 2 8,  -- 21
   .vmvi 8 (0x1#64),  -- 22
@@ -235,9 +235,9 @@ def prog : Array Instr := #[
   .j 233,  -- 227
   .vsseg 0 2 4,  -- 228
   .opi 28 5 .slli (0x5#64),  -- 229
-  .unsupported "vsetvli e8 m4",  -- 230
-  .unsupported "vle8.v",  -- 231
-  .unsupported "vse8.v",  -- 232
+  .vsetvlie8 0 28 4,  -- 230
+  .vle8 24 2,  -- 231
+  .vse8 24 10,  -- 232
   .opi 28 5 .slli (0x6#64),  -- 233
   .op 11 11 28 .add,  -- 234
   .opi 28 5 .slli (0x5#64),  -- 235

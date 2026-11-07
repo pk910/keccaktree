@@ -11,9 +11,17 @@ the shared machine state.  The general registers `x0..x31` are data words in
 encoding, decoded by `Arm.gx`); the vector registers `v0..v31` hold
 `vlmax = VLEN/64` lanes (`vlmax ≤ 8`), of which the first `vl` are active.
 Vector operations leave the tail lanes undisturbed (one of the behaviours
-`ta` allows; the tail never feeds an active lane).  Only `e64, m1` vector
-configurations are modelled; the byte-copy paths for unaligned buffers
-(`lbu/sb`, `vle8/vse8`) are `unsupported` and fail.
+`ta` allows; the tail never feeds an active lane).  The vector configurations
+are `e64, m1` (`vsetvli`) and, for the byte copies of misaligned buffers,
+`e8, m4/m8` (`vsetvlie8`: `vl` counts bytes, read by `vle8`/`vse8` only; the
+translator checks that no `e64` operation runs under an `e8` setting).
+
+**Bytes.**  Memory is word-addressed per region; a byte address `⟨r, o⟩` is byte
+`o % 8` of word `o / 8` (little endian).  `lbu`/`sb` read / insert one byte;
+`vle8`/`vse8` move `vl` bytes (a whole number of words) between memory and a
+register group (word `j` ↔ register `d + j / vlmax`, lane `j % vlmax`); at a
+misaligned address each word is assembled from / split into the two memory
+words it straddles (`joinWords`, `splitWords`).
 -/
 namespace Keccaktree.Asm.Riscv
 open Keccaktree.Asm
@@ -64,6 +72,12 @@ inductive Instr where
   | vmvv (d a : Nat)
   | vlseg (d base nf : Nat)
   | vsseg (src base nf : Nat)
+  -- bytes (the copies of misaligned buffers)
+  | lbu (d base : Nat) (off : Int)
+  | sb (src base : Nat) (off : Int)
+  | vsetvlie8 (d a lmul : Nat)                -- `vsetvli d, a, e8, m<lmul>`: `vl` in bytes
+  | vle8 (d base : Nat)
+  | vse8 (src base : Nat)
   deriving Repr, DecidableEq
 
 variable {α : Type} [LaneOps α]
@@ -99,9 +113,10 @@ def vop : VOp → α → α → α
   | .or, a, b => or a b
   | .andn, a, b => and a (not b)
 
+/-- Vector shifts: the count's low 6 bits (`SEW = 64`), like the hardware. -/
 def vsh : VSh → α → Nat → α
-  | .sll, a, n => if n < 64 then shl a n else const 0
-  | .srl, a, n => if n < 64 then shr a n else const 0
+  | .sll, a, n => shl a (n % 64)
+  | .srl, a, n => shr a (n % 64)
   | .ror, a, n => rotr a n
 
 /-- Lane `l` of vector register `n`. -/
@@ -112,6 +127,53 @@ def setActive (s : State α) (d : Nat) (f : Nat → α) : State α :=
   s.setV d (Vector.ofFn fun i : Fin 8 => if i.val < s.vl then f i.val else lane s d i.val)
 
 def next (s : State α) : State α := { s with pc := s.pc + 1 }
+
+/-- Lanes `l < cnt` of vector register `d` from a lane function; the others stay. -/
+def setLanes (s : State α) (d cnt : Nat) (f : Nat → α) : State α :=
+  s.setV d (Vector.ofFn fun i : Fin 8 => if i.val < cnt then f i.val else lane s d i.val)
+
+/-! ### Bytes -/
+
+/-- The aligned word holding the byte at `a`. -/
+def wordOf (a : Addr) : Addr := ⟨a.region, a.off - a.off % 8⟩
+/-- The position of the byte at `a` in its word. -/
+def byteOf (a : Addr) : Nat := (a.off % 8).toNat
+
+/-- `w` with byte `k` replaced by the low byte of `x` (`sb`). -/
+def insByte (w x : α) (k : Nat) : α :=
+  or (and w (const (~~~ (0xff#64 <<< (8 * k))))) (shl (and x (const 0xff#64)) (8 * k))
+
+/-- The `n` words at byte offset `k` (`0 < k < 8`) of the words `ws` (`n + 1` of them). -/
+def joinWords (k : Nat) (ws : List α) (n : Nat) : List α :=
+  (List.range n).map fun j => or (shr (ws.getD j (const 0)) (8 * k)) (shl (ws.getD (j + 1) (const 0)) (64 - 8 * k))
+
+/-- The `n + 1` words after storing the `n` words `vs` at byte offset `k` (`0 < k < 8`) of them,
+whose first word was `lo` and last word `hi`. -/
+def splitWords (k : Nat) (lo hi : α) (vs : List α) (n : Nat) : List α :=
+  (List.range (n + 1)).map fun j =>
+    or (if j = 0 then and lo (const (BitVec.allOnes 64 >>> (64 - 8 * k))) else shr (vs.getD (j - 1) (const 0)) (64 - 8 * k))
+      (if j = n then and hi (const (~~~ (BitVec.allOnes 64 >>> (64 - 8 * k)))) else shl (vs.getD j (const 0)) (8 * k))
+
+/-- The `n` words of a byte vector load at `a`. -/
+def loadBytes (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (n : Nat) : Option (List α) :=
+  if byteOf a = 0 then s.loadWords rodata a n
+  else (s.loadWords rodata (wordOf a) (n + 1)).map fun ws => joinWords (byteOf a) ws n
+
+/-- Store the `n ≥ 1` words `vs` of a byte vector store at `a`. -/
+def storeBytes (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (vs : List α) (n : Nat) : Option (State α) :=
+  if byteOf a = 0 then s.storeWords a vs
+  else match s.loadWords rodata (wordOf a) 1, s.loadWords rodata ⟨a.region, (wordOf a).off + 8 * n⟩ 1 with
+    | some [lo], some [hi] => s.storeWords (wordOf a) (splitWords (byteOf a) lo hi vs n)
+    | _, _ => none
+
+/-- Write the words `ws` (`n` of them) into the register group at `d`: word `j` to register
+`d + j / vlmax`, lane `j % vlmax`. -/
+def setGroup (vlmax : Nat) (s : State α) (d : Nat) (ws : List α) (n : Nat) : State α :=
+  (List.range ((n + vlmax - 1) / vlmax)).foldl
+    (fun s' r => setLanes s' (d + r) (min vlmax (n - r * vlmax)) fun l => ws.getD (r * vlmax + l) (const 0)) s
+
+/-- Word `j` of the register group at `src`. -/
+def groupWord (vlmax : Nat) (s : State α) (src j : Nat) : α := lane s (src + j / vlmax) (j % vlmax)
 
 /-- Branch condition on two offsets of the same region (counts, or pointers
 into the same region; both non-negative on the machine). -/
@@ -173,6 +235,37 @@ def exec (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α) :
     match s.storeWords a ws with
     | some s' => next s'
     | none => s.fail
+  | .lbu d base off => withAddr s base off fun a =>
+    match s.loadWords rodata (wordOf a) 1 with
+    | some [w] => next (setR s d (and (shr w (8 * byteOf a)) (const 0xff#64)))
+    | _ => s.fail
+  | .sb src base off => withAddr s base off fun a =>
+    match s.loadWords rodata (wordOf a) 1 with
+    | some [w] =>
+      match s.storeWords (wordOf a) [insByte w (getR s src) (byteOf a)] with
+      | some s' => next s'
+      | none => s.fail
+    | _ => s.fail
+  | .vsetvlie8 d a lmul =>
+    match asConst (getR s a) with
+    | some avl =>
+      -- `VLMAX = lmul · VLEN / 8` bytes; the kernels never ask for more (no choice to model)
+      if avl.toNat ≤ 8 * vlmax * lmul then next { setR s d (const (BitVec.ofNat 64 avl.toNat)) with vl := avl.toNat }
+      else s.fail
+    | none => s.fail
+  | .vle8 d base => withAddr s base 0 fun a =>
+    if s.vl % 8 = 0 ∧ 0 < vlmax then
+      match loadBytes rodata s a (s.vl / 8) with
+      | some ws => next (setGroup vlmax s d ws (s.vl / 8))
+      | none => s.fail
+    else s.fail
+  | .vse8 src base => withAddr s base 0 fun a =>
+    if s.vl % 8 = 0 ∧ 0 < vlmax then
+      if s.vl = 0 then next s else
+      match storeBytes rodata s a ((List.range (s.vl / 8)).map fun j => groupWord vlmax s src j) (s.vl / 8) with
+      | some s' => next s'
+      | none => s.fail
+    else s.fail
 
 def step (vlmax : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr) (s : State α) : State α :=
   exec vlmax rodata (prog.getD s.pc .nop) s

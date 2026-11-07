@@ -13,6 +13,57 @@ open Keccaktree.Asm.X86 hiding gx setX withX next getGD_map setGD_map setGD_map'
 open Keccaktree.Asm.Arm (gx setX withX addr withAddr gx_map_some setX_map addr_map_some getGD_map setGD_map setGD_map')
 open LaneOps
 
+section bytes
+variable {α β : Type} [LaneOps α] [LaneOps β] {f : α → β} (hl : IsLaneHom f)
+include hl
+
+theorem insByte_map (w x : α) (k : Nat) : f (insByte w x k) = insByte (f w) (f x) k := by
+  simp only [insByte, hl.or, hl.and, hl.shl, hl.const]
+
+theorem joinWords_map (k : Nat) (ws : List α) (n : Nat) : (joinWords k ws n).map f = joinWords k (ws.map f) n := by
+  simp only [joinWords, List.map_map]
+  apply List.map_congr_left; intro j _
+  simp only [Function.comp_apply, hl.or, hl.shr, hl.shl, X86.getD_map hl]
+
+theorem splitWords_map (k : Nat) (lo hi : α) (vs : List α) (n : Nat) :
+    (splitWords k lo hi vs n).map f = splitWords k (f lo) (f hi) (vs.map f) n := by
+  simp only [splitWords, List.map_map]
+  apply List.map_congr_left; intro j _
+  simp only [Function.comp_apply, hl.or]
+  have e1 : f (if j = 0 then LaneOps.and lo (LaneOps.const (BitVec.allOnes 64 >>> (64 - 8 * k)))
+      else LaneOps.shr (vs.getD (j - 1) (LaneOps.const 0)) (64 - 8 * k)) =
+      (if j = 0 then LaneOps.and (f lo) (LaneOps.const (BitVec.allOnes 64 >>> (64 - 8 * k)))
+      else LaneOps.shr ((vs.map f).getD (j - 1) (LaneOps.const 0)) (64 - 8 * k)) := by
+    split <;> simp only [hl.and, hl.const, hl.shr, X86.getD_map hl]
+  have e2 : f (if j = n then LaneOps.and hi (LaneOps.const (~~~ (BitVec.allOnes 64 >>> (64 - 8 * k))))
+      else LaneOps.shl (vs.getD j (LaneOps.const 0)) (8 * k)) =
+      (if j = n then LaneOps.and (f hi) (LaneOps.const (~~~ (BitVec.allOnes 64 >>> (64 - 8 * k))))
+      else LaneOps.shl ((vs.map f).getD j (LaneOps.const 0)) (8 * k)) := by
+    split <;> simp only [hl.and, hl.const, hl.shl, X86.getD_map hl]
+  rw [e1, e2]
+
+end bytes
+
+theorem setLanes_err {α : Type} [LaneOps α] (s : State α) (d c : Nat) (g : Nat → α) : (setLanes s d c g).err = s.err := rfl
+
+theorem foldl_setLanes_err {α : Type} [LaneOps α] (d : Nat) (c : Nat → Nat) (g : Nat → Nat → α) :
+    ∀ (l : List Nat) (s : State α), (l.foldl (fun s' r => setLanes s' (d + r) (c r) (g r)) s).err = s.err
+  | [], _ => rfl
+  | r :: l, s => by simp only [List.foldl_cons]; rw [foldl_setLanes_err d c g l]; rfl
+
+theorem setGroup_err {α : Type} [LaneOps α] (vlmax : Nat) (s : State α) (d : Nat) (ws : List α) (n : Nat) :
+    (setGroup vlmax s d ws n).err = s.err :=
+  foldl_setLanes_err d (fun r => min vlmax (n - r * vlmax)) (fun r l => ws.getD (r * vlmax + l) (LaneOps.const 0)) _ s
+
+theorem storeBytes_err {α : Type} [LaneOps α] (rodata : Array (BitVec 64)) (st s' : State α) (a : Addr) (vs : List α)
+    (n : Nat) (h : storeBytes rodata st a vs n = some s') : s'.err = st.err := by
+  unfold storeBytes at h
+  split at h
+  · exact storeWords_err _ _ _ _ h
+  · split at h
+    · exact storeWords_err _ _ _ _ h
+    · cases h
+
 variable {α β : Type} [LaneOps α] [LaneOps β] {f : α → β} (hf : IsHom f)
 include hf
 
@@ -30,6 +81,52 @@ theorem setR_map' (s : State α) (n : Nat) (x : α) (x' : β) (hx : f x = x') :
 
 theorem lane_map (s : State α) (n l : Nat) : lane (mapState f s) n l = f (lane s n l) := by
   simp only [lane, getV_map hf, X86.getD_map hf.lane]
+
+theorem setLanes_map' (s : State α) (d c : Nat) (g : Nat → α) (g' : Nat → β) (hg : ∀ l, f (g l) = g' l) :
+    setLanes (mapState f s) d c g' = mapState f (setLanes s d c g) := by
+  simp only [setLanes, State.setV, mapState, Vector.map_setIfInBounds]
+  congr 2
+  apply Vector.ext; intro i hi
+  simp only [Vector.getElem_map, Vector.getElem_ofFn]
+  by_cases hi : i < c
+  · simp only [hi, ↓reduceIte]; exact (hg i).symm
+  · simp only [hi, ↓reduceIte]
+    show lane (mapState f s) d i = f (lane s d i)
+    exact lane_map hf s d i
+
+theorem setGroup_map (vlmax : Nat) (s : State α) (d : Nat) (ws : List α) (n : Nat) :
+    setGroup vlmax (mapState f s) d (ws.map f) n = mapState f (setGroup vlmax s d ws n) := by
+  unfold setGroup
+  exact (foldl_hom (mapState f) _ _ (fun acc r => (setLanes_map' hf acc (d + r) _ _ _
+    (fun l => (X86.getD_map hf.lane ws _).symm)).symm) _ _).symm
+
+theorem groupWord_map (vlmax : Nat) (s : State α) (src j : Nat) :
+    groupWord vlmax (mapState f s) src j = f (groupWord vlmax s src j) := lane_map hf s _ _
+
+theorem loadBytes_map (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (n : Nat) :
+    loadBytes rodata (mapState f s) a n = (loadBytes rodata s a n).map (List.map f) := by
+  unfold loadBytes
+  split
+  · exact loadWords_map hf rodata s a n
+  · rw [loadWords_map hf]
+    rcases s.loadWords rodata (wordOf a) (n + 1) with _ | ws
+    · rfl
+    · simp only [Option.map_some, joinWords_map hf.lane]
+
+theorem storeBytes_map (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (vs : List α) (n : Nat) :
+    storeBytes rodata (mapState f s) a (vs.map f) n = (storeBytes rodata s a vs n).map (mapState f) := by
+  unfold storeBytes
+  split
+  · exact storeWords_map hf s a vs
+  · rw [loadWords_map hf, loadWords_map hf]
+    rcases s.loadWords rodata (wordOf a) 1 with _ | l1
+    · rfl
+    · rcases s.loadWords rodata ⟨a.region, (wordOf a).off + 8 * n⟩ 1 with _ | l2
+      · rcases l1 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
+      · rcases l1 with _ | ⟨lo, _ | ⟨_, _⟩⟩ <;> rcases l2 with _ | ⟨hi, _ | ⟨_, _⟩⟩ <;> try rfl
+        simp only [Option.map_some, List.map_cons, List.map_nil]
+        rw [← splitWords_map hf.lane]
+        exact storeWords_map hf s _ _
 
 theorem setActive_map' (s : State α) (d : Nat) (g : Nat → α) (g' : Nat → β) (hg : ∀ l, f (g l) = g' l) :
     setActive (mapState f s) d g' = mapState f (setActive s d g) := by
@@ -183,6 +280,70 @@ theorem exec_map (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (st : St
         rcases hs : st.storeWords a ((List.range (nf * st.vl)).map fun q => lane st (src + q % nf) (q / nf)) with _ | s'
         · rfl
         · simp only [Option.map_some, next_map]
+    | lbu d base off =>
+      simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, withAddr] at hne ⊢
+      rcases ha : addr st base off with _ | a
+      · simp only [ha, fail_err'] at hne; exact absurd hne (by decide)
+      · simp only [ha, addr_map_some hf _ _ _ _ ha, loadWords_map hf]
+        rcases hl : st.loadWords rodata (wordOf a) 1 with _ | l
+        · rfl
+        · rcases l with _ | ⟨w, _ | ⟨w2, l⟩⟩
+          · rfl
+          · simp only [Option.map_some, List.map_cons, List.map_nil]
+            rw [← next_map]; exact congrArg next (setR_map' _ _ _ _ (by simp [hf.and, hf.shr, hf.const]))
+          · rfl
+    | sb src base off =>
+      simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, withAddr] at hne ⊢
+      rcases ha : addr st base off with _ | a
+      · simp only [ha, fail_err'] at hne; exact absurd hne (by decide)
+      · simp only [ha, addr_map_some hf _ _ _ _ ha, loadWords_map hf, getR_map hf]
+        rcases hl : st.loadWords rodata (wordOf a) 1 with _ | l
+        · rfl
+        · rcases l with _ | ⟨w, _ | ⟨w2, l⟩⟩
+          · rfl
+          · simp only [Option.map_some, List.map_cons, List.map_nil]
+            rw [← insByte_map hf.lane, show [f (insByte w (getR st src) (byteOf a))] =
+              [insByte w (getR st src) (byteOf a)].map f from rfl, storeWords_map hf]
+            rcases (st.storeWords (wordOf a) [insByte w (getR st src) (byteOf a)]) with _ | s'
+            · rfl
+            · simp only [Option.map_some, next_map]
+          · rfl
+    | vsetvlie8 d a lmul =>
+      simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, getR_map hf] at hne ⊢
+      rcases hx : LaneOps.asConst (getR st a) with _ | x
+      · simp only [hx, fail_err'] at hne; exact absurd hne (by decide)
+      · simp only [hx, hf.asConst _ _ hx]
+        split
+        · rw [setR_map' _ _ _ _ (hf.const _)]; rfl
+        · rfl
+    | vle8 d base =>
+      simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, withAddr, vl_map] at hne ⊢
+      rcases ha : addr st base 0 with _ | a
+      · simp only [ha, fail_err'] at hne; exact absurd hne (by decide)
+      · simp only [ha, addr_map_some hf _ _ _ _ ha, loadBytes_map hf]
+        split
+        · rcases (loadBytes rodata st a (st.vl / 8)) with _ | ws
+          · rfl
+          · simp only [Option.map_some]
+            rw [← next_map, setGroup_map hf]
+        · rfl
+    | vse8 src base =>
+      simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, withAddr, vl_map] at hne ⊢
+      rcases ha : addr st base 0 with _ | a
+      · simp only [ha, fail_err'] at hne; exact absurd hne (by decide)
+      · simp only [ha, addr_map_some hf _ _ _ _ ha, groupWord_map hf]
+        split
+        · split
+          · rfl
+          · have hw : ((List.range (st.vl / 8)).map fun j => f (groupWord vlmax st src j)) =
+                ((List.range (st.vl / 8)).map fun j => groupWord vlmax st src j).map f := by
+              rw [List.map_map]; rfl
+            rw [hw, storeBytes_map hf]
+            rcases storeBytes rodata st a ((List.range (st.vl / 8)).map fun j => groupWord vlmax st src j) (st.vl / 8)
+              with _ | s'
+            · rfl
+            · simp only [Option.map_some, next_map]
+        · rfl
   · simp [exec, mapState, hh]
 
 omit hf in
@@ -191,8 +352,9 @@ theorem err_exec (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (st : St
   cases hh : st.halted
   · cases i <;> simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, next, withAddr, setX, setR, State.setGD,
       State.setV, State.fail, h] <;>
-      (repeat' split) <;> (try simp_all [setActive_err, foldl_setActive_err]) <;>
-      (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h))
+      (repeat' split) <;> (try simp_all [setActive_err, foldl_setActive_err, setGroup_err]) <;>
+      (try (rw [storeWords_err _ _ _ _ ‹State.storeWords _ _ _ = some _›]; exact h)) <;>
+      (try (rw [storeBytes_err _ _ _ _ _ _ ‹storeBytes _ _ _ _ _ = some _›]; exact h))
   · simp [exec, hh, h]
 
 /-- The RISC-V instruction set, for a vector length of `vlmax` 64-bit lanes. -/

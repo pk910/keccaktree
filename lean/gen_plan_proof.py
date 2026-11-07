@@ -40,7 +40,7 @@ def run(*args, ctl=()):
     return subprocess.run([KT] + [str(a) for a in args], capture_output=True, text=True, check=True, env=env).stdout
 
 
-def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
+def matches(kernel, count, steps, lanes, rnd_of, region_filter=None, regs_only=False):
     """the labelled locations after `steps` steps: node `n` is expected at round `rnd_of[n]`"""
     out = run('matches', kernel, count, steps, lanes)
     alloc = []
@@ -60,6 +60,7 @@ def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
             var = f'(regVar {a} {b})'
         else:
             if region_filter is not None and int(a) != region_filter: continue
+            if regs_only: continue
             var = mem_var(int(a), int(b))
         alloc.append((int(node), int(kind), var, int(rot), ln))
     # a round constant (kinds 75..98) is reported for node 0 only but is a hypothesis every node may use;
@@ -885,10 +886,28 @@ def main():
     CTLS.update(find_ctls(kernel, count, bounds))
     print(f'control words per slice: {[CTLS[c] for c in range(K)]}', file=sys.stderr)
     allocs = {}
-    allocs[0] = [(n, w, mem_var(1, 8 * n + w), 0, f'input word {w} of node {n}') for n in range(count) for w in range(8)]
+
+    def alloc_at(c, mode):
+        # the invariant's locations at bound c: 'input' (the input words), 'out' (matches in the output region),
+        # 'regs' (matches in registers), 'mem<r>' (matches in region r), 'all' (every match)
+        if mode == 'input':
+            return [(n, w, mem_var(1, 8 * n + w), 0, f'input word {w} of node {n}') for n in range(count) for w in range(8)]
+        if mode == 'out':
+            return matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c], region_filter=2)
+        if mode == 'regs':
+            return matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c], regs_only=True)
+        if mode.startswith('mem'):
+            return matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c], region_filter=int(mode[3:]))
+        assert mode == 'all', mode
+        return matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c])
+    def no_rc(al, mode):
+        # at a segment's ends (non-default modes) round constants are never live: a word that merely equals one
+        # (a pointer, a count, the constant lane 8) is not claimed
+        return al if mode in ('input', 'out') else [h for h in al if not (75 <= h[1] < 99)]
+    allocs[0] = no_rc(alloc_at(0, os.environ.get('INV0', 'input')), os.environ.get('INV0', 'input'))
     for c in range(1, K):
         allocs[c] = matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c])
-    allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K], region_filter=2)
+    allocs[K] = no_rc(alloc_at(K, os.environ.get('INVK', 'out')), os.environ.get('INVK', 'out'))
     ALLOC_END = allocs[K]
     chyps = {c: const_hyps([n for n in range(count) if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}
     if os.environ.get('DATA') == '0':

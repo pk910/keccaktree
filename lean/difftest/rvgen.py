@@ -35,6 +35,7 @@ class Roles:
         self.ptr = set()
         self.count = set()
         self.shift = set()
+        self.bptr = set()
         self.seg = 0
 
 
@@ -58,6 +59,10 @@ def analyze(lines):
             roles.count.add(args[1])
         if op.endswith('.vx') and op.split('.')[0] in ('vsll', 'vsrl', 'vror'):
             roles.shift.add(args[2])
+        if op in ('lbu', 'sb', 'vle8.v', 'vse8.v'):
+            m = re.match(r'^(-?\d+)?\((\w+)\)$', args[1])
+            if m and m.group(2) != 'sp':
+                roles.bptr.add(m.group(2))     # byte addresses: any misalignment
         m = re.match(r'^v[ls]seg(\d)e64\.v$', op)
         if m:
             roles.seg = int(m.group(1))
@@ -102,13 +107,17 @@ def make_state(roles, vlmax):
         elif g[a][0] == 'p':
             g[b] = ('p', g[a][1], g[a][2] + 8 * rng.choice([-1, 1]))
     for r in roles.shift:
-        g[IDX[r]] = ('d', rng.randrange(64))     # the translator's domain (constant counts < 64)
+        # the kernels' counts are constants < 64; any count (M9: the hardware uses its low 6 bits)
+        g[IDX[r]] = ('d', rng.randrange(64) if rng.random() < 0.5 else r64())
     for r in roles.ptr:
         if r in IDX and IDX[r] not in (0, 1, 3, 4):
             base = MID + 8 * rng.randrange(-200, 200)
             if rng.random() < 0.03:
                 base += 4
             g[IDX[r]] = ('p', 3 if r == 'sp' else rng.choice([1, 2, 3]), base)
+    for r in roles.bptr:
+        if r in IDX and IDX[r] not in (0, 1, 2, 3, 4):
+            g[IDX[r]] = ('p', rng.choice([1, 2, 3]), MID + rng.randrange(-1600, 1600))
     out = []
     for i in range(32):
         h, p = enc(g[i])
@@ -121,7 +130,7 @@ def make_state(roles, vlmax):
 
 
 CONTROL = {'j', 'bnez', 'beqz', 'bne', 'beq', 'bgeu', 'ret', 'nop', 'auipc'}
-UNMODELLED = {'lbu', 'sb', 'vle8.v', 'vse8.v'}
+UNMODELLED = {'vle8.v', 'vse8.v'}       # tested by the byte-vector templates (they need an e8 vsetvli)
 
 
 def kernel_instrs(dis):
@@ -136,7 +145,7 @@ def kernel_instrs(dis):
             raise SystemExit('undecoded instruction in the kernel disassembly: ' + text)
         if op in CONTROL or op in UNMODELLED:
             continue
-        if op == 'vsetvli' and 'e64,m1' not in text:
+        if op == 'vsetvli' and 'e64,m1' not in text and 'e8,' not in text:
             continue
         text = re.sub(r'\bra\b', 't6', text)     # ra is the trampoline's return address
         seen.add(text)
@@ -152,8 +161,42 @@ def mem(nf=1):
     return '%d(%s)' % (8 * rng.randrange(-60, 60), b)
 
 
+VLMAX = 2
+NTEMPL = 33
+
+
+def t_bytes(c):
+    """byte loads/stores (any misalignment) and the e8 vector copies of the bounce paths"""
+    if c == 27:
+        return ['lbu %s, %d(%s)' % (R(), rng.randrange(-64, 64), R())]
+    if c == 28:
+        return ['sb %s, %d(%s)' % (R(), rng.randrange(-64, 64), R())]
+    lmul = rng.choice([1, 2, 4, 8])
+    words = rng.randrange(0, lmul * VLMAX + 1)
+    d = lmul * rng.randrange(32 // lmul)
+    t = rng.choice(['t3', 't4', 'a5'])
+    b = rng.choice(['a0', 'a1', 'a3', 's2', 'sp'])
+    if c in (29, 30):
+        return ['li %s, %d' % (t, 8 * words), 'vsetvli zero, %s, e8, m%d, ta, ma' % (t, lmul),
+                '%s v%d, (%s)' % ('vle8.v' if c == 29 else 'vse8.v', d, b)]
+    if c == 31:
+        # load a register group, store it elsewhere (another misalignment)
+        b2 = rng.choice([x for x in ['a0', 'a1', 'a3', 's2', 'sp'] if x != b])
+        return ['li %s, %d' % (t, 8 * words), 'vsetvli %s, %s, e8, m%d, ta, ma' % (rng.choice(['zero', 'a6']), t, lmul),
+                'vle8.v v%d, (%s)' % (d, b), 'vse8.v v%d, (%s)' % (d, b2)]
+    # the kernels' bounce sequences (rvv / rvv_zvkb), with vl = k nodes
+    k = rng.randrange(1, min(8, VLMAX) + 1)
+    if c == 32:
+        return ['li t0, %d' % k, 'slli t3, t0, 6', 'vsetvli zero, t3, e8, m8, ta, ma', 'vle8.v v24, (a1)',
+                'vse8.v v24, (sp)', 'vsetvli zero, t0, e64, m1, ta, ma', 'vlseg8e64.v v0, (sp)']
+    return ['li t0, %d' % k, 'vsetvli zero, t0, e64, m1, ta, ma', 'vsseg4e64.v v0, (sp)', 'slli t3, t0, 5',
+            'vsetvli zero, t3, e8, m4, ta, ma', 'vle8.v v24, (sp)', 'vse8.v v24, (a0)']
+
+
 def t_rv():
-    c = rng.randrange(27)
+    c = rng.randrange(NTEMPL + 1)
+    if c >= 27:
+        return t_bytes(c)
     if c == 0:
         return ['%s %s, %s, %s' % (rng.choice(['xor', 'or', 'and', 'add', 'sub', 'andn']), R(), R(), R())]
     if c == 1:
@@ -221,6 +264,8 @@ def main():
     nstate = int(sys.argv[5]) if len(sys.argv) > 5 else 2
     ntempl = int(sys.argv[6]) if len(sys.argv) > 6 else 40
     vlmax = vlen // 64
+    global VLMAX
+    VLMAX = vlmax
     rng.seed(seed * 1000 + vlen)
     snips, states = [], []
 
@@ -235,7 +280,7 @@ def main():
         if t.startswith('ld ') and re.search(r'\(t\d\)$', t) and False:
             continue
         add([t], 'kernel', nstate)
-    for _ in range(ntempl * 27):
+    for _ in range(ntempl * (NTEMPL + 1)):
         add(t_rv(), 'tmpl-rv', 2)
     d = os.path.join(outdir, 'rv%d' % vlen)
     os.makedirs(d, exist_ok=True)

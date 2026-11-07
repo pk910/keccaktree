@@ -32,8 +32,8 @@ def prog : Array Instr := #[
   .br .eq 6 0 34,  -- 24
   .mv 6 2,  -- 25
   .li 17 (0x40#64),  -- 26
-  .unsupported "lbu",  -- 27
-  .unsupported "sb",  -- 28
+  .lbu 7 5 (0),  -- 27
+  .sb 7 6 (0),  -- 28
   .opi 5 5 .addi (0x1#64),  -- 29
   .opi 6 6 .addi (0x1#64),  -- 30
   .opi 17 17 .addi (0xffffffffffffffff#64),  -- 31
@@ -5409,8 +5409,8 @@ def prog : Array Instr := #[
   .sd 13 2 (24),  -- 5401
   .mv 6 2,  -- 5402
   .li 17 (0x20#64),  -- 5403
-  .unsupported "lbu",  -- 5404
-  .unsupported "sb",  -- 5405
+  .lbu 7 6 (0),  -- 5404
+  .sb 7 5 (0),  -- 5405
   .opi 6 6 .addi (0x1#64),  -- 5406
   .opi 5 5 .addi (0x1#64),  -- 5407
   .opi 17 17 .addi (0xffffffffffffffff#64),  -- 5408
