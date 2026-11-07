@@ -76,8 +76,8 @@ static double now(void) {
 #define G_23 "%%rbx"
 #define G_24 "%%rcx"
 #define G_25 "%%rdx"
-#define G_26 "%%rsi"
-#define G_27 "%%rdi"
+#define G_26 "%%rcx"
+#define G_27 "%%rdx"
 #define G_28 "%%r8"
 #define G_29 "%%r9"
 #define GA(d) G_##d
@@ -213,6 +213,89 @@ DEF(sc, 149, SA(0) SA(1) SA(2) SA(3) SA(4) SA(5) SA(6) SA(7) SA(8) SA(9) SA(10) 
     SR(0) SR(1) SR(2) SR(3) SR(4) SR(5) SR(6) SR(7) SR(8) SR(9) SR(10) SR(11) SR(12) SR(13) SR(14) SR(15) SR(16) SR(17) SR(18)
     SR(19) SR(20) SR(21) SR(22) SR(23) SR(24) SR(25) SR(26) SR(27) SR(28) SR(29))
 
+
+/* the same 90 ops, batched by five: a row's five theta/rho ternlogs, then
+ * its five rotations (dependent at distance 5), then chi */
+#define THETA5(V) TL(V, 0, 22, 23) TL(V, 1, 22, 23) TL(V, 2, 22, 23) TL(V, 3, 22, 23) TL(V, 4, 22, 23) \
+    TL(V, 0, 24, 25) TL(V, 1, 24, 25) TL(V, 2, 24, 25) TL(V, 3, 24, 25) TL(V, 4, 24, 25) \
+    ROL(V, 0, 0, 1) ROL(V, 1, 1, 1) ROL(V, 2, 2, 1) ROL(V, 3, 3, 1) ROL(V, 4, 4, 1)
+#define ROW5(V, a, b, c, d, e, ra, rb, rc, rd, re) TL(V, a, 26, 27) TL(V, b, 26, 27) TL(V, c, 26, 27) TL(V, d, 26, 27) TL(V, e, 26, 27) \
+    ROL(V, a, a, ra) ROL(V, b, b, rb) ROL(V, c, c, rc) ROL(V, d, d, rd) ROL(V, e, e, re) CHI5(V, a, b, c, d, e, N1)
+#define ROW5S(V, a, b, c, d, e, ra, rb, rc, rd, sh) TL(V, a, 26, 27) TL(V, b, 26, 27) TL(V, c, 26, 27) TL(V, d, 26, 27) TL(V, e, 26, 27) \
+    ROL(V, a, a, ra) ROL(V, b, b, rb) ROL(V, c, c, rc) ROL(V, d, d, rd) SHUF(V, e, e, sh) CHI5(V, a, b, c, d, e, N1)
+#define MIX_B5(V) THETA5(V) TL(V, 5, 0, 1) TL(V, 6, 26, 27) TL(V, 7, 26, 27) TL(V, 8, 26, 27) TL(V, 9, 26, 27) \
+    ROL(V, 6, 6, 44) ROL(V, 7, 7, 43) ROL(V, 8, 8, 21) ROL(V, 9, 9, 14) CHI5(V, 5, 6, 7, 8, 9, N1) \
+    ROW5(V, 10, 11, 12, 13, 14, 28, 20, 3, 45, 61) ROW5S(V, 15, 16, 17, 18, 19, 1, 6, 25, 18, 30) \
+    ROW5S(V, 20, 21, 0, 1, 2, 27, 36, 10, 15, 31) ROW5(V, 3, 4, 5, 6, 7, 62, 55, 39, 41, 2) XOR(V, 8, 8, 30)
+DEF(mixb5_z, 90, MIX_B5("zmm"))
+DEF(mixb5_y, 90, MIX_B5("ymm"))
+/* all theta/rho ternlogs of the round first, then the 24 rotations, then
+ * the five chi rows */
+#define MIX_ALL(V) TL(V, 0, 22, 23) TL(V, 1, 22, 23) TL(V, 2, 22, 23) TL(V, 3, 22, 23) TL(V, 4, 22, 23) \
+    TL(V, 0, 24, 25) TL(V, 1, 24, 25) TL(V, 2, 24, 25) TL(V, 3, 24, 25) TL(V, 4, 24, 25) \
+    ROL(V, 0, 0, 1) ROL(V, 1, 1, 1) ROL(V, 2, 2, 1) ROL(V, 3, 3, 1) ROL(V, 4, 4, 1) \
+    TL(V, 5, 0, 1) TL(V, 6, 26, 27) TL(V, 7, 26, 27) TL(V, 8, 26, 27) TL(V, 9, 26, 27) \
+    TL(V, 10, 26, 27) TL(V, 11, 26, 27) TL(V, 12, 26, 27) TL(V, 13, 26, 27) TL(V, 14, 26, 27) \
+    TL(V, 15, 26, 27) TL(V, 16, 26, 27) TL(V, 17, 26, 27) TL(V, 18, 26, 27) TL(V, 19, 26, 27) \
+    TL(V, 20, 26, 27) TL(V, 21, 26, 27) TL(V, 0, 26, 27) TL(V, 1, 26, 27) TL(V, 2, 26, 27) \
+    ROL(V, 6, 6, 44) ROL(V, 7, 7, 43) ROL(V, 8, 8, 21) ROL(V, 9, 9, 14) \
+    ROL(V, 10, 10, 28) ROL(V, 11, 11, 20) ROL(V, 12, 12, 3) ROL(V, 13, 13, 45) ROL(V, 14, 14, 61) \
+    ROL(V, 15, 15, 1) ROL(V, 16, 16, 6) ROL(V, 17, 17, 25) SHUF(V, 18, 18, 30) ROL(V, 19, 19, 18) \
+    ROL(V, 20, 20, 27) ROL(V, 21, 21, 36) ROL(V, 0, 0, 10) ROL(V, 1, 1, 15) SHUF(V, 2, 2, 31) \
+    CHI5(V, 5, 6, 7, 8, 9, N1) CHI5(V, 10, 11, 12, 13, 14, N1) CHI5(V, 15, 16, 17, 18, 19, N1) CHI5(V, 20, 21, 0, 1, 2, N1) \
+    TL(V, 3, 26, 27) TL(V, 4, 26, 27) TL(V, 5, 26, 27) TL(V, 6, 26, 27) TL(V, 7, 26, 27) \
+    ROL(V, 3, 3, 62) ROL(V, 4, 4, 55) ROL(V, 5, 5, 39) ROL(V, 6, 6, 41) ROL(V, 7, 7, 2) \
+    CHI5(V, 3, 4, 5, 6, 7, N1) XOR(V, 8, 8, 30)
+DEF(mixall_z, 90, MIX_ALL("zmm"))
+DEF(mixall_y, 90, MIX_ALL("ymm"))
+/* the kernel order with every rotation independent of the ternlog before
+ * it (source register 29) */
+#define ROLI(V, d, a, r) ROL(V, d, 29, r)
+#define SHUFI(V, d, a, c) SHUF(V, d, 29, c)
+#define RHOI(V, d, r, HT, HR) TL(V, d, 26, 27) ROLI(V, d, d, r)
+#define RHOSI(V, d, c, HT, HR) TL(V, d, 26, 27) SHUFI(V, d, d, c)
+#define THETA_CI(V, d, HT, HR) TL(V, d, 22, 23) TL(V, d, 24, 25) ROLI(V, d, d, 1)
+#define MIX_IND(V) \
+    THETA_CI(V, 0, N1, N1) THETA_CI(V, 1, N1, N1) THETA_CI(V, 2, N1, N1) THETA_CI(V, 3, N1, N1) THETA_CI(V, 4, N1, N1) \
+    TL(V, 5, 0, 1) RHOI(V, 6, 44, N1, N1) RHOI(V, 7, 43, N1, N1) RHOI(V, 8, 21, N1, N1) RHOI(V, 9, 14, N1, N1) CHI5(V, 5, 6, 7, 8, 9, N1) \
+    RHOI(V, 10, 28, N1, N1) RHOI(V, 11, 20, N1, N1) RHOI(V, 12, 3, N1, N1) RHOI(V, 13, 45, N1, N1) RHOI(V, 14, 61, N1, N1) CHI5(V, 10, 11, 12, 13, 14, N1) \
+    RHOI(V, 15, 1, N1, N1) RHOI(V, 16, 6, N1, N1) RHOI(V, 17, 25, N1, N1) RHOSI(V, 18, 30, N1, N1) RHOI(V, 19, 18, N1, N1) CHI5(V, 15, 16, 17, 18, 19, N1) \
+    RHOI(V, 20, 27, N1, N1) RHOI(V, 21, 36, N1, N1) RHOI(V, 0, 10, N1, N1) RHOI(V, 1, 15, N1, N1) RHOSI(V, 2, 31, N1, N1) CHI5(V, 20, 21, 0, 1, 2, N1) \
+    RHOI(V, 3, 62, N1, N1) RHOI(V, 4, 55, N1, N1) RHOI(V, 5, 39, N1, N1) RHOI(V, 6, 41, N1, N1) RHOI(V, 7, 2, N1, N1) CHI5(V, 3, 4, 5, 6, 7, N1) \
+    XOR(V, 8, 8, 30)
+DEF(mixind_z, 90, MIX_IND("zmm"))
+/* the kernel order with 2-source xors in place of the ternlogs */
+#define TLX(V, d, a, b) XOR(V, d, d, a)
+#define TLDX(V, d, a, b) XOR(V, d, d, a)
+#define THETA_CX(V, d, HT, HR) TLX(V, d, 22, 23) TLX(V, d, 24, 25) ROL(V, d, d, 1)
+#define RHOX(V, d, r, HT, HR) TLX(V, d, 26, 27) ROL(V, d, d, r)
+#define RHOSX(V, d, c, HT, HR) TLX(V, d, 26, 27) SHUF(V, d, d, c)
+#define CHI5X(V, a, b, c, d, e, HC) TLDX(V, a, b, c) TLDX(V, b, c, d) TLDX(V, c, d, e) TLDX(V, d, e, a) TLDX(V, e, a, b)
+#define MIX_X(V) \
+    THETA_CX(V, 0, N1, N1) THETA_CX(V, 1, N1, N1) THETA_CX(V, 2, N1, N1) THETA_CX(V, 3, N1, N1) THETA_CX(V, 4, N1, N1) \
+    TLX(V, 5, 0, 1) RHOX(V, 6, 44, N1, N1) RHOX(V, 7, 43, N1, N1) RHOX(V, 8, 21, N1, N1) RHOX(V, 9, 14, N1, N1) CHI5X(V, 5, 6, 7, 8, 9, N1) \
+    RHOX(V, 10, 28, N1, N1) RHOX(V, 11, 20, N1, N1) RHOX(V, 12, 3, N1, N1) RHOX(V, 13, 45, N1, N1) RHOX(V, 14, 61, N1, N1) CHI5X(V, 10, 11, 12, 13, 14, N1) \
+    RHOX(V, 15, 1, N1, N1) RHOX(V, 16, 6, N1, N1) RHOX(V, 17, 25, N1, N1) RHOSX(V, 18, 30, N1, N1) RHOX(V, 19, 18, N1, N1) CHI5X(V, 15, 16, 17, 18, 19, N1) \
+    RHOX(V, 20, 27, N1, N1) RHOX(V, 21, 36, N1, N1) RHOX(V, 0, 10, N1, N1) RHOX(V, 1, 15, N1, N1) RHOSX(V, 2, 31, N1, N1) CHI5X(V, 20, 21, 0, 1, 2, N1) \
+    RHOX(V, 3, 62, N1, N1) RHOX(V, 4, 55, N1, N1) RHOX(V, 5, 39, N1, N1) RHOX(V, 6, 41, N1, N1) RHOX(V, 7, 2, N1, N1) CHI5X(V, 3, 4, 5, 6, 7, N1) \
+    XOR(V, 8, 8, 30)
+DEF(mixx_z, 90, MIX_X("zmm"))
+/* dependent ternlog -> rotate pairs at the 2:1 ratio, and 1:1 */
+DEF(tlroldep_z, 24, TL("zmm", 0, 24, 25) TL("zmm", 1, 24, 25) ROL("zmm", 1, 1, 7) TL("zmm", 2, 24, 25) TL("zmm", 3, 24, 25) ROL("zmm", 3, 3, 7)
+    TL("zmm", 4, 24, 25) TL("zmm", 5, 24, 25) ROL("zmm", 5, 5, 7) TL("zmm", 6, 24, 25) TL("zmm", 7, 24, 25) ROL("zmm", 7, 7, 7)
+    TL("zmm", 8, 24, 25) TL("zmm", 9, 24, 25) ROL("zmm", 9, 9, 7) TL("zmm", 10, 24, 25) TL("zmm", 11, 24, 25) ROL("zmm", 11, 11, 7)
+    TL("zmm", 12, 24, 25) TL("zmm", 13, 24, 25) ROL("zmm", 13, 13, 7) TL("zmm", 14, 24, 25) TL("zmm", 15, 24, 25) ROL("zmm", 15, 15, 7))
+DEF(tlrol11_z, 24, TL("zmm", 0, 24, 25) ROL("zmm", 1, 1, 7) TL("zmm", 2, 24, 25) ROL("zmm", 3, 3, 7) TL("zmm", 4, 24, 25) ROL("zmm", 5, 5, 7)
+    TL("zmm", 6, 24, 25) ROL("zmm", 7, 7, 7) TL("zmm", 8, 24, 25) ROL("zmm", 9, 9, 7) TL("zmm", 10, 24, 25) ROL("zmm", 11, 11, 7)
+    TL("zmm", 12, 24, 25) ROL("zmm", 13, 13, 7) TL("zmm", 14, 24, 25) ROL("zmm", 15, 15, 7) TL("zmm", 16, 24, 25) ROL("zmm", 17, 17, 7)
+    TL("zmm", 18, 24, 25) ROL("zmm", 19, 19, 7) TL("zmm", 20, 24, 25) ROL("zmm", 21, 21, 7) TL("zmm", 22, 24, 25) ROL("zmm", 23, 23, 7))
+DEF(tlrol11dep_z, 24, TL("zmm", 0, 24, 25) ROL("zmm", 0, 0, 7) TL("zmm", 2, 24, 25) ROL("zmm", 2, 2, 7) TL("zmm", 4, 24, 25) ROL("zmm", 4, 4, 7)
+    TL("zmm", 6, 24, 25) ROL("zmm", 6, 6, 7) TL("zmm", 8, 24, 25) ROL("zmm", 8, 8, 7) TL("zmm", 10, 24, 25) ROL("zmm", 10, 10, 7)
+    TL("zmm", 12, 24, 25) ROL("zmm", 12, 12, 7) TL("zmm", 14, 24, 25) ROL("zmm", 14, 14, 7) TL("zmm", 16, 24, 25) ROL("zmm", 16, 16, 7)
+    TL("zmm", 18, 24, 25) ROL("zmm", 18, 18, 7) TL("zmm", 20, 24, 25) ROL("zmm", 20, 20, 7) TL("zmm", 22, 24, 25) ROL("zmm", 22, 22, 7))
+/* chi alone: five rows of five dependent ternlogs */
+DEF(chi_z, 25, CHI5("zmm", 0, 1, 2, 3, 4, N1) CHI5("zmm", 5, 6, 7, 8, 9, N1) CHI5("zmm", 10, 11, 12, 13, 14, N1) CHI5("zmm", 15, 16, 17, 18, 19, N1) CHI5("zmm", 20, 21, 22, 23, 24, N1))
+
 struct t { const char* name; void (*f)(long, void*); int ops; };
 #define T(n) {#n, n##_f, n##_ops}
 
@@ -263,7 +346,7 @@ int main(int argc, char** argv) {
     memset(buf, 0, 8192);
     struct t tests[] = {T(tl_z), T(tl_y), T(tld_z), T(tlm_z), T(xor_z), T(xor_y), T(andn_z), T(rol_z), T(rol_y), T(shuf_z),
                         T(shuf_y), T(msh_z), T(mov_z), T(ld_z), T(st_z), T(tlrol_z), T(xorrol_z), T(mix_z), T(mixm_z),
-                        T(mix_y), T(mixm_y), T(hyb_z), T(hyb_y), T(sc)};
+                        T(mix_y), T(mixm_y), T(hyb_z), T(hyb_y), T(sc), T(mixb5_z), T(mixb5_y), T(mixall_z), T(mixall_y), T(mixind_z), T(mixx_z), T(tlroldep_z), T(tlrol11_z), T(tlrol11dep_z), T(chi_z)};
     /* clock: a dependent add chain runs one add per cycle */
     double ghz = 0;
     for (int i = 0; i < 3; i++) {
