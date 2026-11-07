@@ -76,7 +76,19 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
 * `lakefile.toml` of the merge adds tool targets; not synced to `/root/kt-rv` while builds run (rsync
   `--exclude lakefile.toml`), to avoid any reconfiguration of the running builds.
 
-## Status (18:00 UTC)
+## Status (18:20 UTC)
+* DONE (axioms propext, Classical.choice, Quot.sound + bv_decide certificates, no sorry):
+  - rvv at VLEN 128 (`RvvV2.All.all`, `all_ch`, `kernel`, `kernel_ch`) — a9b4d97 / 4d16931
+  - rvv_zvkb at VLEN 128 (`RvvZvkbV2.All`) — 0d21c16
+* vl-choice layer (M11) DONE: `Asm/RiscvChoice.lean` (`isaCh`, `LegalVl`, `legal_min`, `run_min`, `run_ch_scalar`,
+  `run_ch_of_pathOk`, `SliceCert.run_ch`, `run_ovr_ann_ch`, `LibRv.mkKernelRvCh`, `LibRv.lib_rv_ch`); RVV frame lemmas
+  are stated for `isaCh V ch`; each RVV `All` proves `all_ch` (any legal choice, `8 + P·nb ch c c` steps) and derives
+  the deterministic `all` (`nb_min`: `⌈c/V⌉` batches).  Scalar kernels: `kernel_ch` via `run_ch_scalar`.
+* Building: rv64_x1 body (slices 16–24 left, P=1, ~11 min each under CPU load), zbb_x1 (all 25 slices, ~1 min each),
+  RVV queue (v4 then v8 variants; generation of the v8 variants still running).
+* `RvLib.lean`: tables `table<V>` / `table<V>ch` and `lib<V>` / `lib<V>ch` for V ∈ {2,4,8} (needs all kernels built).
+
+## Status (older) (18:00 UTC)
 * rv64_x1: GenSE/GenSX built; GenSB slices 0–12 built, 13–24 building (P=1: 8–12 GB, ~8 min each).
 * zbb_x1: segments generated (`gen_segments_rv.sh zbb_x1 ZbbX1 18 3456 3460 3474 2097155`), `All.lean` from the
   template (`gen_all_rv1.py zbb_x1 ZbbX1 3479 3498 3438`); build after rv64.
