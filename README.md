@@ -27,7 +27,7 @@ round and frame macros (`.inc`). The header of each file explains its design.
 
 | Platform | Kernels | ns per 64-byte chunk |
 |---|---|---|
-| x86-64 AVX-512 | `avx512_x9` (avx512_x8 plus one node in the integer registers; Zen 4: +5.5%), `avx512_x8`, `avx512vl_x4` (cores with one 512-bit port); four-round loop bodies (Ice Lake avx512vl_x4 1.3x) | 25 (Xeon; hashtree avx512_x16: 18) |
+| x86-64 AVX-512 + BMI2 | `avx512_x9d`, `avx512_x8d`, `avx512vl_x4d`: the D-form rounds, all 25 lanes in registers and 35 instead of 60 vpternlogq per round, for cores that run a ternlog on fresh operands at half rate or count macro-ops (Zen 4: x9d 43 ns, 1.17x avx512_x9; Zen 5: x8d 21 ns, 1.19x avx512_x8); `avx512_x9` (avx512_x8 plus one node in the integer registers), `avx512_x8` (Ice Lake: two 512-bit ports count ALU ops), `avx512vl_x4` (cores with one 512-bit port); four-round loop bodies | 21 (Zen 5), 43 (Zen 4), 42 (Ice Lake; hashtree avx512_x16: 18) |
 | x86-64 AVX2 (hybrid) | `avx2_x10`, `avx2_x9`, `avx2_x6`, `avx2_x5`: the AVX2 batches plus one or two nodes hashed in the integer registers (rorx, andn) in the gaps of the vector rounds; picked where the integer ALUs are separate from the vector pipes (Zen 3: x10, Gracemont: x6) | 67 (Zen 3; hashtree avx2_x8: 78, shani: 42) |
 | x86-64 AVX2 | `avx2_x8`, `avx2_x4`, `avx2_x2` (2 remaining nodes) | 81 (Zen 3, avx2_x8) |
 | x86-64 | `x86_x1` (a single node in the integer registers; the single-node tail of every AVX-512 and AVX2 kernel) | 219 (Zen 3; hashtree shani: 44) |

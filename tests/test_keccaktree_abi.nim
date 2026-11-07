@@ -134,6 +134,9 @@ proc kernels(): seq[Kernel] =
     result.add (name: "avx512vl_x4", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512vl_x4), feature: 2)
     result.add (name: "avx512_x8", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512_x8), feature: 2)
     result.add (name: "avx512_x9", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512_x9), feature: 2)
+    result.add (name: "avx512vl_x4d", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512vl_x4d), feature: 2)
+    result.add (name: "avx512_x8d", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512_x8d), feature: 2)
+    result.add (name: "avx512_x9d", fn: KeccaktreeHashFcn(keccaktree_keccak256_avx512_x9d), feature: 2)
   when keccaktreeAsm and defined(arm64):
     result.add (name: "neon_x2", fn: KeccaktreeHashFcn(keccaktree_keccak256_neon_x2), feature: 0)
     result.add (name: "scalar_x1", fn: KeccaktreeHashFcn(keccaktree_keccak256_scalar_x1), feature: 0)

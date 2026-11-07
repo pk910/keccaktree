@@ -33,6 +33,17 @@ jobs:
       - name: Test
         continue-on-error: true
         run: build/test
+      # the Go wrapper's dispatch and forced paths against this tree's lib
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Go forced paths (this tree's lib)
+        run: |
+          make -C src OUT_DIR=$PWD/build_gcc lib
+          cp build_gcc/lib/libkeccaktree.a lib/linux_amd64/libkeccaktree.a
+          export KECCAKTREE_EXPECT_PATH='avx512_x9d|avx512_x8d|avx512_x8|avx512vl_x4|avx2_x10|avx2_x9|avx2_x6|avx2_x5|avx2_x8|avx2_x4'
+          go test -count=1 -run 'TestForcedPaths|TestActivePathMatchesEnv|TestHash' -v . 2>&1 | grep -E "^(=== RUN|--- |PASS|FAIL|ok|    )" | grep -v "=== RUN" | head -60
+          git checkout lib/linux_amd64/libkeccaktree.a
       # interleaved A/B of this tree against main (bench/ab): ratio > 1 =
       # this tree faster; min and median of -n rounds per size
       - name: A/B vs main

@@ -31,4 +31,7 @@ var forcedCases = []forcedCase{
 	{"avx512_x8", hasAVX512 && hasBMI, forceAMD64(true, kernelAVX512X8)},
 	{"avx512_x9", hasAVX512 && hasBMI, forceAMD64(true, kernelAVX512X9)},
 	{"avx512vl_x4", hasAVX512 && hasBMI, forceAMD64(true, kernelAVX512VLX4)},
+	{"avx512_x8d", hasAVX512 && hasBMI, forceAMD64(true, kernelAVX512X8D)},
+	{"avx512_x9d", hasAVX512 && hasBMI, forceAMD64(true, kernelAVX512X9D)},
+	{"avx512vl_x4d", hasAVX512 && hasBMI, forceAMD64(true, kernelAVX512VLX4D)},
 }
