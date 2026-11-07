@@ -56,7 +56,7 @@ theorem tblWord_map (lo hi : α) (cw : BitVec 64) : tblWord (f lo) (f hi) cw = f
   simp only [tblWord]
   rw [X86.foldl_hom f _ _ ?_ _ _, hf.const]
   intro acc i
-  dsimp only
+  try dsimp only
   split
   · rfl
   · simp only [hf.or, hf.shl]; split <;> simp [hf.and, hf.shr, hf.const]
@@ -126,7 +126,7 @@ theorem exec_map (rodata : Array (BitVec 64)) (i : Instr) (st : State α) (hne :
         · simp only [h0, h1, fail_err'] at hne; exact absurd hne (by decide)
         · simp only [hf.asConst _ _ h0, hf.asConst _ _ h1]
           rw [← next_map]
-          exact congrArg next (setLanes_map' hf _ _ _ _ _ _ (tblWord_map hf _ _ _) (tblWord_map hf _ _ _))
+          exact congrArg next (setLanes_map' hf _ _ _ _ _ _ (tblWord_map hf _ _ _).symm (tblWord_map hf _ _ _).symm)
     | zip1 d a b => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; arm_vec
     | zip2 d a b => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; arm_vec
     | movv d a => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; arm_vec

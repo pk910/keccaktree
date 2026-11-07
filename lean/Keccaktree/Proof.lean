@@ -84,6 +84,13 @@ theorem RC_eq (r : Nat) (hr : r < 24) : Generic.RC r = Spec.RC r := by
   | 16 => rfl | 17 => rfl | 18 => rfl | 19 => rfl | 20 => rfl | 21 => rfl | 22 => rfl | 23 => rfl
   | n + 24 => omega
 
+/-- `Fin 5` literals as naturals (core `simp` has no general lemma for this). -/
+theorem Fin.val_lit0 : ((0 : Fin 5)).val = 0 := rfl
+theorem Fin.val_lit1 : ((1 : Fin 5)).val = 1 := rfl
+theorem Fin.val_lit2 : ((2 : Fin 5)).val = 2 := rfl
+theorem Fin.val_lit3 : ((3 : Fin 5)).val = 3 := rfl
+theorem Fin.val_lit4 : ((4 : Fin 5)).val = 4 := rfl
+
 /-- `a[i]` with its bound proof as the proof-free `a[i]!`: `bv_decide`
 identifies atoms syntactically, and the same lane reached through different
 index computations carries different proof terms. -/

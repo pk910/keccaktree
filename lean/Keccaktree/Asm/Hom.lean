@@ -94,6 +94,20 @@ omit hf in
 omit hf in
 @[simp] theorem cf_map (s : State α) : (mapState f s).cf = s.cf := rfl
 omit hf in
+@[simp] theorem vl_map (s : State α) : (mapState f s).vl = s.vl := rfl
+omit hf in
+@[simp] theorem nf_map (s : State α) : (mapState f s).nf = s.nf := rfl
+omit hf in
+@[simp] theorem vf_map (s : State α) : (mapState f s).vf = s.vf := rfl
+omit hf in
+@[simp] theorem g_map (s : State α) : (mapState f s).g = s.g := rfl
+omit hf in
+@[simp] theorem tail_map (s : State α) : (mapState f s).tail = s.tail := rfl
+omit hf in
+@[simp] theorem gd_map (s : State α) : (mapState f s).gd = s.gd.map f := rfl
+omit hf in
+@[simp] theorem v_map (s : State α) : (mapState f s).v = s.v.map (·.map f) := rfl
+omit hf in
 @[simp] theorem mem_map (s : State α) : (mapState f s).mem = fun r q => f (s.mem r q) := rfl
 omit hf in
 theorem next_map (s : State α) : next (mapState f s) = mapState f (next s) := rfl
@@ -1105,14 +1119,12 @@ theorem repBody_map (rodata : Array (BitVec 64)) (st : State α) (n src dst : Ad
     (hne : (repBody rodata st n src dst).err = false) :
     repBody rodata (mapState f st) n src dst = mapState f (repBody rodata st n src dst) := by
   unfold repBody at hne ⊢
-  split at hne
-  · rename_i hc
+  by_cases hc : n.region = 0 ∧ n.off % 8 = 0 ∧ n.off ≥ 0
+  · rw [if_pos hc] at hne
     rw [if_pos hc, if_pos hc]
-    apply withLoad_map hf _ _ _ _ _ _ hne
-    intro vs _ hne5
-    apply withStore_map hf _ _ _ _ rfl _ _ hne5
-    intro s' _ _; simp only [setX_map hf, next_map]
-  · rename_i hc
+    exact withLoad_map hf _ _ _ _ _ _ hne fun vs _ hne5 =>
+      withStore_map hf _ _ _ _ rfl _ _ hne5 fun s' _ _ => by rw [setX_map hf, setX_map hf, setX_map hf, next_map]
+  · rw [if_neg hc] at hne
     rw [if_neg hc, if_neg hc]
     exact absurd hne (by simp only [fail_err]; decide)
 

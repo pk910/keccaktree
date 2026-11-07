@@ -9,7 +9,7 @@ failed state stays failed (`err_exec`): `Riscv.isa vlmax`.
 -/
 namespace Keccaktree.Asm.Riscv
 open Keccaktree.Asm
-open Keccaktree.Asm.X86 hiding gx setX withX next wordGpr
+open Keccaktree.Asm.X86 hiding gx setX withX next wordGpr getGD_map setGD_map setGD_map' gx_map_some setX_map next_map condHolds_map
 open Keccaktree.Asm.Arm (gx setX withX addr withAddr gx_map_some setX_map addr_map_some getGD_map setGD_map setGD_map')
 open LaneOps
 
