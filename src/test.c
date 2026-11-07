@@ -198,6 +198,11 @@ int main(void) {
         test_backend("avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
         test_backend("avx512_x8", keccaktree_keccak256_avx512_x8);
         test_backend("avx512_x9", keccaktree_keccak256_avx512_x9);
+        test_backend("avx512_x8b5", keccaktree_keccak256_avx512_x8b5);
+        test_backend("avx512_x8b10", keccaktree_keccak256_avx512_x8b10);
+        test_backend("avx512_x8al", keccaktree_keccak256_avx512_x8al);
+        test_backend("avx512_x9b", keccaktree_keccak256_avx512_x9b);
+        test_backend("avx512_x9c", keccaktree_keccak256_avx512_x9c);
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx512");
     }
