@@ -84,7 +84,7 @@ theorem reloc_ptr_out (m : Nat) (o : Int) : E.reloc (rho m) (.ptr ⟨rOutput, o�
   show E.ptr ⟨rOutput, o + (rho m).δ rOutput⟩ = _
   rw [rho_δ, if_neg (by decide), if_pos rfl]
 
-theorem reloc_const (m : Nat) (w : BitVec 64) : E.reloc (rho m) (.const w) = .const w := rfl
+theorem rho_const (m : Nat) (w : BitVec 64) : E.reloc (rho m) (.const w) = .const w := rfl
 
 -- The digest predicate and node words of the library (`LibX86.Digest`, shared by every ISA).
 export Keccaktree.Asm.LibX86 (nodeWords Digest digest_local)

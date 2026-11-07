@@ -66,7 +66,7 @@ def ctl_case(w, v):
     if v == 261:
         return f'''      · -- t0 = vl
         rw [cutVar_const_of GenB{w}.ctl0 H 261 _ (by decide) ((envOf_gdVar H 5 (by decide)).trans hf5) (by decide +kernel),
-          show cutVar GenB{w}.ctl0 GenB{w}.sc0 261 = .const (BitVec.ofNat 64 {w}) by decide +kernel, reloc_const]'''
+          show cutVar GenB{w}.ctl0 GenB{w}.sc0 261 = .const (BitVec.ofNat 64 {w}) by decide +kernel, rho_const]'''
     if v == 266:
         return f'''      · -- a0
         rw [cutVar_ptr_of GenB{w}.ctl0 H 266 ⟨rOutput, 32 * ((off + j : Nat) : Int)⟩ (by decide)
@@ -81,12 +81,12 @@ def ctl_case(w, v):
         return f'''      · -- a7 = 0
         rw [cutVar_const_of GenB{w}.ctl0 H 273 0#64 (by decide) ((hHenv 273 (by decide) (by decide)).trans ((envOf_gdVar S 17 (by decide)).trans hM.a7))
             (by decide +kernel),
-          show cutVar GenB{w}.ctl0 GenB{w}.sc0 273 = .const 0#64 by decide +kernel, reloc_const]'''
+          show cutVar GenB{w}.ctl0 GenB{w}.sc0 273 = .const 0#64 by decide +kernel, rho_const]'''
     if v == 286:
         return f'''      · -- t5 = 1 << 63
         rw [cutVar_const_of GenB{w}.ctl0 H 286 0x8000000000000000#64 (by decide)
             ((hHenv 286 (by decide) (by decide)).trans ((envOf_gdVar S 30 (by decide)).trans hM.t5)) (by decide +kernel),
-          show cutVar GenB{w}.ctl0 GenB{w}.sc0 286 = .const 0x8000000000000000#64 by decide +kernel, reloc_const]'''
+          show cutVar GenB{w}.ctl0 GenB{w}.sc0 286 = .const 0x8000000000000000#64 by decide +kernel, rho_const]'''
     raise SystemExit(f'GenB{w}: unexpected start control word {v}')
 
 
@@ -100,7 +100,7 @@ def batch(w):
     for n in range(w):
         idx = {j: i for i, (n_, j) in enumerate(outs) if n_ == n}
         assert sorted(idx) == [0, 1, 2, 3], (w, n, idx)
-        cases = '\n'.join(f'''        · have := o{idx[j]}; rw [env_out Sb m {n} {j}] at this; simp only [{SQ}] at this; rw [this]; exact congrArg (fun X => L X {j}) (GenB{w}.aat_{n} _)''' for j in range(4))
+        cases = '\n'.join(f'''      · have := o{idx[j]}; dsimp only at this; rw [env_out Sb m {n} {j}] at this; simp only [{SQ}] at this; rw [this]; exact congrArg (fun X => L X {j}) (GenB{w}.aat_{n} _)''' for j in range(4))
         node_digests.append(f'''    have d{n} : Digest input Sb (m + {n}) := by
       apply digest_of
       intro t ht
@@ -186,15 +186,15 @@ theorem batch{w} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec
     fun v _ hv => cut_word (rho (off + j)) hρ GenB{w}.ctl25 GenB{w}.sc25 Sb hcutb v (Or.inl hv)
   have hb5 : Sb.getGD 5 = BitVec.ofNat 64 {w} := by
     have e1 := word 261 (by decide) (by decide)
-    rw [show cutVar GenB{w}.ctl25 GenB{w}.sc25 261 = .const (BitVec.ofNat 64 {w}) by decide +kernel, reloc_const] at e1
+    rw [show cutVar GenB{w}.ctl25 GenB{w}.sc25 261 = .const (BitVec.ofNat 64 {w}) by decide +kernel, rho_const] at e1
     rw [← envOf_gdVar Sb 5 (by decide)]; exact cut_const _ Sb 261 (by decide) _ e1
   have hb17 : Sb.getGD 17 = 0#64 := by
     have e1 := word 273 (by decide) (by decide)
-    rw [show cutVar GenB{w}.ctl25 GenB{w}.sc25 273 = .const 0#64 by decide +kernel, reloc_const] at e1
+    rw [show cutVar GenB{w}.ctl25 GenB{w}.sc25 273 = .const 0#64 by decide +kernel, rho_const] at e1
     rw [← envOf_gdVar Sb 17 (by decide)]; exact cut_const _ Sb 273 (by decide) _ e1
   have hb30 : Sb.getGD 30 = 0x8000000000000000#64 := by
     have e1 := word 286 (by decide) (by decide)
-    rw [show cutVar GenB{w}.ctl25 GenB{w}.sc25 286 = .const 0x8000000000000000#64 by decide +kernel, reloc_const] at e1
+    rw [show cutVar GenB{w}.ctl25 GenB{w}.sc25 286 = .const 0x8000000000000000#64 by decide +kernel, rho_const] at e1
     rw [← envOf_gdVar Sb 30 (by decide)]; exact cut_const _ Sb 286 (by decide) _ e1
   have hb10 : Sb.getGD 10 = gprWord ⟨rOutput, 32 * ((off + (j + {w}) : Nat) : Int)⟩ := by
     have e1 := word 266 (by decide) (by decide)
