@@ -254,6 +254,12 @@ def window(plan, a, b, nodes):
             if t + 1 <= step: j = i + 1
         return rounds[j]
     keep = [t for t in cuts if a < t + 1 < b]
+    # only cuts at which the nodes in progress are all at the same round (a cut where some nodes are a round
+    # ahead, e.g. the scalar lane of avx2_x5 against its vector lanes, has unprovable lane facts)
+    def uniform(t):
+        row = rounds_at(t + 1)
+        return len(set(row[n] for n in nodes if 0 < row[n] < 24)) <= 1
+    keep = [t for t in keep if uniform(t)]
     rs = [rounds_at(a)] + [rounds_at(t + 1) for t in keep] + [rounds[-1] if b >= plan['end'] else rounds_at(b)]
     rs = [[r[n] if n in nodes else 0 for n in range(count)] for r in rs]
     return keep, rs
@@ -297,6 +303,20 @@ def gen_segments(kernel, patch=None):
     for ex in (A['exits'] if os.environ.get('ONLY') != 'Bb' else []):
         if only_exits and ex['name'] not in only_exits:
             continue
+        if os.environ.get('SKIP_EXITS'):
+            # keep an already generated exit without own batches (frame code only: not affected by the cuts)
+            gdir = os.path.join(HERE, f'Keccaktree/Kernels/{d}/Gen{ex["name"]}')
+            plf = os.path.join(HERE, f'plans/{kernel}_{ex["name"]}.json')
+            if os.path.exists(os.path.join(gdir, 'Seg.lean')) and os.path.exists(plf):
+                pj_ = json.load(open(plf))
+                if not pj_['cuts'] and all(r == 0 for row in pj_['rounds'] for r in row):
+                    c0 = json.loads(re.search(r'^def ctl0 : List Nat := (.*)$', open(os.path.join(gdir, 'Slice0.lean')).read(), re.M).group(1))
+                    ex_ctl[ex['name']] = c0
+                    src = ex['src']
+                    info[ex['name']] = {'slices': 1, 'ctl0': c0, 'nodes': [], 'count': src['count'], 'start': src['start'],
+                                        'end': src['end'], 'base': None}
+                    print(f"  Gen{ex['name']}: kept, ctl0={c0}", flush=True)
+                    continue
         src = ex['src']; c = src['count']
         pl = find_plan(kernel, c, patch=patch) if c > 0 else {'cuts': [], 'rounds': [[]], 'end': src['end']}
         a, b = src['start'], src['end']
