@@ -49,9 +49,6 @@
  * lane, c for a chi lane), empty here; a kernel that interleaves other
  * work into the rounds (keccak256_avx512_x9.S) defines it first.
  */
-#ifndef CHI_ANDN
-#define CHI_ANDN 0
-#endif
 #ifndef VHOOK_DEFINED
 .macro VHOOK kind
 .endm
@@ -129,21 +126,11 @@
  * outputs no longer need it: true for x = 2, 3, 4. Outputs x = 0, 1 go to
  * the free registers t0, t1; b0, b1 are free afterwards. */
 .macro CHI_ROW b0, b1, b2, b3, b4, t0, t1
-#if CHI_ANDN >= 1
-	vpandnq		VR\t0, VR\b1, VR\b2
-	vpxorq		VR\t0, VR\t0, VR\b0
-#else
 	vmovdqa64	VR\t0, VR\b0
 	vpternlogq	VR\t0, VR\b1, VR\b2, 0xD2
-#endif
 	VHOOK		c
-#if CHI_ANDN >= 2
-	vpandnq		VR\t1, VR\b2, VR\b3
-	vpxorq		VR\t1, VR\t1, VR\b1
-#else
 	vmovdqa64	VR\t1, VR\b1
 	vpternlogq	VR\t1, VR\b2, VR\b3, 0xD2
-#endif
 	VHOOK		c
 	vpternlogq	VR\b2, VR\b3, VR\b4, 0xD2
 	VHOOK		c
@@ -155,13 +142,8 @@
 
 /* chi over row 0, with iota, straight to memory row LOUT(r); t is free */
 .macro CHI_ROW0 r, b0, b1, b2, b3, b4, t
-#if CHI_ANDN >= 1
-	vpandnq		VR\t, VR\b1, VR\b2
-	vpxorq		VR\t, VR\t, VR\b0
-#else
 	vmovdqa64	VR\t, VR\b0
 	vpternlogq	VR\t, VR\b1, VR\b2, 0xD2
-#endif
 .if LOOP_RC
 	vpxorq		VR\t, VR\t, RCL(\r - 1)
 .else
@@ -169,13 +151,8 @@
 .endif
 	vmovdqa64	LOUT(\r, 0), VR\t
 	VHOOK		c
-#if CHI_ANDN >= 2
-	vpandnq		VR\t, VR\b2, VR\b3
-	vpxorq		VR\t, VR\t, VR\b1
-#else
 	vmovdqa64	VR\t, VR\b1
 	vpternlogq	VR\t, VR\b2, VR\b3, 0xD2
-#endif
 	vmovdqa64	LOUT(\r, 1), VR\t
 	VHOOK		c
 	vpternlogq	VR\b2, VR\b3, VR\b4, 0xD2
@@ -454,9 +431,6 @@
 	add		RCP, 8
 	mov		qword ptr [LOOP_CNT], 5
 	.set		LOOP_RC, 1
-#ifdef KT_LOOP_ALIGN
-.p2align 6
-#endif
 1:
 	RHOOK_BEGIN	1
 	ROUND	1, 10, 11, 6, 8, 9, 3, 0, 12, 13, 14, 1, 7, 15, 16, 17, 4, 5, 19, 20, 21, 2, 18

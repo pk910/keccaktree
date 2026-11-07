@@ -4,8 +4,10 @@
  *
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 8 at a time: node j
  * of a batch lives in qword lane j of every zmm register. AVX-512F + VL.
- * The rounds are in keccak256_avx512.inc, the frame (loop, tail, Windows ABI)
- * in keccak256_x86_frame.inc. A single node (a whole call or the last
+ * The rounds are in keccak256_avx512.inc (or, with KT_DFORM defined by
+ * keccak256_avx512_x8d.S, the all-in-registers rounds of
+ * keccak256_avx512d.inc), the frame (loop, tail, Windows ABI) in
+ * keccak256_x86_frame.inc. A single node (a whole call or the last
  * one) goes to keccaktree_keccak256_x86_x1 (BMI1 + BMI2, which every
  * AVX-512 core has: keccaktree_detect checks), 2..4 remaining nodes to the
  * ymm kernel, which takes the same time for them; 5..7 are padded to a
@@ -20,9 +22,12 @@
 #ifdef __x86_64__
 .intel_syntax noprefix
 
-/* With NS defined (keccak256_avx512_x9.S: NS = 1) the batch also hashes
- * NS nodes in the general registers (keccak256_x86_scalar.inc), their
- * round chunks spread through the vector round by VHOOK; see that file. */
+/* With NS defined (keccak256_avx512_x9.S, keccak256_avx512_x9d.S: NS = 1)
+ * the batch also hashes NS nodes in the general registers
+ * (keccak256_x86_scalar.inc), their round chunks spread through the vector
+ * round by VHOOK; see that file. The including file may also set
+ * KERNEL_NAME, SMALL_TAIL (the kernel for 2..4 remaining nodes) and
+ * ENTRY_ALT (the zmm kernel whole calls of 8..56 nodes go to). */
 #ifdef NS
 #define NODES		(8 + NS)
 #define SLOTS		(10*64 + NS*448 + 64 + 64)
@@ -47,12 +52,16 @@
 #define KERNEL_NAME	keccaktree_keccak256_avx512_x8
 #endif
 #define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar */
+#ifndef SMALL_TAIL
 #define SMALL_TAIL	keccaktree_keccak256_avx512vl_x4
+#endif
 #define SMALL_TAIL_MAX	4
 #ifdef NS
 /* whole calls of a multiple of 8 nodes (below 64) go to the zmm kernel:
  * a padded batch here costs as much as a full one */
+#ifndef ENTRY_ALT
 #define ENTRY_ALT	keccaktree_keccak256_avx512_x8
+#endif
 #define ENTRY_ALT_MASK	((1 << 8) | (1 << 16) | (1 << 24) | (1 << 32) | (1ULL << 40) | (1ULL << 48) | (1ULL << 56))
 #endif
 
@@ -117,41 +126,40 @@
 #define LOOP_CNT	r9 + 10*64
 #endif
 
-#if defined(KT_DFORM) && defined(KT_DFORM_FILE)
-#include KT_DFORM_FILE
-#elif defined(KT_DFORM)
+#ifdef KT_DFORM
 #include "keccak256_avx512d.inc"
 #else
 #include "keccak256_avx512.inc"
 #endif
 
-/* digest words o0..o3 (8 nodes each) -> 8 x 32 bytes at [BOUT].
- * o0..o3 can be any registers; once the first four instructions have read
- * them, everything else is free. vpermt2q keeps its index register, so the
- * four index vectors are loaded once: the first level pairs the words of
- * nodes 0..3 (lo) or 4..7 (hi), the second puts the four words of two nodes
- * side by side. */
-.macro OUTPUT o0, o1, o2, o3
-	vmovdqa64	zmm22, zmmword ptr [rip + .LOUT_LO]
-	vmovdqa64	zmm23, zmmword ptr [rip + .LOUT_HI]
-	vmovdqa64	zmm24, zmmword ptr [rip + .LOUT_EVEN]
-	vmovdqa64	zmm25, zmmword ptr [rip + .LOUT_ODD]
-	vmovdqa64	zmm26, VR\o0
-	vmovdqa64	zmm27, VR\o2
-	vpermt2q	VR\o0, zmm22, VR\o1		/* n0..n3: w0 w1 */
-	vpermt2q	VR\o2, zmm22, VR\o3		/* n0..n3: w2 w3 */
-	vpermt2q	zmm26, zmm23, VR\o1		/* n4..n7: w0 w1 */
-	vpermt2q	zmm27, zmm23, VR\o3		/* n4..n7: w2 w3 */
-	vmovdqa64	zmm28, VR\o0
-	vmovdqa64	zmm29, zmm26
-	vpermt2q	VR\o0, zmm24, VR\o2		/* nodes 0, 1 */
-	vpermt2q	zmm28, zmm25, VR\o2		/* nodes 2, 3 */
-	vpermt2q	zmm26, zmm24, zmm27		/* nodes 4, 5 */
-	vpermt2q	zmm29, zmm25, zmm27		/* nodes 6, 7 */
+/* digest words o0..o3 (8 nodes each) -> 8 x 32 bytes at [BOUT], with the
+ * scratch registers s0..s7 (any eight others; the rounds of
+ * keccak256_avx512.inc leave their digest in registers below 22, the
+ * D-form rounds pass eight dead ones). vpermt2q keeps its index register,
+ * so the four index vectors are loaded once: the first level pairs the
+ * words of nodes 0..3 (lo) or 4..7 (hi), the second puts the four words of
+ * two nodes side by side. */
+.macro OUTPUT o0, o1, o2, o3, s0=22, s1=23, s2=24, s3=25, s4=26, s5=27, s6=28, s7=29
+	vmovdqa64	VR\s0, zmmword ptr [rip + .LOUT_LO]
+	vmovdqa64	VR\s1, zmmword ptr [rip + .LOUT_HI]
+	vmovdqa64	VR\s2, zmmword ptr [rip + .LOUT_EVEN]
+	vmovdqa64	VR\s3, zmmword ptr [rip + .LOUT_ODD]
+	vmovdqa64	VR\s4, VR\o0
+	vmovdqa64	VR\s5, VR\o2
+	vpermt2q	VR\o0, VR\s0, VR\o1		/* n0..n3: w0 w1 */
+	vpermt2q	VR\o2, VR\s0, VR\o3		/* n0..n3: w2 w3 */
+	vpermt2q	VR\s4, VR\s1, VR\o1		/* n4..n7: w0 w1 */
+	vpermt2q	VR\s5, VR\s1, VR\o3		/* n4..n7: w2 w3 */
+	vmovdqa64	VR\s6, VR\o0
+	vmovdqa64	VR\s7, VR\s4
+	vpermt2q	VR\o0, VR\s2, VR\o2		/* nodes 0, 1 */
+	vpermt2q	VR\s6, VR\s3, VR\o2		/* nodes 2, 3 */
+	vpermt2q	VR\s4, VR\s2, VR\s5		/* nodes 4, 5 */
+	vpermt2q	VR\s7, VR\s3, VR\s5		/* nodes 6, 7 */
 	vmovdqu64	zmmword ptr [BOUT + 0*64], VR\o0
-	vmovdqu64	zmmword ptr [BOUT + 1*64], zmm28
-	vmovdqu64	zmmword ptr [BOUT + 2*64], zmm26
-	vmovdqu64	zmmword ptr [BOUT + 3*64], zmm29
+	vmovdqu64	zmmword ptr [BOUT + 1*64], VR\s6
+	vmovdqu64	zmmword ptr [BOUT + 2*64], VR\s4
+	vmovdqu64	zmmword ptr [BOUT + 3*64], VR\s7
 .endm
 
 .text

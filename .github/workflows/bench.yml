@@ -33,18 +33,12 @@ jobs:
       - name: Test
         continue-on-error: true
         run: build/test
-      - name: Pipes
-        run: |
-          if grep -qw avx512f /proc/cpuinfo; then
-            clang -O2 -mavx512f -mavx512vl -mavx512bw -mavx512vbmi -mbmi -mbmi2 -o build/pipes bench/ab/pipes.c -Isrc -Lbuild/lib -lkeccaktree
-            build/pipes v || true; echo; build/pipes || true
-          else echo "no AVX-512"; fi
       # interleaved A/B of this tree against main (bench/ab): ratio > 1 =
       # this tree faster; min and median of -n rounds per size
       - name: A/B vs main
         run: |
           CC=clang bench/ab/build.sh origin/main
-          if grep -qw avx512f /proc/cpuinfo; then K=avx512_x8d_p:avx512_x8,avx512_x8d_px:avx512_x8,avx512_x8d_px3:avx512_x8,avx512_x9d_p:avx512_x9,avx512_x9d:avx512_x9,avx512_x8d:avx512_x8
+          if grep -qw avx512f /proc/cpuinfo; then K=auto,avx512_x8d:avx512_x8,avx512_x9d:avx512_x9,avx512vl_x4d:avx512vl_x4,avx512_x8,avx512_x9,avx512vl_x4
           elif grep -qw avx2 /proc/cpuinfo; then K=auto,avx2_x8,avx2_x4
           else K=auto,generic; fi
-          for i in 1 2; do build/ab -n 9 -s 1,8,64,256,1024 $K; echo; done
+          for i in 1 2; do build/ab -n 9 -s 1,2,4,5,8,9,16,64,256,1024 $K; echo; done
