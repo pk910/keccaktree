@@ -96,9 +96,10 @@ def find_ctls(kernel, count, bounds):
     need = {}
     for c in range(K):
         need[c] = set(slice_lits(kernel, count, bounds[c], bounds[c + 1])[0])
-    cells = set(v for c in need for v in need[c] if v >= 288)
-    for c in range(K):
-        need[c] |= cells
+    if not SEG:
+        cells = set(v for c in need for v in need[c] if v >= 288)
+        for c in range(K):
+            need[c] |= cells
     # segment mode: the control words the next segment needs at the end bound
     need[K] = set(END_CTL)
     for v in FORBID_CTL:
@@ -116,6 +117,9 @@ def find_ctls(kernel, count, bounds):
                 for x in re.findall(r'\(\.var (\d+)\)', t):
                     if int(x) not in need[c - 1]:
                         need[c - 1].add(int(x)); changed = True
+        # a loop body: the end cut is the start cut of the next iteration
+        if LOOP and not need[0] <= need[K]:
+            need[K] |= need[0]; changed = True
     for v in FORBID_CTL:
         for c in range(K + 1):
             assert v not in need[c], f'forbidden control word {v} needed at cut {c}'
@@ -472,6 +476,8 @@ theorem rounds_succ (r : Nat) (X : Spec.State) : Spec.round r (Spec.rounds r X) 
 
 ''')
         for n in range(count):
+            if PLAN['rounds'][0][n] != 0:
+                continue   # a segment starting mid-way: `A n` is not the absorbed state
             f.write(f'''set_option maxRecDepth 100000 in
 theorem aat_{n} (A : Fin {count} → Spec.State) : AAt A {K} ⟨{n}, by decide⟩ = Spec.rounds {rounds_end[n]} (A ⟨{n}, by decide⟩) := by
   have h0 : AAt A 0 ⟨{n}, by decide⟩ = Spec.rounds 0 (A ⟨{n}, by decide⟩) := rfl
@@ -747,64 +753,61 @@ def cert{c} : SliceCert X86.isa X86.isaReloc rodata prog B where
       h7.trans (by decide +kernel), h8.trans (by decide +kernel), h9.trans (by decide +kernel), h11, h12⟩
 
 """)
-        f.write(f"""/-- The concrete states along the segment. -/
-def segAt (S0 : State (BitVec 64)) : Nat → State (BitVec 64)
-  | 0 => S0
-""" + ''.join(f"  | {c + 1} => X86.isa.execTrace rodata slice{c} (segAt S0 {c})\n" for c in range(K)) + f"""  | _ => S0
-
+        def at(c):
+            return 'S0' if c == 0 else f'(segAt{c} S0)'
+        f.write("/-! The concrete states along the segment (one plain definition each: unfolded by delta). -/\n" +
+                ''.join(f"def segAt{c + 1} (S0 : State (BitVec 64)) : State (BitVec 64) := X86.isa.execTrace rodata slice{c} {at(c)}\n"
+                        for c in range(K)) + f"""
 /-- The number of instructions of the segment. -/
-def segLen : Nat := """ + ' + '.join(f'idx{c}.length' for c in range(K)) + f"""
-
-set_option maxRecDepth 100000 in
+def segLen : Nat := """ + ' + '.join(f'idx{c}.length' for c in range(K)) + "\n\n")
+        chain = ''.join(f"  have s{c} := (cert{c}).step ρ hρ hw {at(c)} s{c - 1}.2.2.2 s{c - 1}.2.2.1\n" for c in range(1, K))
+        hyps = """(ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
+    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0)"""
+        f.write(f"""set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 /-- **The segment at a relocated position**: from a concrete state whose cut is the segment's first
 cut relocated by `ρ`, the fetch-execute loop runs the recorded path to the end cut relocated by `ρ`. -/
-theorem seg_run (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
-    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :
-    X86.isa.run rodata prog segLen S0 = segAt S0 {K} ∧ SliceCert.Ok (segAt S0 {K}) ∧
-    relocState ρ (cutOf ctl{K} sc{K}) = cutOf ctl{K} (segAt S0 {K}) := by
+theorem seg_run {hyps} :
+    X86.isa.run rodata prog segLen S0 = segAt{K} S0 ∧ SliceCert.Ok (segAt{K} S0) ∧
+    relocState ρ (cutOf ctl{K} sc{K}) = cutOf ctl{K} (segAt{K} S0) := by
   have s0 := (cert0).step ρ hρ hw S0 hc hs
-""" + ''.join(f"  have s{c} := (cert{c}).step ρ hρ hw (segAt S0 {c}) s{c - 1}.2.2.2 s{c - 1}.2.2.1\n" for c in range(1, K)) + f"""  refine ⟨?_, s{K - 1}.2.2.1, s{K - 1}.2.2.2⟩
-  unfold segLen
+{chain}  refine ⟨?_, s{K - 1}.2.2.1, s{K - 1}.2.2.2⟩
+  show X86.isa.run rodata prog (""" + ' + '.join(f'(cert{c}).idx.length' for c in range(K)) + f""") S0 = _
   repeat rw [Isa.run_add]
-  rw [s0.1""" + ''.join(f", s{c}.1" for c in range(1, K)) + f"""]
-  rfl
+  rw [""" + ', '.join(f"s{c}.1, show X86.isa.execTrace rodata (cert{c}).slice {at(c)} = segAt{c + 1} S0 from rfl" for c in range(K)) + f"""]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 /-- **The lanes along the segment at a relocated position**: the invariants hold at the relocated
 locations (base variables read through `ρ.var`). -/
-theorem seg_data (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
-    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0)
+theorem seg_data {hyps}
     (A : Fin {count} → Spec.State) (h0 : Inv0 (fun i => envOf S0 (ρ.var i)) A) :
-    Inv{K} (fun i => envOf (segAt S0 {K}) (ρ.var i)) (AAt A {K}) := by
+    Inv{K} (fun i => envOf (segAt{K} S0) (ρ.var i)) (AAt A {K}) := by
   have s0 := (cert0).step ρ hρ hw S0 hc hs
-""" + ''.join(f"  have s{c} := (cert{c}).step ρ hρ hw (segAt S0 {c}) s{c - 1}.2.2.2 s{c - 1}.2.2.1\n" for c in range(1, K)) + ''.join(f"""  have i{c + 1} : Inv{c + 1} (fun i => envOf (segAt S0 {c + 1}) (ρ.var i)) (AAt A {c + 1}) := by
+{chain}""" + ''.join(f"""  have i{c + 1} : Inv{c + 1} (fun i => envOf (segAt{c + 1} S0) (ρ.var i)) (AAt A {c + 1}) := by
     apply Inv{c + 1}_congr _ _ _ (step{c} _ _ {'h0' if c == 0 else f'i{c}'})
     intro v hv
-    show envOf (X86.isa.execTrace rodata slice{c} (segAt S0 {c})) (ρ.var v) = _
+    show envOf (X86.isa.execTrace rodata (cert{c}).slice {at(c)}) (ρ.var v) = _
     rw [s{c}.2.1]
-    exact (cert{c}).data ρ hρ (segAt S0 {c}) v (List.all_eq_true.mp noptr{c} v hv)
+    exact (cert{c}).data ρ hρ {at(c)} v (List.all_eq_true.mp noptr{c} v hv)
 """ for c in range(K)) + f"""  exact i{K}
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
 /-- **The memory the segment does not store to**: a cell whose base location no slice may store to
 (`{WRITE_OK}` false) keeps its value. -/
-theorem seg_frame (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
-    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0)
+theorem seg_frame {hyps}
     (r : Region) (q : Int) (hq : ({WRITE_OK}) (r, q - ρ.wshift r) = false) :
-    (segAt S0 {K}).mem r q = S0.mem r q := by
+    (segAt{K} S0).mem r q = S0.mem r q := by
   have s0 := (cert0).step ρ hρ hw S0 hc hs
-""" + ''.join(f"  have s{c} := (cert{c}).step ρ hρ hw (segAt S0 {c}) s{c - 1}.2.2.2 s{c - 1}.2.2.1\n" for c in range(1, K)) + ''.join(f"""  have m{c + 1} : (segAt S0 {c + 1}).mem r q = (segAt S0 {c}).mem r q := by
-    show (X86.isa.execTrace rodata slice{c} (segAt S0 {c})).mem r q = _
+{chain}""" + ''.join(f"""  have m{c + 1} : (segAt{c + 1} S0).mem r q = {at(c)}.mem r q := by
+    show (X86.isa.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _
     rw [s{c}.2.1]
-    apply (cert{c}).frame X86.isaFoot ρ (segAt S0 {c}) {'hc' if c == 0 else f's{c - 1}.2.2.2'} r q
+    apply (cert{c}).frame X86.isaFoot ρ {at(c)} {'hc' if c == 0 else f's{c - 1}.2.2.2'} r q
     intro hm
     have := List.all_eq_true.mp writes{c} _ hm
-    rw [hq] at this; exact absurd this (by decide)
+    exact absurd (hq.symm.trans this) (by decide)
 """ for c in range(K)) + f"""  rw [""" + ', '.join(f'm{c}' for c in range(K, 0, -1)) + f"""]
-  rfl
 
 """ + (seg_moves_text() if MOVES else '') + f"""end Keccaktree.Kernels.{ns}
 """)
@@ -812,6 +815,8 @@ theorem seg_frame (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (Bit
 
 def seg_moves_text():
     """seg_moves: at the end of the segment, d holds what s held at its start"""
+    def at(c):
+        return 'S0' if c == 0 else '(segAt%d S0)' % c
     L = []
     L.append('set_option maxRecDepth 100000 in')
     L.append('set_option maxHeartbeats 40000000 in')
@@ -819,13 +824,13 @@ def seg_moves_text():
     L.append('theorem seg_moves (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))')
     L.append('    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0)')
     L.append('    (d s : Nat) (hp : (d, s) ∈ (%s : List (Nat × Nat))) :' % (MOVES,))
-    L.append('    envOf (segAt S0 %d) (ρ.var d) = envOf S0 (ρ.var s) := by' % K)
+    L.append('    envOf (segAt%d S0) (ρ.var d) = envOf S0 (ρ.var s) := by' % K)
     L.append('  have s0 := (cert0).step ρ hρ hw S0 hc hs')
     for c in range(1, K):
-        L.append('  have s%d := (cert%d).step ρ hρ hw (segAt S0 %d) s%d.2.2.2 s%d.2.2.1' % (c, c, c, c - 1, c - 1))
+        L.append('  have s%d := (cert%d).step ρ hρ hw %s s%d.2.2.2 s%d.2.2.1' % (c, c, at(c), c - 1, c - 1))
     for c in range(K):
         src = 's' if c == 0 else 'd'
-        L.append('  have v%d : envOf (segAt S0 %d) (ρ.var d) = envOf (segAt S0 %d) (ρ.var %s) := by' % (c + 1, c + 1, c, src))
+        L.append('  have v%d : envOf (segAt%d S0) (ρ.var d) = envOf %s (ρ.var %s) := by' % (c + 1, c + 1, at(c), src))
         L.append('    have hm : readVar result%d d = .var %s := by' % (c, src))
         L.append('      have := List.all_eq_true.mp moves%d (d, %s) (by' % (c, src))
         L.append('        simp only [List.mem_cons, List.mem_nil_iff, or_false, Prod.mk.injEq] at hp ⊢')
@@ -834,8 +839,8 @@ def seg_moves_text():
         else:
             L.append('        rcases hp with %s <;> simp)' % (' | '.join('⟨rfl, rfl⟩' for _ in MOVES)))
         L.append('      simpa using this')
-        L.append('    show envOf (X86.isa.execTrace rodata slice%d (segAt S0 %d)) (ρ.var d) = _' % (c, c))
-        L.append('    rw [s%d.2.1, (cert%d).data ρ hρ (segAt S0 %d) d (by show (readVar result%d d).noPtr = true; rw [hm]; rfl)]' % (c, c, c, c))
+        L.append('    show envOf (X86.isa.execTrace rodata (cert%d).slice %s) (ρ.var d) = _' % (c, at(c)))
+        L.append('    rw [s%d.2.1, (cert%d).data ρ hρ %s d (by show (readVar result%d d).noPtr = true; rw [hm]; rfl)]' % (c, c, at(c), c))
         L.append('    show E.eval _ (readVar result%d d) = _' % c)
         L.append('    rw [hm]; rfl')
     L.append('  rw [%s]' % ', '.join('v%d' % c for c in range(K, 0, -1)))
@@ -849,6 +854,7 @@ END_CTL = [int(x) for x in os.environ.get('END_CTL', '').split(',') if x]
 FORBID_CTL = [int(x) for x in os.environ.get('FORBID_CTL', '').split(',') if x]
 WRITE_OK = os.environ.get('WRITE_OK', 'fun _ => true')   # Lean: (Region × Int) → Bool, the cells a slice may store to
 BOUND = os.environ.get('BOUND', '2 ^ 54')
+LOOP = bool(os.environ.get('LOOP'))      # segment mode: a loop body (end control words = start control words)
 # words the segment moves (in its first slice) or keeps: 'd:s,d:s' (d holds what s held at the start)
 MOVES = [tuple(int(y) for y in x.split(':')) for x in os.environ.get('MOVES', '').split(',') if x]                   # the address bound of the relocation certificates
 
