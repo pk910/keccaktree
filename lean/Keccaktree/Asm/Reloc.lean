@@ -1670,4 +1670,164 @@ def X86.isaReloc : X86.isa.Relocatable where
   decodes := X86.decodes
   exec_reloc := fun ρ hρ rodata i st hne hok => X86.exec_reloc ρ hρ rodata i st hne hok
 
+
+/-! ## Evaluation, bounds and cuts -/
+
+/-- Evaluate with a given interpretation of the pointer leaves. -/
+def E.evalP (pt : Addr → BitVec 64) (env : Nat → BitVec 64) : E → BitVec 64
+  | .var i => env i
+  | .const v => v
+  | .ptr a => pt a
+  | .xor a b => a.evalP pt env ^^^ b.evalP pt env
+  | .and a b => a.evalP pt env &&& b.evalP pt env
+  | .or a b => a.evalP pt env ||| b.evalP pt env
+  | .not a => ~~~ a.evalP pt env
+  | .shl a n => a.evalP pt env <<< n
+  | .shr a n => a.evalP pt env >>> n
+  | .rol a n => (a.evalP pt env).rotateLeft n
+  | .add a b => a.evalP pt env + b.evalP pt env
+  | .ternlog imm a b c => ternlogW imm (a.evalP pt env) (b.evalP pt env) (c.evalP pt env)
+
+theorem E.eval_eq_evalP (env : Nat → BitVec 64) (e : E) : E.eval env e = E.evalP gprWord env e := by
+  induction e <;> simp_all [E.eval, E.evalP]
+
+/-- Evaluating a relocated expression: shifted memory variables, shifted pointers. -/
+theorem E.eval_reloc (ρ : Reloc) (env : Nat → BitVec 64) (e : E) :
+    E.eval env (e.reloc ρ) = E.evalP (fun a => gprWord (ρ.addr a)) (fun i => env (ρ.var i)) e := by
+  induction e <;> simp_all [E.eval, E.evalP, E.reloc]
+
+/-- An expression without pointer leaves (the data lanes: node words, digests). -/
+def E.noPtr : E → Bool
+  | .var _ => true
+  | .const _ => true
+  | .ptr _ => false
+  | .xor a b | .and a b | .or a b | .add a b => a.noPtr && b.noPtr
+  | .not a | .shl a _ | .shr a _ | .rol a _ => a.noPtr
+  | .ternlog _ a b c => a.noPtr && b.noPtr && c.noPtr
+
+theorem E.evalP_noPtr (pt pt' : Addr → BitVec 64) (env : Nat → BitVec 64) (e : E) (h : e.noPtr = true) :
+    E.evalP pt env e = E.evalP pt' env e := by
+  induction e <;> simp_all [E.evalP, E.noPtr]
+
+/-- **The data lanes of a relocated run** are the original lanes read at the shifted variables. -/
+theorem E.eval_reloc_noPtr (ρ : Reloc) (env : Nat → BitVec 64) (e : E) (h : e.noPtr = true) :
+    E.eval env (e.reloc ρ) = E.eval (fun i => env (ρ.var i)) e := by
+  rw [E.eval_reloc, E.eval_eq_evalP, E.evalP_noPtr _ _ _ e h]
+
+theorem E.addrs_wf (e : E) (a : Addr) (h : a ∈ e.addrs) : a.wf := by
+  induction e generalizing a with
+  | xor x y ihx ihy | and x y ihx ihy | or x y ihx ihy | add x y ihx ihy =>
+    simp only [E.addrs, List.mem_append, Option.mem_toList] at h
+    rcases h with h | h | h
+    · exact E.addrP_wf _ _ h
+    · exact ihx a h
+    · exact ihy a h
+  | not x ihx | shl x _ ihx | shr x _ ihx | rol x _ ihx =>
+    simp only [E.addrs, List.mem_append, Option.mem_toList] at h
+    rcases h with h | h
+    · exact E.addrP_wf _ _ h
+    · exact ihx a h
+  | ternlog _ x y z ihx ihy ihz =>
+    simp only [E.addrs, List.mem_append, Option.mem_toList] at h
+    rcases h with h | (h | h) | h
+    · exact E.addrP_wf _ _ h
+    · exact ihx a h
+    · exact ihy a h
+    · exact ihz a h
+  | _ =>
+    simp only [E.addrs, List.mem_append, Option.mem_toList, List.not_mem_nil, or_false] at h
+    exact E.addrP_wf _ _ h
+
+/-- All decoded addresses of an expression below a bound (decidable). -/
+def E.addrsBelow (B : Int) (e : E) : Bool := e.addrs.all fun a => decide (a.off < B)
+
+/-- A relocation that keeps offsets below `2^55` for everything below `B`. -/
+def Reloc.within (ρ : Reloc) (B : Int) : Prop := ∀ r, ρ.δ r + B ≤ 2 ^ 55
+
+theorem E.relocOk_of_below (ρ : Reloc) (hρ : ρ.ok) (B : Int) (hw : ρ.within B) (e : E)
+    (h : e.addrsBelow B = true) : E.relocOk ρ e := by
+  intro a ha
+  have hwf := E.addrs_wf e a ha
+  have hb : a.off < B := by
+    simp only [E.addrsBelow, List.all_eq_true, decide_eq_true_eq] at h; exact h a ha
+  simp only [Addr.wf, Reloc.addr] at hwf ⊢
+  have := (hρ.2.2.2 a.region).1; have := hw a.region
+  omega
+
+namespace X86
+
+/-- **Relocating a cut**: the relocated cut of `S0` is the cut of `Sk`, if the control
+values correspond (pointers moved by `ρ`, counts equal), no control cell lies in a moved
+region, and the control parts agree. -/
+theorem relocState_cutOf (ρ : Reloc) (ctl : List Nat) (S0 Sk : State (BitVec 64))
+    (hctl : ∀ i ∈ ctl, cutVar ctl Sk i = E.reloc ρ (cutVar ctl S0 i))
+    (hmem : ∀ i ∈ ctl, 288 ≤ i → ρ.wshift (memVarRegion i) = 0)
+    (hc : Sk.g = S0.g ∧ Sk.k = S0.k ∧ Sk.zf = S0.zf ∧ Sk.cf = S0.cf ∧ Sk.nf = S0.nf ∧ Sk.vf = S0.vf ∧
+      Sk.vl = S0.vl ∧ Sk.pc = S0.pc ∧ Sk.depth = S0.depth) :
+    relocState ρ (cutOf ctl S0) = cutOf ctl Sk := by
+  obtain ⟨hg, hk, hz, hcf, hn, hv, hvl, hpc, hd⟩ := hc
+  have hlow : ∀ i, i < 288 → E.reloc ρ (cutVar ctl S0 i) = cutVar ctl Sk i := by
+    intro i hi
+    by_cases h : ctl.contains i
+    · exact (hctl i (List.contains_iff_mem.mp h)).symm
+    · simp only [cutVar, h, Bool.false_eq_true, ↓reduceIte, E.reloc, Reloc.var_lt ρ i hi]
+  have hv' : (relocState ρ (cutOf ctl S0)).v = (cutOf ctl Sk).v := by
+    apply Vector.ext; intro r hr; apply Vector.ext; intro l hl
+    simp only [relocState, cutOf, Vector.getElem_map, Vector.getElem_ofFn]
+    exact hlow _ (by simp only [regVar]; omega)
+  have hgd' : (relocState ρ (cutOf ctl S0)).gd = (cutOf ctl Sk).gd := by
+    apply Vector.ext; intro n hn
+    simp only [relocState, cutOf, Vector.getElem_map, Vector.getElem_ofFn]
+    exact hlow _ (by simp only [gdVar]; omega)
+  have hmem' : (relocState ρ (cutOf ctl S0)).mem = (cutOf ctl Sk).mem := by
+    funext r q
+    simp only [relocState, cutOf]
+    by_cases h : ctl.contains (memVar r (q - ρ.wshift r))
+    · have h0 := hmem _ (List.contains_iff_mem.mp h) (memVar_ge r _)
+      rw [memVarRegion_memVar] at h0
+      rw [h0, Int.sub_zero] at h ⊢
+      exact (hctl _ (List.contains_iff_mem.mp h)).symm
+    · have h' : ¬ ctl.contains (memVar r q) := by
+        intro hq
+        have h0 := hmem _ (List.contains_iff_mem.mp hq) (memVar_ge r _)
+        rw [memVarRegion_memVar] at h0
+        rw [h0, Int.sub_zero] at h; exact h hq
+      simp only [cutVar, h, h', Bool.false_eq_true, ↓reduceIte, E.reloc, Reloc.var_memVar, Int.sub_add_cancel]
+  cases hR : relocState ρ (cutOf ctl S0)
+  cases hC : cutOf ctl Sk
+  rw [hR, hC] at hv' hgd' hmem'
+  simp only at hv' hgd' hmem'
+  have e1 := congrArg State.g hR; have e2 := congrArg State.k hR; have e3 := congrArg State.zf hR
+  have e4 := congrArg State.cf hR; have e5 := congrArg State.nf hR; have e6 := congrArg State.vf hR
+  have e7 := congrArg State.vl hR; have e8 := congrArg State.pc hR; have e9 := congrArg State.depth hR
+  have e10 := congrArg State.err hR; have e11 := congrArg State.halted hR; have e12 := congrArg State.tail hR
+  have f1 := congrArg State.g hC; have f2 := congrArg State.k hC; have f3 := congrArg State.zf hC
+  have f4 := congrArg State.cf hC; have f5 := congrArg State.nf hC; have f6 := congrArg State.vf hC
+  have f7 := congrArg State.vl hC; have f8 := congrArg State.pc hC; have f9 := congrArg State.depth hC
+  have f10 := congrArg State.err hC; have f11 := congrArg State.halted hC; have f12 := congrArg State.tail hC
+  simp only [relocState, cutOf] at e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 e11 e12 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12
+  subst hv' hgd' hmem'
+  simp only [State.mk.injEq, true_and]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp only [← e1, ← e2, ← e3, ← e4, ← e5, ← e6, ← e7, ← e8, ← e9, ← e10, ← e11, ← e12,
+      ← f1, ← f2, ← f3, ← f4, ← f5, ← f6, ← f7, ← f8, ← f9, ← f10, ← f11, ← f12, hg, hk, hz, hcf, hn, hv, hvl, hpc, hd]
+
+end X86
+
+/-- **The concrete run of a relocated batch** is the evaluation of the relocated symbolic
+run of the batch at offset 0: with `relocState_cutOf` this proves every iteration of a
+batch loop from the one symbolic run of its first iteration. -/
+theorem Isa.Relocatable.execTrace_reloc_concrete {isa : Isa} (R : isa.Relocatable) (ρ : Reloc) (hρ : ρ.ok)
+    (rodata : Array (BitVec 64)) (slice : List isa.Instr) (ctl : List Nat) (S0 Sk : State (BitVec 64))
+    (hcut : X86.relocState ρ (X86.cutOf ctl S0) = X86.cutOf ctl Sk)
+    (hs : Sk.err = false ∧ Sk.halted = false ∧ Sk.tail = none)
+    (hne : (isa.execTrace rodata slice (X86.cutOf ctl S0)).err = false)
+    (hok : ∀ e ∈ R.traceDecodes rodata slice (X86.cutOf ctl S0), E.relocOk ρ e) :
+    isa.execTrace rodata slice Sk =
+      X86.mapState (E.eval (X86.envOf Sk)) (X86.relocState ρ (isa.execTrace rodata slice (X86.cutOf ctl S0))) := by
+  have hr := R.execTrace_reloc ρ hρ rodata slice _ hne hok
+  rw [hcut] at hr
+  have hne' : (isa.execTrace rodata slice (X86.cutOf ctl Sk)).err = false := by rw [hr]; exact hne
+  rw [X86.execTrace_cut isa rodata slice ctl _ Sk rfl hs hne', hr]
+
 end Keccaktree.Asm
