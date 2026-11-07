@@ -38,19 +38,25 @@ const (
 	kernelAVX512X8
 	kernelAVX2X6
 	kernelAVX512X9
+	kernelAVX512X8D
+	kernelAVX512X9D
+	kernelAVX512VLX4D
 )
 
 var kernelNames = [...]string{
-	kernelAVX2X8:     "avx2_x8",
-	kernelAVX2X4:     "avx2_x4",
-	kernelAVX2X5:     "avx2_x5",
-	kernelAVX2X9:     "avx2_x9",
-	kernelAVX2X10:    "avx2_x10",
-	kernelX86X1:      "x86_x1",
-	kernelAVX512VLX4: "avx512vl_x4",
-	kernelAVX512X8:   "avx512_x8",
-	kernelAVX2X6:     "avx2_x6",
-	kernelAVX512X9:   "avx512_x9",
+	kernelAVX2X8:      "avx2_x8",
+	kernelAVX2X4:      "avx2_x4",
+	kernelAVX2X5:      "avx2_x5",
+	kernelAVX2X9:      "avx2_x9",
+	kernelAVX2X10:     "avx2_x10",
+	kernelX86X1:       "x86_x1",
+	kernelAVX512VLX4:  "avx512vl_x4",
+	kernelAVX512X8:    "avx512_x8",
+	kernelAVX2X6:      "avx2_x6",
+	kernelAVX512X9:    "avx512_x9",
+	kernelAVX512X8D:   "avx512_x8d",
+	kernelAVX512X9D:   "avx512_x9d",
+	kernelAVX512VLX4D: "avx512vl_x4d",
 }
 
 // kernel is the one KeccaktreeHash calls, read by the wrapper.

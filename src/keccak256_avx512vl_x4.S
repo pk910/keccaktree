@@ -5,8 +5,10 @@
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 4 at a time: node j
  * of a batch lives in qword lane j of every ymm register. AVX-512F + VL
  * (vprolq, vpternlogq and ymm16..31 on 256-bit vectors). Same rounds as the
- * zmm kernel (keccak256_avx512.inc). Used on Intel client cores, whose
- * 512-bit ALU is a single port, and for the last 2..4 nodes of the zmm one.
+ * zmm kernel (keccak256_avx512.inc; keccak256_avx512vl_x4d.S builds this
+ * file with the D-form rounds of keccak256_avx512d.inc). Used on Intel
+ * client cores, whose 512-bit ALU is a single port, and for the last 2..4
+ * nodes of the zmm one.
  * A single node (a whole call or the last one) goes to
  * keccaktree_keccak256_x86_x1 (BMI1 + BMI2; keccaktree_detect checks).
  */
@@ -31,22 +33,28 @@
 #define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar */
 
 #include "keccak256_x86_frame.inc"
+#ifdef KT_DFORM
+#include "keccak256_avx512d.inc"
+#else
 #include "keccak256_avx512.inc"
+#endif
 
-/* digest words o0..o3 (4 nodes each) -> 4 x 32 bytes at [BOUT] */
-.macro OUTPUT o0, o1, o2, o3
-	vpunpcklqdq	ymm25, VR\o0, VR\o1		/* n0, n2: w0 w1 */
-	vpunpckhqdq	ymm26, VR\o0, VR\o1		/* n1, n3: w0 w1 */
-	vpunpcklqdq	ymm27, VR\o2, VR\o3		/* n0, n2: w2 w3 */
-	vpunpckhqdq	ymm28, VR\o2, VR\o3		/* n1, n3: w2 w3 */
-	vshufi64x2	ymm0, ymm25, ymm27, 0x0	/* node 0 */
-	vshufi64x2	ymm1, ymm26, ymm28, 0x0	/* node 1 */
-	vshufi64x2	ymm2, ymm25, ymm27, 0x3	/* node 2 */
-	vshufi64x2	ymm3, ymm26, ymm28, 0x3	/* node 3 */
-	vmovdqu64	ymmword ptr [BOUT + 0*32], ymm0
-	vmovdqu64	ymmword ptr [BOUT + 1*32], ymm1
-	vmovdqu64	ymmword ptr [BOUT + 2*32], ymm2
-	vmovdqu64	ymmword ptr [BOUT + 3*32], ymm3
+/* digest words o0..o3 (4 nodes each) -> 4 x 32 bytes at [BOUT], with the
+ * scratch registers s0..s7 (any eight others; the D-form rounds pass eight
+ * dead ones, see the zmm kernel) */
+.macro OUTPUT o0, o1, o2, o3, s0=25, s1=26, s2=27, s3=28, s4=0, s5=1, s6=2, s7=3
+	vpunpcklqdq	VR\s0, VR\o0, VR\o1		/* n0, n2: w0 w1 */
+	vpunpckhqdq	VR\s1, VR\o0, VR\o1		/* n1, n3: w0 w1 */
+	vpunpcklqdq	VR\s2, VR\o2, VR\o3		/* n0, n2: w2 w3 */
+	vpunpckhqdq	VR\s3, VR\o2, VR\o3		/* n1, n3: w2 w3 */
+	vshufi64x2	VR\s4, VR\s0, VR\s2, 0x0	/* node 0 */
+	vshufi64x2	VR\s5, VR\s1, VR\s3, 0x0	/* node 1 */
+	vshufi64x2	VR\s6, VR\s0, VR\s2, 0x3	/* node 2 */
+	vshufi64x2	VR\s7, VR\s1, VR\s3, 0x3	/* node 3 */
+	vmovdqu64	ymmword ptr [BOUT + 0*32], VR\s4
+	vmovdqu64	ymmword ptr [BOUT + 1*32], VR\s5
+	vmovdqu64	ymmword ptr [BOUT + 2*32], VR\s6
+	vmovdqu64	ymmword ptr [BOUT + 3*32], VR\s7
 .endm
 
 .text
@@ -82,14 +90,19 @@
 	vshufi64x2	ymm6, ymm24, ymm26, 0x3
 	vshufi64x2	ymm5, ymm25, ymm27, 0x0
 	vshufi64x2	ymm7, ymm25, ymm27, 0x3
-#ifdef KT_AVX512_UNROLLED
+#if defined(KT_DFORM)
+	KECCAK_F_D_LOOP
+#elif defined(KT_AVX512_UNROLLED)
 	KECCAK_F
 #else
 	KECCAK_F_LOOP
 #endif
 	ret
 
-	FUNCTION keccaktree_keccak256_avx512vl_x4
+#ifndef KERNEL_NAME
+#define KERNEL_NAME	keccaktree_keccak256_avx512vl_x4
+#endif
+	FUNCTION KERNEL_NAME
 
 	KECCAK_RODATA
 .LROT8:		.byte 7, 0, 1, 2, 3, 4, 5, 6, 15, 8, 9, 10, 11, 12, 13, 14

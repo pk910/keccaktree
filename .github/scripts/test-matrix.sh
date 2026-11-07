@@ -7,8 +7,9 @@
 # models, so every runtime-detected path (and the pure-Go fallback) runs on one
 # host. KECCAKTREE_EXPECT_PATH makes the binary assert which path(s) it may select.
 #
-# NOTE: qemu-user (TCG) cannot emulate AVX-512; that tier (avx512_x9,
-# avx512_x8, avx512vl_x4) only runs natively, in TestForcedPaths.
+# NOTE: qemu-user (TCG) cannot emulate AVX-512; that tier (avx512_x9d,
+# avx512_x8d, avx512vl_x4d, avx512_x9, avx512_x8, avx512vl_x4) only runs
+# natively, in TestForcedPaths.
 # RISC-V selection reads riscv_hwprobe, which qemu-user answers from -cpu.
 
 set -u
