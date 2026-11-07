@@ -263,18 +263,18 @@ theorem exec_vlmax {α : Type} [LaneOps α] (v1 v2 : Nat) (rodata : Array (BitVe
     (h : i.usesVlmax = false) : exec v1 rodata i s = exec v2 rodata i s := by
   cases i <;> simp [Instr.usesVlmax] at h <;> rfl
 
-theorem getD_usesVlmax (prog : Array Instr) (h : prog.all (fun i => !i.usesVlmax) = true) (k : Nat) :
+theorem getD_usesVlmax (prog : Array Instr) (h : prog.toList.all (fun i => !i.usesVlmax) = true) (k : Nat) :
     (prog.getD k .nop).usesVlmax = false := by
   unfold Array.getD
   split
   · rename_i hk
-    have := Array.all_eq_true.mp h k hk
+    have := List.all_eq_true.mp h (prog[k]) (by simp)
     simpa using this
   · rfl
 
 /-- **A program without `vsetvli` runs the same for every `vlmax`.** -/
 theorem run_vlmax {α : Type} [LaneOps α] (v1 v2 : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr)
-    (h : prog.all (fun i => !i.usesVlmax) = true) :
+    (h : prog.toList.all (fun i => !i.usesVlmax) = true) :
     ∀ (n : Nat) (s : State α), (isa v1).run rodata prog n s = (isa v2).run rodata prog n s := by
   intro n
   induction n with

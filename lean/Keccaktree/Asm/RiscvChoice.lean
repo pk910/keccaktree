@@ -118,7 +118,7 @@ theorem run_min (V : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr) :
 
 /-- A program without `vsetvli` runs the same under every choice. -/
 theorem run_ch_scalar (V : Nat) (ch : Nat → Nat) (rodata : Array (BitVec 64)) (prog : Array Instr)
-    (h : prog.all (fun i => !i.usesVlmax) = true) :
+    (h : prog.toList.all (fun i => !i.usesVlmax) = true) :
     ∀ (n : Nat) (s : State α), (isaCh V ch).run rodata prog n s = (isa V).run rodata prog n s := by
   intro n
   induction n with

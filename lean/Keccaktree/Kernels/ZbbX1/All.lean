@@ -180,7 +180,7 @@ theorem B4_env (Sb : State (BitVec 64)) (n : Int) (i : Nat) (h5 : i ≠ 261) (hc
     envOf (B4 Sb n) i = envOf Sb i := by
   rw [B4, envOf_withPc, B3, envOf_next]
   have hm : (B2 Sb n).mem = Sb.mem := by simp only [B2, B1, next_mem, setR_mem']
-  rw [← hm, envOf_memStore_other _ rStack 131054 _ i hc, B2, envOf_next, envOf_setR_other _ 5 (by decide) _ i h5, B1,
+  rw [envOf_memStore_other (B2 Sb n) rStack 131054 _ i hc, B2, envOf_next, envOf_setR_other _ 5 (by decide) _ i h5, B1,
     envOf_next, envOf_setR_other _ 5 (by decide) _ i h5]
 
 theorem B4_ctrl (Sb : State (BitVec 64)) (n : Int) :
@@ -393,8 +393,8 @@ theorem epilogue (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 6
   have fx := cut_fields _ _ _ _ hcutx
   have hpc : Sx.pc = 3498 := fx.2.2.2.2.2.2.2.1.trans (by decide +kernel)
   have hr : RV.run rodata prog 15 U = { Sx with halted := true } := by
-    rw [show 15 = GenSX.segLen + 1 by rw [exit_len], Isa.run_add, hrun, run_one 2 rodata prog Sx hokx.2.1, hpc, prog_5429,
-      exec_ret_eq 2 rodata Sx hokx.2.1]
+    rw [show 15 = GenSX.segLen + 1 by rw [exit_len], Isa.run_add, hrun, run_one 2 rodata prog Sx hokx.2.1,
+      show prog.getD Sx.pc .nop = .ret by rw [hpc]; exact prog_5429, exec_ret_eq 2 rodata Sx hokx.2.1]
   have hmem : ∀ r q, Sx.mem r q = U.mem r q := fun r q => fr r q rfl
   rw [hr]
   refine ⟨rfl, hokx.1, hokx.2.2, fun q hq => (hmem _ _).trans (hpre q hq), fun n hn => ?_⟩
@@ -427,7 +427,7 @@ theorem zbb_x1_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 
     rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
   -- bnez a2, frame
   have hbr : RV.run rodata prog 1 S = { S with pc := if brHolds .ne (c : Int) 0 then 3 else S.pc + 1 } := by
-    rw [run_one 2 rodata prog S hh, hpc0, prog_1,
+    rw [run_one 2 rodata prog S hh, show prog.getD S.pc .nop = .br .ne 12 0 3 by rw [hpc0]; exact prog_1,
       exec_br_num 2 rodata S .ne 12 0 3 c 0 hh ((getR_pos S 12 (by decide)).trans hE.a2) (getR_zero S) hcwf (by decide)]
   rcases Nat.eq_zero_or_pos c with hc | hc
   · -- no node: `j` to the `ret`
@@ -438,7 +438,7 @@ theorem zbb_x1_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 
     have h2 : RV.run rodata prog 1 T1 = { T1 with pc := 3498 } := by
       rw [run_one 2 rodata prog T1 hT1h, hT1pc, prog_2, exec_j_eq 2 rodata T1 3498 hT1h]
     have h3 : RV.run rodata prog 1 { T1 with pc := 3498 } = { T1 with pc := 3498, halted := true } := by
-      rw [run_one 2 rodata prog _ hT1h]
+      rw [run_one 2 rodata prog { T1 with pc := 3498 } hT1h]
       exact exec_ret_eq 2 rodata { T1 with pc := 3498 } hT1h
     have hrun : RV.run rodata prog 3 S = { T1 with pc := 3498, halted := true } := by
       rw [show 3 = 1 + 1 + 1 from rfl, Isa.run_add, Isa.run_add, hbr, h2, h3]
@@ -507,14 +507,16 @@ theorem zbb_x1_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 
     have hl := loop off c input S hb (c - 1) 0 T2 (by omega) hH
     have he := epilogue off c input S (off + c - 1) (by omega) _ hl
     have hrun1' : RV.run rodata prog 17 T1 = T2 := by rw [← entry_len]; exact hrun1
-    rw [show 32 + 3443 * c = 1 + 17 + (3443 * (c - 1) + 3442) + 15 by omega, Isa.run_add, Isa.run_add, Isa.run_add,
-      hbr, hrun1']
+    rw [show 32 + 3443 * c = 1 + 17 + (3443 * (c - 1) + 3442) + 15 by omega,
+      Isa.run_add _ _ _ (1 + 17 + (3443 * (c - 1) + 3442)) 15, Isa.run_add _ _ _ (1 + 17) (3443 * (c - 1) + 3442),
+      Isa.run_add _ _ _ 1 17, hbr, hrun1']
     exact he
 
 /-! ## In the library -/
 
+set_option maxRecDepth 100000 in
 /-- The kernel has no `vsetvli`: its runs are the same for every vector length. -/
-theorem scalar : prog.all (fun i => !i.usesVlmax) = true := by decide +kernel
+theorem scalar : prog.toList.all (fun i => !i.usesVlmax) = true := by decide +kernel
 
 /-- What the library needs (`LibRv.NormThmRv`), for every `vlmax`: from the library's entry state
 (normalised control part, `pc` at the entry), the run halts with every digest and no tail call. -/
