@@ -41,6 +41,10 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
   `next_getGD`, `next_pc`, `getGD_withMem`, `envOf_next`, `envOf_withPc`, `setR_getGD_same/other` and
   `subst` instead of `rw [← hX]` (whose trailing `rfl` attempt is the same trap).  Found by bisecting with
   `sorry` cut-offs (`lake env lean` on scratch copies under a 3–4 GB scope: a blow-up shows as rc 143).
+* `decide +kernel` on `prog.all …` (Array, 5430 entries) blew past 9 GB; the same check on `prog.toList.all …`
+  takes 0.6 s.  A type-mismatched `exact` between two `run` towers also blows up (the elaborator unfolds
+  `run`): split the step count with explicit `Isa.run_add _ _ _ n m` instances.
+* rv64_x1 body slices 20–22 need up to 20.6 GB each (`/usr/bin/time -v`); built one at a time in a 26 GB scope.
 * `simp only [(lemma _ _ _).1, …]` silently does nothing inside `try`/`first` when the placeholders can't be
   elaborated: use named projection lemmas (`setR_zf`, `next_zf`, …).
 * Memory: rv64_x1 body slices peak at 8–12 GB (the late rounds); RVV slices ≈ 2 GB (1 node, ~50 s).
@@ -78,6 +82,7 @@ of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (
 
 ## Status (18:20 UTC)
 * DONE (axioms propext, Classical.choice, Quot.sound + bv_decide certificates, no sorry):
+  - rv64_x1 (`Rv64X1.All.rv64_x1_all`, `kernel vlmax`, `kernel_ch vlmax ch`) — f17c881
   - rvv at VLEN 128 (`RvvV2.All.all`, `all_ch`, `kernel`, `kernel_ch`) — a9b4d97 / 4d16931
   - rvv_zvkb at VLEN 128 (`RvvZvkbV2.All`) — 0d21c16
 * vl-choice layer (M11) DONE: `Asm/RiscvChoice.lean` (`isaCh`, `LegalVl`, `legal_min`, `run_min`, `run_ch_scalar`,
