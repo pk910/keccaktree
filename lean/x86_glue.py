@@ -108,6 +108,15 @@ class FrChain:
             self.nxt(f'{p}.bt {a[0]} {a[1]} {w.lean} {v.lean} {hi} {self.mem()} {self.mem()} (by fr_lo) (by fr_hi)')
             self.cf = bool((w.rep % 2 ** 64 >> (v.rep % 64)) & 1)
             self.pc = pc + 1
+        elif op == 'cmprm':
+            v = V[a[0]]
+            off = int(re.search(r'\d+', a[1]).group(0))
+            wv = self.rodata[off // 8]
+            self.nxt(f'{p}.cmprm {a[0]} {off} {v.lean} ({wv}) {hi} (by decide) (by decide +kernel) (by decide) {self.mem()} (by fr_lo) (by fr_hi)')
+            self.zf_lean = f'{v.lean} = {wv}'
+            self.zf, self.cf = v.rep == wv, v.rep < wv
+            self.flags_known = v.py is not None
+            self.pc = pc + 1
         elif op in ('nop', 'vzeroupper'):
             self.nxt(f'{p}.nop (Or.{"inl" if op == "nop" else "inr"} {hi})')
             self.pc = pc + 1
@@ -286,11 +295,9 @@ def targets : List String := {json.dumps(targets)}
 
 macro "fr_lo" : tactic => `(tactic| first | decide | omega)
 macro "fr_hi" : tactic => `(tactic| first | decide | (rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; omega))
-macro "fr_eq" : tactic => `(tactic| first | decide +kernel | (rw [decide_eq_true (by omega)]; decide +kernel)
-  | (rw [decide_eq_false (by omega)]; decide +kernel))
+macro "fr_eq" : tactic => `(tactic| first | decide +kernel | (rw [decide_eq_true (by omega)]; decide +kernel) | (rw [decide_eq_false (by omega)]; decide +kernel))
 macro "wok_in" : tactic => `(tactic| (intro q; rfl))
-macro "wok_out" : tactic => `(tactic| (intro q hq; first | rfl | (simp only [Bool.or_eq_false_iff, Bool.and_eq_false_iff,
-  decide_eq_false_iff_not]; omega) | (simp; omega)))
+macro "wok_out" : tactic => `(tactic| (intro q hq; first | rfl | (simp only [Bool.or_eq_false_iff, Bool.and_eq_false_iff, decide_eq_false_iff_not]; omega) | (simp; omega)))
 
 abbrev DoneK := Done rodata prog targets
 """)
@@ -383,7 +390,9 @@ theorem exit_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVe
   rw [Isa.run_halted _ _ _ _ _ rfl]
   refine ⟨rfl, hok.1, fun q hq => hI'.pre q hq, Or.inr ⟨"{sym}", done + {bK - b0}, rfl, by decide, by omega,
     fun n hn => hdig n (by omega), ?_⟩⟩
-  · have he := handover m {G}.facts.ctlK {G}.facts.scK (X86.isa.run rodata prog {G}.facts.len U) _ input hcutK {r} {bK}
+  · have he := handover m {G}.facts.ctlK {G}.facts.scK (X86.isa.run rodata prog {G}.facts.len U)
+      {{ {{ X86.isa.run rodata prog {G}.facts.len U with halted := true, tail := some "{sym}" }} with halted := false, tail := none }}
+      input hcutK {r} {bK}
       (by decide +kernel) ⟨rfl, rfl, rfl, rfl, hok.1, rfl, rfl⟩ hI'.inp
     rw [show m + {bK} = off + (done + {bK - b0}) by omega, show {r} = c - (done + {bK - b0}) by omega] at he
     exact ⟨he, by omega⟩
