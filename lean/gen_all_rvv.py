@@ -11,6 +11,8 @@ kernel, ns, pns, V, s, L = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4
 root = os.path.dirname(os.path.abspath(__file__))
 kdir = os.path.join(root, 'Keccaktree', 'Kernels', ns)
 P = L + 6  # steps per batch
+base = kernel.rsplit('_v', 1)[0]            # rvv / rvv_zvkb (the symbol; one program for every VLEN)
+entsel = {'rvv': '2.2.1', 'rvv_zvkb': '2.2.2'}[base]
 
 SQ = ('specQuantity, specQuantity0, specQuantityCol, Nat.reduceLT, ↓reduceIte, Nat.reduceSub, Nat.reduceDiv, '
       'Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, rotl0')
@@ -263,6 +265,7 @@ def main():
     parts = []
     imports = ''.join(f'import Keccaktree.Kernels.{ns}.GenB{w}.Seg\n' for w in range(1, V + 1))
     parts.append(f'''{imports}import Keccaktree.Kernels.RvvCommon
+import Keccaktree.Kernels.RvVl
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -372,35 +375,20 @@ theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (h
 
 /-! ## In the library -/
 
-/-- The RISC-V calling convention of the library at node offset `off` (within the address bound). -/
-def EntryRVV (name : String) (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop :=
-  Entry off count input {{ S with pc := 1 }} ∧ 64 * (off + count) ≤ 2 ^ 54
+/-- What the library needs (`LibRv.NormThmRv`): from the library's entry state (normalised control
+part, `pc` at the entry), the run halts with every digest and no tail call. -/
+theorem norm_thm : LibRv.NormThmRv {V} rodata prog 1 (fun _ c => 8 + {P} * ((c + {V - 1}) / {V})) [] := by
+  intro off count input S hE hb hpc
+  obtain ⟨⟨g, k, z, cf, n, v, _, d⟩, hok, ha2, _, ha1, ha0, hin⟩ := hE
+  have hE' : Entry off count input S := ⟨⟨g, k, z, cf, n, v, hpc, d⟩, hok, ha2, ha1, ha0, hin⟩
+  obtain ⟨hh, he, ht, hp, hd⟩ := all off count input S hE' hb
+  exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
 
-/-- The kernel as a kernel of the library (rank 0: it hands nothing over). -/
-def kernel : Library.KernelThm RV EntryRVV Digest where
-  name := "{kernel}"
-  rank := 0
-  rodata := rodata
-  prog := prog
-  entry := 1
-  steps := fun _ c => 8 + {P} * ((c + {V - 1}) / {V})
-  thm := fun off count input S h => by
-    obtain ⟨hh, he, ht, hp, hd⟩ := all off count input _ h.1 h.2
-    exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
-
-theorem ranks_ok : Library.RanksOk [kernel] := by
-  intro K hK off count input S hS next done htail _
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at hK
-  subst hK
-  have ht := (all off count input _ hS.1 hS.2).2.2.1
-  have h := ht.symm.trans htail
-  cases h
-
-/-- **The library theorem on the table `[{kernel}]`.** -/
-theorem lib (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
-    (hS : EntryRVV "{kernel}" off count input S) : Library.LibOk [kernel] kernel off count input S :=
-  Library.lib_correct [kernel] 0 (by simp [kernel]) ranks_ok digest_local _ kernel (by simp) off count input S
-    (Nat.le_refl _) hS
+/-- The kernel as a kernel of the RISC-V library at `vlmax = {V}` (VLEN = {64 * V}; rank 0: it hands
+nothing over; any `vl` at entry). -/
+def kernel : Library.KernelThm RV LibTable.EntryRv Digest :=
+  LibRv.mkKernelRv {V} (LibTable.sym "{base}") 0 [] rodata prog 1 (fun _ c => 8 + {P} * ((c + {V - 1}) / {V}))
+    (Riscv.vlAnn RvVl.{base}) RvVl.{base}_ok RvVl.entries.{entsel} norm_thm
 
 end Keccaktree.Kernels.{ns}.All
 ''')

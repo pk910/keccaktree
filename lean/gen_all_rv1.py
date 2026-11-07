@@ -14,4 +14,6 @@ T = {5410: be, 5411: be + 1, 5412: be + 2, 5413: be + 3, 5414: be + 4, 5415: be 
      5369: L, 5374: L + 5, 5373: L + 4}
 out = re.sub(r'\b(5410|5411|5412|5413|5414|5415|5429|5369|5374|5373)\b', lambda m: str(T[int(m.group(1))]), src)
 out = out.replace('Rv64X1', ns).replace('rv64_x1', kernel)
+if kernel == 'zbb_x1':
+    out = out.replace('RvVl.entries.1', 'RvVl.entries.2.1')
 open(os.path.join(root, f'Keccaktree/Kernels/{ns}/All.lean'), 'w').write(out)

@@ -1,6 +1,6 @@
 import Keccaktree.Asm.RiscvSteps
 import Keccaktree.Asm.Node
-import Keccaktree.Asm.Library
+import Keccaktree.Asm.LibRv
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -8,9 +8,8 @@ set_option linter.unusedVariables false
 # Shared definitions of the RISC-V all-count theorems
 
 Relocation by whole nodes (`rho m`: 64 input bytes and 32 output bytes per node), the digest
-predicate (`Digest input S n`: output words `4n..4n+3` hold keccak256 of input node `n`), and the
-lemmas every RISC-V kernel's `All.lean` uses.  One `Digest` for all RISC-V kernels, so that their
-theorems share the library's digest predicate.
+predicate of the library (`LibX86.Digest input S n`: output words `4n..4n+3` hold keccak256 of input
+node `n`), and the lemmas every RISC-V kernel's `All.lean` uses.
 -/
 namespace Keccaktree.Kernels.RiscvCommon
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Proof Keccak
@@ -87,25 +86,14 @@ theorem reloc_ptr_out (m : Nat) (o : Int) : E.reloc (rho m) (.ptr ⟨rOutput, o�
 
 theorem reloc_const (m : Nat) (w : BitVec 64) : E.reloc (rho m) (.const w) = .const w := rfl
 
-/-- The words of node `n` of the message. -/
-def nodeWords (input : Int → BitVec 64) (n : Nat) (w : Nat) : BitVec 64 := input (Int.ofNat (8 * n + w))
-
-/-- Output words `4n..4n+3` hold the keccak256 digest of input node `n` (byte `8w+i` of the digest
-is byte `i` of word `4n+w`). -/
-def Digest (input : Int → BitVec 64) (S : State (BitVec 64)) (n : Nat) : Prop :=
-  ∀ w i : Nat, w < 4 → i < 8 →
-    (S.mem rOutput (Int.ofNat (4 * n + w))).extractLsb' (8 * i) 8 = Spec.keccak256 64 (nodeBytes (nodeWords input n)) (8 * w + i)
+-- The digest predicate and node words of the library (`LibX86.Digest`, shared by every ISA).
+export Keccaktree.Asm.LibX86 (nodeWords Digest digest_local)
 
 theorem digest_congr (input : Int → BitVec 64) (S T : State (BitVec 64)) (n : Nat)
     (h : ∀ w : Nat, w < 4 → T.mem rOutput (Int.ofNat (4 * n + w)) = S.mem rOutput (Int.ofNat (4 * n + w)))
     (hd : Digest input S n) : Digest input T n := by
   intro w i hw hi
   rw [h w hw]
-  exact hd w i hw hi
-
-theorem digest_local : Library.DigestLocal Digest := by
-  intro input S S' n h hd w i hw hi
-  rw [h (Int.ofNat (4 * n + w)) (by simp only [Int.ofNat_eq_coe]; omega) (by simp only [Int.ofNat_eq_coe]; omega)]
   exact hd w i hw hi
 
 /-- The digest of node `m` from its four output lanes after the 24 rounds. -/

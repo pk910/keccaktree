@@ -2,6 +2,7 @@ import Keccaktree.Kernels.Rv64X1.GenSE.Seg
 import Keccaktree.Kernels.Rv64X1.GenSB.Seg
 import Keccaktree.Kernels.Rv64X1.GenSX.Seg
 import Keccaktree.Kernels.RiscvCommon
+import Keccaktree.Kernels.RvVl
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -511,36 +512,24 @@ theorem rv64_x1_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec
 
 /-! ## In the library -/
 
-/-- The RISC-V calling convention of the library at node offset `off` (within the address bound). -/
-def EntryRV (name : String) (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop :=
-  Entry off count input { S with pc := 1 } ∧ 64 * (off + count) ≤ 2 ^ 54
+/-- The kernel has no `vsetvli`: its runs are the same for every vector length. -/
+theorem scalar : prog.all (fun i => !i.usesVlmax) = true := by decide +kernel
 
-/-- `keccaktree_keccak256_rv64_x1` as a kernel of the library (rank 0: it hands nothing over). -/
-def kernel : Library.KernelThm RV EntryRV Digest where
-  name := "rv64_x1"
-  rank := 0
-  rodata := rodata
-  prog := prog
-  entry := 1
-  steps := fun _ c => 32 + 5374 * c
-  thm := fun off count input S h => by
-    obtain ⟨hh, he, ht, hp, hd⟩ := rv64_x1_all off count input _ h.1 h.2
-    exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
+/-- What the library needs (`LibRv.NormThmRv`), for every `vlmax`: from the library's entry state
+(normalised control part, `pc` at the entry), the run halts with every digest and no tail call. -/
+theorem norm_thm (vlmax : Nat) : LibRv.NormThmRv vlmax rodata prog 1 (fun _ c => 32 + 5374 * c) [] := by
+  intro off count input S hE hb hpc
+  obtain ⟨⟨g, k, z, cf, n, v, l, d⟩, hok, ha2, hsp, ha1, ha0, hin⟩ := hE
+  have hE' : Entry off count input S := ⟨⟨g, k, z, cf, n, v, l, hpc, d⟩, hok, ha2, hsp, ha1, ha0, hin⟩
+  obtain ⟨hh, he, ht, hp, hd⟩ := rv64_x1_all off count input S hE' hb
+  show Library.Outcome _ _ _ off count input S ((Riscv.isa vlmax).run rodata prog (32 + 5374 * count) S)
+  rw [Riscv.run_vlmax vlmax 2 rodata prog scalar]
+  exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
 
-theorem ranks_ok : Library.RanksOk [kernel] := by
-  intro K hK off count input S hS next done htail _
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at hK
-  subst hK
-  have ht : (RV.run rodata prog (32 + 5374 * count) { S with pc := 1 }).tail = none :=
-    (rv64_x1_all off count input _ hS.1 hS.2).2.2.1
-  have h := ht.symm.trans htail
-  cases h
-
-/-- **The library theorem on the table `[rv64_x1]`**: from the library's RISC-V entry state, the
-run halts without a model fault with every node's digest in place. -/
-theorem lib_rv64_x1 (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
-    (hS : EntryRV "rv64_x1" off count input S) : Library.LibOk [kernel] kernel off count input S :=
-  Library.lib_correct [kernel] 0 (by simp [kernel]) ranks_ok digest_local _ kernel (by simp) off count input S
-    (Nat.le_refl _) hS
+/-- `keccaktree_keccak256_rv64_x1` as a kernel of the RISC-V library at any `vlmax` (rank 0: it
+hands nothing over; any `vl` at entry). -/
+def kernel (vlmax : Nat) : Library.KernelThm (Riscv.isa vlmax) LibTable.EntryRv Digest :=
+  LibRv.mkKernelRv vlmax (LibTable.sym "rv64_x1") 0 [] rodata prog 1 (fun _ c => 32 + 5374 * c)
+    (Riscv.vlAnn RvVl.rv64_x1) RvVl.rv64_x1_ok RvVl.entries.1 (norm_thm vlmax)
 
 end Keccaktree.Kernels.Rv64X1.All

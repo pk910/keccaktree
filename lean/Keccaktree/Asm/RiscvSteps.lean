@@ -247,3 +247,42 @@ theorem envOf_next (s : State (BitVec 64)) (i : Nat) : envOf (next s) i = envOf 
 theorem envOf_withPc (s : State (BitVec 64)) (p i : Nat) : envOf ({ s with pc := p } : State (BitVec 64)) i = envOf s i := rfl
 
 end Keccaktree.Asm.Riscv
+
+namespace Keccaktree.Asm.Riscv
+open Keccaktree.Asm
+open Keccaktree.Asm.X86 hiding gx setX withX next
+
+/-! ## Scalar programs do not depend on the vector length -/
+
+/-- The only instruction whose semantics reads `vlmax`. -/
+def Instr.usesVlmax : Instr → Bool
+  | .vsetvli _ _ => true
+  | _ => false
+
+theorem exec_vlmax {α : Type} [LaneOps α] (v1 v2 : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α)
+    (h : i.usesVlmax = false) : exec v1 rodata i s = exec v2 rodata i s := by
+  cases i <;> simp [Instr.usesVlmax] at h <;> rfl
+
+theorem getD_usesVlmax (prog : Array Instr) (h : prog.all (fun i => !i.usesVlmax) = true) (k : Nat) :
+    (prog.getD k .nop).usesVlmax = false := by
+  unfold Array.getD
+  split
+  · rename_i hk
+    have := Array.all_eq_true.mp h k hk
+    simpa using this
+  · rfl
+
+/-- **A program without `vsetvli` runs the same for every `vlmax`.** -/
+theorem run_vlmax {α : Type} [LaneOps α] (v1 v2 : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr)
+    (h : prog.all (fun i => !i.usesVlmax) = true) :
+    ∀ (n : Nat) (s : State α), (isa v1).run rodata prog n s = (isa v2).run rodata prog n s := by
+  intro n
+  induction n with
+  | zero => intro s; rfl
+  | succ n ih =>
+    intro s
+    show (if s.halted then s else (isa v1).run rodata prog n (exec v1 rodata (prog.getD s.pc .nop) s)) =
+      (if s.halted then s else (isa v2).run rodata prog n (exec v2 rodata (prog.getD s.pc .nop) s))
+    rw [exec_vlmax v1 v2 rodata _ s (getD_usesVlmax prog h s.pc), ih]
+
+end Keccaktree.Asm.Riscv
