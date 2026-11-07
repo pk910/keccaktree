@@ -6,7 +6,10 @@ Branch `reloc` (worktree `src/wt-reloc`), remote build dir `/root/kt-reloc`.
 - Pointer-tagged core: DONE (Machine/Lemmas/Hom/ArmHom/RiscvHom/Compose/Tools; whole library builds).
 - `Reloc.lean` (x86) + `ArmReloc.lean` + `RiscvReloc.lean`: DONE, no `sorry`.
 - Merged `lean-verification` (e713c7d, specQuantity split) into `reloc`: f45f2f7.
-- End-to-end validation (X86X1, ScalarX1 regenerated with `.ptr` leaves): see below.
+- End-to-end validation DONE (remote /root/kt-reloc, 09:04 UTC): `lake build Keccaktree kttool` green (116 jobs,
+  all 24 harnesses `#guard` true); `BATCH=1 ./gen_all.sh x86_x1 scalar_x1` (0 warnings, 182 `.ptr` leaves in
+  X86X1's generated files); `build_bounded.sh X86X1 4` and `ScalarX1 4` without errors; `kernel_keccak256` of
+  both depends only on propext, Classical.choice, Quot.sound + bv_decide certificates.
 
 ## Model changes (semantics)
 - `LaneOps` gains `ptr : Addr → α` and `asAddr : α → Option Addr`.
