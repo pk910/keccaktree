@@ -293,7 +293,10 @@ def gen_segments(kernel, patch=None):
     countregs = {256 + n for ex in A['exits'] for n in map(int, ex['vals'])} | {258}
     # ---- exits
     ex_ctl = {}
+    only_exits = [x for x in os.environ.get('ONLY_EXITS', '').split(',') if x]
     for ex in (A['exits'] if os.environ.get('ONLY') != 'Bb' else []):
+        if only_exits and ex['name'] not in only_exits:
+            continue
         src = ex['src']; c = src['count']
         pl = find_plan(kernel, c, patch=patch) if c > 0 else {'cuts': [], 'rounds': [[]], 'end': src['end']}
         a, b = src['start'], src['end']
@@ -319,6 +322,11 @@ def gen_segments(kernel, patch=None):
         ex_ctl[ex['name']] = ctl0
         info[ex['name']] = {'slices': nsl, 'ctl0': ctl0, 'nodes': nodes, 'count': c, 'start': a, 'end': b,
                             'base': (src['count'] - len(nodes) - (src['rem'] if src['tail'] else 0)) if nodes else None}
+    if only_exits:
+        # regenerate just these exits (e.g. after a matcher change); keep the other segments' data
+        A.setdefault('segments', {}).update(info)
+        json.dump(A, open(os.path.join(HERE, f'plans/{kernel}_all.json'), 'w'), indent=1, default=str)
+        return
     # ---- body: the first iteration of a run on 2N nodes, cut at its first flag write: the prefix `Ba`
     # is proved for every flag value at the loop head (the flags are dead there), the rest `Bb` once
     prog, entry, rodata = load_prog(kernel)
