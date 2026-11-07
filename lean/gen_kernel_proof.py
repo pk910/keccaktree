@@ -280,6 +280,8 @@ theorem lane{c}_{j} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) {
 ''')
     print(f'slice {c}: {len(outs)} outputs, {len(groups)} generic lemmas', file=sys.stderr)
     # the step theorem
+    if len(outs) > 200 or len(alloc_in) > 200:
+        out.write('set_option maxRecDepth 100000 in\n')
     out.write(f'/-- Slice {c}: the invariant at its start gives the output invariant, for the next round\'s states. -/\n')
     out.write(f'theorem step{c} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (h : Inv{c} env A) :\n')
     out.write(f'    Inv{c + 1} (fun i => E.eval env (readVar result{c} i)) (fun n => Spec.round {round_in} (A n)) := by\n')

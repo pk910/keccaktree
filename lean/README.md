@@ -89,7 +89,7 @@ executed by instruction-set models and shown to compute keccak256.
 ```shell
 lake build kttool                   # the proof-generation tool (symbolic executor, matcher)
 ./gen_all.sh                        # generate Keccaktree/Kernels/<K>/Gen/*.lean (minutes)
-./build_gen.sh ScalarX1 Avx2X4 …    # check the proofs (≈5–15 min per kernel, parallel; ≤ 4 GB per process)
+./build_bounded.sh ScalarX1 6       # check one kernel's proofs with ≤ 6 lean processes (5–40 min, 2–15 GB each)
 ```
 
 ### What is proved
@@ -127,8 +127,8 @@ and `bv_decide`'s checked certificates.
   symbolic executor on expression trees `E`.
 * **Slices and cuts.**  A batch is cut at the 23 round boundaries (found by
   `kttool`, which runs the kernel on two random inputs and recognises which
-  spec quantity — lane, θ-parity, θ-output, rotated — each register and stack
-  word holds).  Each slice is run once symbolically from a cut state whose
+  spec quantity — lane, θ-parity, θ-output, rotated, or a round constant
+  held for the next round — each register and stack word holds).  Each slice is run once symbolically from a cut state whose
   data locations are fresh variables (`cutOf`); the result is checked by the
   kernel (`decide +kernel`), and one `bv_decide` lemma per distinct
   expression shape (shared by all nodes) proves that the slice's outputs are
