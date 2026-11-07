@@ -276,16 +276,25 @@ def thresh_transform(text, lib, d, segnames):
     t = t.replace('abbrev DoneK := Done rodata prog targets', f'abbrev DoneK (v : Nat) := Done {W} prog targets')
     t = t.replace('DoneK off', 'DoneK v off')
     t = t.replace(' rodata prog', f' {W} prog')
-    # segment bundles under the image; the length lemmas stay about the default bundles (defeq)
+    # segment runs under the image (`factsV`); their results are restated with the default bundle's closed
+    # fields (so every closed check stays decidable)
     t = re.sub(r'(Gen\w+)\.facts_rdx', r'\1.factsV_rdx v', t)
-    t = re.sub(r'(?<![\w.])(Gen\w+)\.facts(?=[.\s)])', r'(\1.factsV v)', t)
-    t = re.sub(r'\(by wok_out \((Gen\w+)\.factsV v\)\)', r'(by wok_out2 \1.factsV \1.facts)', t)
-    # closed checks: the bundle's closed fields do not depend on `v` (`kt_factsV` rewrites them away)
-    t = t.replace('decide +kernel', 'kdec')
-    t = re.sub(r'theorem len_(\w+) : \(Gen(\w+)\.factsV v\)\.len = (\d+) := by decide \+kernel',
-               r'theorem len0_\1 : Gen\2.facts.len = \3 := by decide +kernel\ntheorem len_\1 (v : Nat) : (Gen\2.factsV v).len = \3 := len0_\1', t)
-    t = re.sub(r'rw \[len_(\w+)\]', r'rw [len_\1 v]', t)
-    t = re.sub(r'rw \[len_(\w+), len_Bb\]', r'rw [len_\1 v, len_Bb v]', t)
+    out_ = []
+    for ln in t.split('\n'):
+        m = re.match(r'^(\s*)obtain ⟨(\w+), (\w+)⟩ := (Gen\w+)\.facts\.run (.*)$', ln)
+        if m:
+            ind_, a_, b_, g_, rest_ = m.groups()
+            out_.append(f'{ind_}obtain ⟨{a_}, {b_}⟩ := ({g_}.factsV v).run {rest_}')
+            out_.append(f'{ind_}simp only [{g_}.factsV_ctlK, {g_}.factsV_scK, {g_}.factsV_len] at {a_} {b_}')
+            continue
+        m = re.match(r"^(\s*)have ([\w']+) := (.*)\.seg('?) (Gen\w+)\.facts (.*)\(by wok_out (Gen\w+)\.facts\)$", ln)
+        if m:
+            ind_, h_, base_, pr_, g_, rest_, g2_ = m.groups()
+            out_.append(f'{ind_}have {h_} := {base_}.seg{pr_} ({g_}.factsV v) {rest_}(by wok_out2 {g_}.factsV {g_}.facts)')
+            out_.append(f'{ind_}simp only [{g_}.factsV_len] at {h_}')
+            continue
+        out_.append(ln)
+    t = '\n'.join(out_)
     # data lemmas: the default-image segment facts, moved to the image by `run_agree`
     t = t.replace('  rw [← sr1.1] at da\n', '  rw [← sr1.1] at da\n  rw [← GBA.run_agree _ (agree_setWord rodata 112 v) _ hρ hw S hcut hI.ok] at da\n')
     t = t.replace('  rw [← sr2.1] at db\n', '  rw [← sr2.1] at db\n  rw [← GenBb.run_agree _ (agree_setWord rodata 112 v) _ hρ hw _ cut2 ok1] at db\n')
@@ -305,8 +314,7 @@ def thresh_transform(text, lib, d, segnames):
         t = re.sub(rf'theorem ({nm}) \(', r'theorem \1 (v : Nat) (hv64 : v < 2 ^ 64) (', t)
         t = re.sub(rf'(?<![\w.])({nm}) off ', r'\1 v hv64 off ', t)
     t = t.replace('theorem norm_thm :', 'theorem norm_thm (v : Nat) (hv64 : v < 2 ^ 64) :')
-    fl = ', '.join(f'{g}.factsV_{f}' for g in ['Gen' + n for n in segnames] for f in ('ctl0', 'sc0', 'ctlK', 'scK', 'len', 'wok'))
-    t = t.replace('macro "fr_lo"', f'macro "kdec" : tactic => `(tactic| first | decide +kernel | (simp only [{fl}]; decide +kernel))\nmacro "fr_lo"')
+
     t = t.replace('macro "wok_in"', 'macro "wok_out2 " g:ident h:ident : tactic => `(tactic| (intro q hq; simp only [$g:ident, $h:ident]; first | rfl | (simp [rOutput, rInput, rStack] <;> omega)))\nmacro "wok_in"')
     t = t.replace('import Keccaktree.Asm.X86Kernel', 'import Keccaktree.Asm.X86Thresh')
     lib = lib.replace(f'import Keccaktree.Kernels.{d}.All', f'import Keccaktree.Kernels.{d}.AllV')

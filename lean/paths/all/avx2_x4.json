@@ -193,6 +193,196 @@
     69,
     73
    ]
+  },
+  {
+   "name": "X4",
+   "pc": 791,
+   "vals": {
+    "2": 2,
+    "0": 1
+   },
+   "flags": [
+    true,
+    false
+   ],
+   "kset": false,
+   "term": [
+    "tailcall",
+    "keccaktree_keccak256_avx2_x2"
+   ],
+   "src": {
+    "count": 2,
+    "start": 18,
+    "end": 27,
+    "tail": "keccaktree_keccak256_avx2_x2",
+    "rem": 2,
+    "len": 9
+   },
+   "len": 9,
+   "counts": [
+    2,
+    6,
+    10,
+    14,
+    18,
+    22,
+    26,
+    30,
+    34,
+    38,
+    42,
+    46,
+    50,
+    54,
+    58,
+    62,
+    66,
+    70,
+    74
+   ],
+   "patch": "112:2"
+  },
+  {
+   "name": "X5",
+   "pc": 791,
+   "vals": {
+    "2": 2,
+    "0": 1
+   },
+   "flags": [
+    false,
+    true
+   ],
+   "kset": false,
+   "term": [
+    "tailcall",
+    "keccaktree_keccak256_avx2_x2"
+   ],
+   "src": {
+    "count": 2,
+    "start": 18,
+    "end": 27,
+    "tail": "keccaktree_keccak256_avx2_x2",
+    "rem": 2,
+    "len": 9
+   },
+   "len": 9,
+   "counts": [
+    2,
+    6,
+    10,
+    14,
+    18,
+    22,
+    26,
+    30,
+    34,
+    38,
+    42,
+    46,
+    50,
+    54,
+    58,
+    62,
+    66,
+    70,
+    74
+   ],
+   "patch": "112:3"
+  },
+  {
+   "name": "X6",
+   "pc": 791,
+   "vals": {
+    "2": 3,
+    "0": 1
+   },
+   "flags": [
+    true,
+    false
+   ],
+   "kset": false,
+   "term": [
+    "tailcall",
+    "keccaktree_keccak256_avx2_x2"
+   ],
+   "src": {
+    "count": 3,
+    "start": 18,
+    "end": 27,
+    "tail": "keccaktree_keccak256_avx2_x2",
+    "rem": 3,
+    "len": 9
+   },
+   "len": 9,
+   "counts": [
+    3,
+    7,
+    11,
+    15,
+    19,
+    23,
+    27,
+    31,
+    35,
+    39,
+    43,
+    47,
+    51,
+    55,
+    59,
+    63,
+    67,
+    71
+   ],
+   "patch": "112:3"
+  },
+  {
+   "name": "X7",
+   "pc": 791,
+   "vals": {
+    "2": 3,
+    "0": 1
+   },
+   "flags": [
+    false,
+    true
+   ],
+   "kset": false,
+   "term": [
+    "tailcall",
+    "keccaktree_keccak256_avx2_x2"
+   ],
+   "src": {
+    "count": 3,
+    "start": 18,
+    "end": 27,
+    "tail": "keccaktree_keccak256_avx2_x2",
+    "rem": 3,
+    "len": 9
+   },
+   "len": 9,
+   "counts": [
+    3,
+    7,
+    11,
+    15,
+    19,
+    23,
+    27,
+    31,
+    35,
+    39,
+    43,
+    47,
+    51,
+    55,
+    59,
+    63,
+    67,
+    71
+   ],
+   "patch": "112:4"
   }
  ],
  "p0_flags": [
@@ -20442,6 +20632,67 @@
     false,
     false
    ]
+  },
+  "X4": {
+   "slices": 1,
+   "ctl0": [
+    256,
+    258,
+    261,
+    266,
+    267
+   ],
+   "nodes": [],
+   "count": 2,
+   "start": 18,
+   "end": 27,
+   "base": null
+  },
+  "X5": {
+   "slices": 1,
+   "ctl0": [
+    256,
+    258,
+    261,
+    266,
+    267
+   ],
+   "nodes": [],
+   "count": 2,
+   "start": 18,
+   "end": 27,
+   "base": null
+  },
+  "X6": {
+   "slices": 1,
+   "ctl0": [
+    256,
+    258,
+    261,
+    266,
+    267
+   ],
+   "nodes": [],
+   "count": 3,
+   "start": 18,
+   "end": 27,
+   "base": null
+  },
+  "X7": {
+   "slices": 1,
+   "ctl0": [
+    256,
+    258,
+    261,
+    266,
+    267
+   ],
+   "nodes": [],
+   "count": 3,
+   "start": 18,
+   "end": 27,
+   "base": null
   }
- }
+ },
+ "thresh_values": "2,3,4"
 }

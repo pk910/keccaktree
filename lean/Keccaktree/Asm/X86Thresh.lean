@@ -41,11 +41,11 @@ theorem SliceCert.run_agree {rodata r2 : Array (BitVec 64)} {prog : Array Instr}
 /-- The flags of the policy compare `cmp r, [rip + 896]` against word 112 set to `v`. -/
 theorem setWord_flags (rodata : Array (BitVec 64)) (r : Int) (v : Nat) (h0 : 0 ≤ r) (h1 : r < 2 ^ 55)
     (hv : v < 2 ^ 64) (hsz : 112 < rodata.size) :
-    decide (BitVec.ofInt 64 r = (setWord rodata 112 v).getD (((896 : Nat) : Int) / 8).toNat 0#64) = decide (r = v) ∧
-    decide ((BitVec.ofInt 64 r).toNat < ((setWord rodata 112 v).getD (((896 : Nat) : Int) / 8).toNat 0#64).toNat) =
+    decide (BitVec.ofInt 64 r = (setWord rodata 112 v).getD (((896 : Nat) : Int) / 8).toNat 0) = decide (r = v) ∧
+    decide ((BitVec.ofInt 64 r).toNat < ((setWord rodata 112 v).getD (((896 : Nat) : Int) / 8).toNat 0).toNat) =
       decide (r < v) := by
   have e112 : ((((896 : Nat) : Int) / 8).toNat) = 112 := by decide
-  rw [e112, setWord_getD rodata 112 v hsz]
+  rw [e112, show (0 : BitVec 64) = 0#64 from rfl, setWord_getD rodata 112 v hsz]
   obtain ⟨x, rfl⟩ : ∃ x : Nat, r = x := ⟨r.toNat, (Int.toNat_of_nonneg h0).symm⟩
   have hx64 : x < 2 ^ 64 := by omega
   rw [BitVec.ofInt_natCast]
