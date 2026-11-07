@@ -536,43 +536,6 @@ theorem x86_x1_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 
     rw [show 21 + 4269 * c = 9 + 4 + 4269 * c + 8 by omega, Isa.run_add, Isa.run_add, Isa.run_add, h9, hrun3']
     exact he
 
-/-! ## In the library -/
-
-/-- The x86 calling convention of the library at node offset `off` (within the address bound). -/
-def EntryX86 (name : String) (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) : Prop :=
-  Entry off count input { S with pc := 0 } ∧ 64 * (off + count) ≤ 2 ^ 54
-
-/-- `keccaktree_keccak256_x86_x1` as a kernel of the library (rank 0: it hands nothing over). -/
-def kernel : Library.KernelThm X86.isa EntryX86 Digest where
-  name := "x86_x1"
-  rank := 0
-  rodata := rodata
-  prog := prog
-  entry := 0
-  steps := fun _ c => 21 + 4269 * c
-  thm := fun off count input S h => by
-    obtain ⟨hh, he, ht, hp, hd⟩ := x86_x1_all off count input _ h.1 h.2
-    exact ⟨hh, he, hp, Or.inl ⟨ht, hd⟩⟩
-
-theorem digest_local : Library.DigestLocal Digest := by
-  intro input S S' n h hd w i hw hi
-  rw [h (Int.ofNat (4 * n + w)) (by simp only [Int.ofNat_eq_coe]; omega) (by simp only [Int.ofNat_eq_coe]; omega)]
-  exact hd w i hw hi
-
-theorem ranks_ok : Library.RanksOk [kernel] := by
-  intro K hK off count input S hS next done htail _
-  simp only [List.mem_cons, List.mem_nil_iff, or_false] at hK
-  subst hK
-  have ht : (X86.isa.run rodata prog (21 + 4269 * count) { S with pc := 0 }).tail = none :=
-    (x86_x1_all off count input _ hS.1 hS.2).2.2.1
-  have h := ht.symm.trans htail
-  cases h
-
-/-- **The library theorem on the table `[x86_x1]`**: from the library's x86 entry state, the run
-halts without a model fault with every node's digest in place. -/
-theorem lib_x86_x1 (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
-    (hS : EntryX86 "x86_x1" off count input S) : Library.LibOk [kernel] kernel off count input S :=
-  Library.lib_correct [kernel] 0 (by simp [kernel]) ranks_ok digest_local _ kernel (by simp) off count input S
-    (Nat.le_refl _) hS
+-- The library instance (any entry control state, `Library.KernelThm`) is in `X86X1/Lib.lean`.
 
 end Keccaktree.Kernels.X86X1.All
