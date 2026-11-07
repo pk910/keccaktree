@@ -32,6 +32,16 @@ Branch `all-arm` (worktree `src/wt-arm`, off `lean-verification` f3a7dc5), remot
   at count 0).  The condition is not used by `lib_step` (`hpos` unused) — it should be dropped (agent `lib`).
 * Tail names are the symbols (`keccaktree_keccak256_scalar_x1`); the AArch64 kernels use them as `KernelThm.name`.
 
+## Integration with agent `lib` (branch all-lib)
+`lib` provides `LibTable.EntryA` (same fields as `Arm.Entry`: ctrl/ok/x2/sp/x1/x0/inp, but flags = false and no
+`pc`), `LibTable.EntryArm name := EntryA (normCtl S) ∧ bound`, `LibArm.NormThmArm` (kernel theorem from `EntryA`
+with `S.pc = entry`, conclusion `Library.Outcome EntryArm Digest targets …`) and `mkKernelArm` (+ its own flag
+annotations `Kernels/ArmFlags.lean`).  Our theorems are stronger on the entry side (any flags, `Arm.Entry`), so
+`NormThmArm k` follows: `EntryA S ∧ S.pc = 0 → Arm.Entry`; the hand-over `Arm.Entry … {Sf with halted := false,
+tail := none, pc := 0}` gives `EntryA (normCtl …)`.  `Digest`: `Nodes.Digest` and `LibX86.Digest` have the same
+body (unfold).  **Blocker in `lib`'s `Outcome`: `(done = 0 → count > 0)`** — false for sha3_x3/neon_x3/sha3_x3r at
+count 0 (and the x86 kernels that tail-call at count 0); unused by `lib_step`, must be dropped.
+
 ## New/changed files (core changes are additive)
 * `Asm/ArmFootprint.lean`: `Arm.writes`, `Arm.exec_frame`, `Arm.isaFoot`.
 * `Asm/Flags.lean` (generic), `Asm/ArmFlags.lean`, `Asm/ArmSteps.lean` (`run_one`, `exec_cbz_num`, `exec_subs_num`,
