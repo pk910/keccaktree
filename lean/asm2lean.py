@@ -92,8 +92,8 @@ class X86:
         self.check_flags()
 
     # flag-setting instructions the model implements, and those it does not (data ALU: flags unchanged)
-    FLAG_OK = ('.cmpi', '.cmpr', '.cmpm', '.cmprm', '.test', '.dec', '.decm', '.sub', '.xorz', '.bt', '.btc')
-    FLAG_BAD = ('.alu', '.andn', '.add', '.andi', '.shl', '.addm', '.xorm')
+    FLAG_OK = ('.cmpi', '.cmpr', '.cmpm', '.cmprm', '.test', '.dec', '.decm', '.sub', '.xorz', '.bt')
+    FLAG_BAD = ('.alu', '.andn', '.add', '.andi', '.shl', '.addm', '.xorm', '.btc')
 
     def check_flags(self):
         """every conditional jump must be reached, in straight-line code, from a modelled flag setter"""

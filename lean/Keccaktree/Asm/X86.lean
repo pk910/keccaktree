@@ -95,7 +95,7 @@ inductive Instr where
   | cmprm (a : Gpr) (m : MemOp)     -- cmp a, qword ptr [m]
   | test (a b : Gpr)
   | bt (a b : Gpr)                  -- cf := bit b of a
-  | btc (a : Gpr) (imm : Nat)       -- complement bit imm of a, cf := its old value
+  | btc (a : Gpr) (imm : Nat)       -- complement bit imm of a (data; flags not modelled)
   | alu (op : AluOp) (d : Gpr) (b : GSrc)   -- d := d op b (data; flags not modelled)
   | andn (d a : Gpr) (b : GSrc)     -- d := ~a & b
   | rorx (d : Gpr) (b : GSrc) (imm : Nat)
@@ -452,10 +452,7 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
     | some w => withX s b fun y =>
       if y.region = 0 ∧ y.off ≥ 0 then next { s with cf := w.getLsbD (y.off.toNat % 64) } else s.fail
     | none => s.fail
-  | .btc a imm =>
-    match asConst (s.getGD a) with
-    | some w => next { s.setGD a (const (w ^^^ (1#64 <<< (imm % 64)))) with cf := w.getLsbD (imm % 64) }
-    | none => s.fail
+  | .btc a imm => next (s.setGD a (xor (s.getGD a) (const (1#64 <<< (imm % 64)))))   -- flags not modelled
   | .alu op d b => readG rodata s b fun y => next (s.setGD d (aluOp op (s.getGD d) y))
   | .andn d a b => readG rodata s b fun y => next (s.setGD d (and (not (s.getGD a)) y))
   | .rorx d b imm => readG rodata s b fun y => next (s.setGD d (rol y ((64 - imm % 64) % 64)))

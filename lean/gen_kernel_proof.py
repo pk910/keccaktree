@@ -55,7 +55,7 @@ def matches(kernel, count, steps, lanes, rnd, region_filter=None):
             var = mem_var(int(a), int(b))
         alloc.append((int(node), int(kind), var, int(rot), ln))
     # a round constant (kinds 75..98) is reported for node 0 only but is a hypothesis every node may use
-    alloc += [(n, kind, var, rot, ln) for (node, kind, var, rot, ln) in list(alloc) if kind >= 75
+    alloc += [(n, kind, var, rot, ln) for (node, kind, var, rot, ln) in list(alloc) if 75 <= kind < 99
               for n in range(count) if n != node]
     return alloc
 
@@ -261,7 +261,7 @@ theorem lane{c}_g{g} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) 
 ''' + (f'''  simp only [E.eval]
   all_goals decide +kernel
 
-''' if kind >= 75 else f'''  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
+''' if 75 <= kind < 99 else f'''  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
   {"simp only [specQuantity, Spec.RC]" + at_h if hnames else "skip"}
   simp only [{SIMP_SPEC}]
   bv_decide (config := {{ timeout := 1800 }})
@@ -304,11 +304,11 @@ theorem lane{c}_{j} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) {
 
 def out_quantity(node, round_in, kind):
     """the spec quantity of an output: of the node's state after the slice's round, or a round constant"""
-    return f'(specQuantity (Spec.round {round_in} (A {node})) {kind})' if kind < 75 else f'(Spec.RC {kind - 75})'
+    return f'(Spec.RC {kind - 75})' if 75 <= kind < 99 else f'(specQuantity (Spec.round {round_in} (A {node})) {kind})'
 
 def quantity(node, kind):
     """the spec quantity of a match: `specQuantity (A node) kind`, or a round constant (kinds 75..98)"""
-    return f'(specQuantity (A {node}) {kind})' if kind < 75 else f'(Spec.RC {kind - 75})'
+    return f'(Spec.RC {kind - 75})' if 75 <= kind < 99 else f'(specQuantity (A {node}) {kind})'
 
 def inv_conj(alloc):
     return ' ∧\n  '.join(f'env {var} = {quantity(node, kind)}.rotateLeft {rot}' for node, kind, var, rot, _ in alloc) or 'True'

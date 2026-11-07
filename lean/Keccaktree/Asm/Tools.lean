@@ -190,10 +190,13 @@ structure Match where
 
 /-- Kinds 0..74 are `specQuantity`; 75..98 are the round constants `Spec.RC (k - 75)` (held in
 registers across round boundaries by the AArch64 kernels, which load them early). -/
-def nKinds : Nat := 99
+def nKinds : Nat := 209
+
+/-- Kinds 75..98 are the round constants. -/
+def isRC (kind : Nat) : Bool := 75 ≤ kind && kind < 99
 
 def kindValue (A : Spec.State) (kind : Nat) : BitVec 64 :=
-  if kind < 75 then specQuantity A kind else Spec.RC (kind - 75)
+  if isRC kind then Spec.RC (kind - 75) else specQuantity A kind
 
 /-- Node `n` of the message `fun i => input word` as the state after `r` rounds. -/
 def nodeState (input : Int → BitVec 64) (n r : Nat) : Spec.State :=
@@ -214,7 +217,7 @@ def table (spec : Array (Array (Array (BitVec 64)))) : Std.HashMap (BitVec 64) (
     for r in [0:25] do
       for kind in [0:nKinds] do
         -- a round constant is entered once: node 0, at the round it belongs to
-        if kind ≥ 75 && (n ≠ 0 || r ≠ kind - 75) then continue
+        if isRC kind && (n ≠ 0 || r ≠ kind - 75) then continue
         let q := ((spec.getD n #[]).getD r #[]).getD kind 0
         for rot in [0:64] do
           let v := q.rotateLeft rot
@@ -282,13 +285,19 @@ def matchAll (t1 : Std.HashMap (BitVec 64) (List Match)) (spec2 : Array (Array (
     let cands0 := t1.getD v1 []
     if cands0.length > 256 then [] else
     let cands := cands0.filter fun m =>
-      (v1 != v2 || m.kind ≥ 75) &&
+      (v1 != v2 || isRC m.kind) &&
       (((spec2.getD m.node #[]).getD m.round #[]).getD m.kind 0).rotateLeft m.rot == v2
     match cands with
     | [m] => [(loc, m)]
     -- some round constants coincide (RC 5 = RC 22, RC 6 = RC 20): report every candidate,
     -- the generator keeps the one of the slice's round
-    | ms => if !ms.isEmpty && ms.all (·.kind ≥ 75) then ms.map ((loc, ·)) else []
+    | ms =>
+      if !ms.isEmpty && ms.all (isRC ·.kind) then ms.map ((loc, ·))
+      -- quantities that coincide structurally (round 0: zero lanes make `A ^ D = D`, partial sums
+      -- equal): the same node, round and rotation — keep the smallest kind
+      else if !ms.isEmpty && ms.all (fun m => m.node == ms.head!.node && m.round == ms.head!.round && m.rot == ms.head!.rot) then
+        [(loc, ms.foldl (fun a b => if b.kind < a.kind then b else a) ms.head!)]
+      else []
 
 /-- Step both runs for `n` instructions from the entry, reporting after each
 instruction the executed index and, per node, the rounds whose 25 lanes are

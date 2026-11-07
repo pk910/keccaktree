@@ -926,11 +926,8 @@ theorem exec_map_btc (rodata : Array (BitVec 64)) (st : State α) (a : _) (imm :
     (hne : (exec rodata (.btc a imm) st).err = false) :
     exec rodata (.btc a imm) (mapState f st) = mapState f (exec rodata (.btc a imm) st) := by
   cases hh : st.halted
-  · simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, getGD_map hf] at hne ⊢
-    rcases hc : LaneOps.asConst (st.getGD a) with _ | w
-    · simp only [hc, fail_err] at hne; exact absurd hne (by decide)
-    · simp only [hf.asConst _ _ hc]
-      rw [← next_map, setGD_map' _ _ _ _ (hf.const _)]; rfl
+  · simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]
+    rw [← next_map]; exact congrArg next (setGD_map' _ _ _ _ (by simp [getGD_map hf, hf.xor, hf.const]))
   · simp [exec, mapState, hh]
 
 theorem exec_map_alu (rodata : Array (BitVec 64)) (st : State α) (op : _) (d : _) (b : _)
