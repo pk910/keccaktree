@@ -180,7 +180,7 @@ def analyze(kernel, patch=None):
                 if G is None: G = path[t2]
                 assert path[t2] == G, (c, path[t2], G)
                 seq.append(('seg', 'P', t, t2))
-                vals = {2: c}; zf = cf = None   # through the prologue only the count register is known
+                vals = {2: c}   # through the prologue only the count register is known; it keeps the flags
                 t = t2; mode = 'guard'; continue
             if pc == H:
                 assert zf is not None and cf is not None, (c, t)
@@ -190,11 +190,11 @@ def analyze(kernel, patch=None):
                 if C is None: C = path[t2]
                 assert path[t2] == C, (c, path[t2], C)
                 seq.append(('seg', 'B', t, t2))
-                vals = {2: vals[2]}; zf = cf = None
+                vals = {2: vals[2]}
+                zf = True   # the batch's round counter reached zero; it does not write CF
                 t = t2; mode = 'control'; continue
             # an exit: runs to the end of the path
-            fl = flags_at(kernel, c, t, patch)
-            if zf is not None: assert fl == (zf, cf), (c, t, fl, zf, cf)
+            fl = (bool(zf), bool(cf))   # None (fresh call): clear
             key = (pc, tuple(sorted(vals.items())), fl)
             assert H not in path[t:], (c, pc)
             last = path[-1]
@@ -217,6 +217,7 @@ def analyze(kernel, patch=None):
         lens = set(s['len'] for s in ex['sources'])
         assert len(lens) == 1, (key, lens)
         src = min(ex['sources'], key=lambda s: s['count'])
+        assert flags_at(kernel, src['count'], src['start'], patch) == ex['flags'], (key, ex['flags'])
         ex_list.append({'name': f'X{i}', 'pc': ex['pc'], 'vals': {str(k): v for k, v in ex['vals'].items()}, 'flags': ex['flags'],
                         'term': ex['term'], 'src': src, 'len': src['len'],
                         'counts': sorted(set(s['count'] for s in ex['sources']))})
@@ -365,7 +366,8 @@ def gen_segments(kernel, patch=None):
     need = sorted((ba_ctl0 | set(v for ctl in ex_ctl.values() for v in ctl)) - countregs)
     p_flags = A['p0_flags']
     if any(z is None or c is None for (z, c) in p_flags):
-        p_flags = [(False, False), (False, True), (True, False), (True, True)]
+        # a fresh call (`LibX86.Entry`: the library normalises the control state at a call) has clear flags
+        p_flags = sorted(set((False, False) if (z is None or c is None) else (z, c) for (z, c) in p_flags))
     for (zf, cf) in p_flags:
         nm = 'P' + ('t' if zf else 'f') + ('t' if cf else 'f')
         env = {'DATA': '0', 'END_CTL': ','.join(map(str, need)), 'FORBID_CTL': '258', 'MOVES': '258:258',
