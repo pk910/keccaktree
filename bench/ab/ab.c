@@ -28,6 +28,7 @@ void base_keccaktree_keccak256_avx2_x4(unsigned char*, const unsigned char*, uin
 void base_keccaktree_keccak256_avx2_x8(unsigned char*, const unsigned char*, uint64_t);
 void base_keccaktree_keccak256_avx512_x8(unsigned char*, const unsigned char*, uint64_t);
 void base_keccaktree_keccak256_avx512vl_x4(unsigned char*, const unsigned char*, uint64_t);
+void base_keccaktree_keccak256_avx512_x9(unsigned char*, const unsigned char*, uint64_t);
 #endif
 #ifdef __aarch64__
 void base_keccaktree_keccak256_neon_x2(unsigned char*, const unsigned char*, uint64_t);
@@ -111,6 +112,23 @@ WEAK(keccaktree_keccak256_avx512_x10)
 WEAK(keccaktree_keccak256_avx512vl_x5)
 WEAK(keccaktree_keccak256_avx512_x16)
 WEAK(keccaktree_keccak256_avx2_x6)
+WEAK(keccaktree_keccak256_avx512_x8b5)
+WEAK(keccaktree_keccak256_avx512_x8b10)
+WEAK(keccaktree_keccak256_avx512_x8al)
+WEAK(keccaktree_keccak256_avx512_x9b)
+WEAK(keccaktree_keccak256_avx512_x9c)
+WEAK(keccaktree_keccak256_avx512_x8d)
+WEAK(keccaktree_keccak256_avx512_x9d)
+WEAK(keccaktree_keccak256_avx512_x8du)
+WEAK(keccaktree_keccak256_avx512_x8d_p)
+WEAK(keccaktree_keccak256_avx512_x8d_a)
+WEAK(keccaktree_keccak256_avx512_x8d_ax2)
+WEAK(keccaktree_keccak256_avx512_x8d_ax5)
+WEAK(keccaktree_keccak256_avx512_x8d_pax5)
+WEAK(keccaktree_keccak256_avx512vl_x4d)
+WEAK(keccaktree_keccak256_avx512_x8d_px)
+WEAK(keccaktree_keccak256_avx512_x8d_px3)
+WEAK(keccaktree_keccak256_avx512_x9d_p)
 #else
 #define keccaktree_keccak256_avx2_x4 NULL
 #define keccaktree_keccak256_avx2_x8 NULL
@@ -134,29 +152,23 @@ WEAK(keccaktree_keccak256_avx2_x6)
 #define keccaktree_keccak256_avx512vl_x5 NULL
 #define keccaktree_keccak256_avx512_x16 NULL
 #define keccaktree_keccak256_avx2_x6 NULL
-#endif
-
-/* apple-agent candidates: always built into the candidate library on AArch64 */
-#ifdef __aarch64__
-void keccaktree_keccak256_sha3_x3r_n8(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x3r_n16(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x3r_s16(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x2_n16(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x2_v16(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x3r_sp(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x3rp(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x2_v66(unsigned char*, const unsigned char*, uint64_t);
-void keccaktree_keccak256_sha3_x3r_t4(unsigned char*, const unsigned char*, uint64_t);
-#else
-#define keccaktree_keccak256_sha3_x3r_n8 NULL
-#define keccaktree_keccak256_sha3_x3r_n16 NULL
-#define keccaktree_keccak256_sha3_x3r_s16 NULL
-#define keccaktree_keccak256_sha3_x2_n16 NULL
-#define keccaktree_keccak256_sha3_x2_v16 NULL
-#define keccaktree_keccak256_sha3_x3r_sp NULL
-#define keccaktree_keccak256_sha3_x3rp NULL
-#define keccaktree_keccak256_sha3_x2_v66 NULL
-#define keccaktree_keccak256_sha3_x3r_t4 NULL
+#define keccaktree_keccak256_avx512_x8b5 NULL
+#define keccaktree_keccak256_avx512_x8b10 NULL
+#define keccaktree_keccak256_avx512_x8al NULL
+#define keccaktree_keccak256_avx512_x9b NULL
+#define keccaktree_keccak256_avx512_x9c NULL
+#define keccaktree_keccak256_avx512_x8d NULL
+#define keccaktree_keccak256_avx512_x9d NULL
+#define keccaktree_keccak256_avx512_x8du NULL
+#define keccaktree_keccak256_avx512_x8d_p NULL
+#define keccaktree_keccak256_avx512_x8d_a NULL
+#define keccaktree_keccak256_avx512_x8d_ax2 NULL
+#define keccaktree_keccak256_avx512_x8d_ax5 NULL
+#define keccaktree_keccak256_avx512_x8d_pax5 NULL
+#define keccaktree_keccak256_avx512vl_x4d NULL
+#define keccaktree_keccak256_avx512_x8d_px NULL
+#define keccaktree_keccak256_avx512_x8d_px3 NULL
+#define keccaktree_keccak256_avx512_x9d_p NULL
 #endif
 
 static double now(void) {
@@ -227,17 +239,25 @@ static fn lookup_cand(const char* n) {
     if (!strcmp(n, "avx512_x10")) return keccaktree_keccak256_avx512_x10;
     if (!strcmp(n, "avx512vl_x5")) return keccaktree_keccak256_avx512vl_x5;
     if (!strcmp(n, "avx512_x16")) return keccaktree_keccak256_avx512_x16;
+    if (!strcmp(n, "avx512_x8b5")) return keccaktree_keccak256_avx512_x8b5;
+    if (!strcmp(n, "avx512_x8b10")) return keccaktree_keccak256_avx512_x8b10;
+    if (!strcmp(n, "avx512_x8al")) return keccaktree_keccak256_avx512_x8al;
+    if (!strcmp(n, "avx512_x9b")) return keccaktree_keccak256_avx512_x9b;
+    if (!strcmp(n, "avx512_x9c")) return keccaktree_keccak256_avx512_x9c;
+    if (!strcmp(n, "avx512_x8d")) return keccaktree_keccak256_avx512_x8d;
+    if (!strcmp(n, "avx512_x9d")) return keccaktree_keccak256_avx512_x9d;
+    if (!strcmp(n, "avx512_x8du")) return keccaktree_keccak256_avx512_x8du;
+    if (!strcmp(n, "avx512_x8d_p")) return keccaktree_keccak256_avx512_x8d_p;
+    if (!strcmp(n, "avx512_x8d_a")) return keccaktree_keccak256_avx512_x8d_a;
+    if (!strcmp(n, "avx512_x8d_ax2")) return keccaktree_keccak256_avx512_x8d_ax2;
+    if (!strcmp(n, "avx512_x8d_ax5")) return keccaktree_keccak256_avx512_x8d_ax5;
+    if (!strcmp(n, "avx512_x8d_pax5")) return keccaktree_keccak256_avx512_x8d_pax5;
+    if (!strcmp(n, "avx512vl_x4d")) return keccaktree_keccak256_avx512vl_x4d;
+    if (!strcmp(n, "avx512_x8d_px")) return keccaktree_keccak256_avx512_x8d_px;
+    if (!strcmp(n, "avx512_x8d_px3")) return keccaktree_keccak256_avx512_x8d_px3;
+    if (!strcmp(n, "avx512_x9d_p")) return keccaktree_keccak256_avx512_x9d_p;
     if (!strcmp(n, "sha3_x4")) return keccaktree_keccak256_sha3_x4;
     if (!strcmp(n, "sha3_x3b")) return keccaktree_keccak256_sha3_x3b;
-    if (!strcmp(n, "sha3_x3r_n8")) return keccaktree_keccak256_sha3_x3r_n8;
-    if (!strcmp(n, "sha3_x3r_n16")) return keccaktree_keccak256_sha3_x3r_n16;
-    if (!strcmp(n, "sha3_x3r_s16")) return keccaktree_keccak256_sha3_x3r_s16;
-    if (!strcmp(n, "sha3_x2_n16")) return keccaktree_keccak256_sha3_x2_n16;
-    if (!strcmp(n, "sha3_x2_v16")) return keccaktree_keccak256_sha3_x2_v16;
-    if (!strcmp(n, "sha3_x3r_sp")) return keccaktree_keccak256_sha3_x3r_sp;
-    if (!strcmp(n, "sha3_x3rp")) return keccaktree_keccak256_sha3_x3rp;
-    if (!strcmp(n, "sha3_x2_v66")) return keccaktree_keccak256_sha3_x2_v66;
-    if (!strcmp(n, "sha3_x3r_t4")) return keccaktree_keccak256_sha3_x3r_t4;
     return NULL;
 }
 static fn lookup_base(const char* n) {
@@ -253,6 +273,7 @@ static fn lookup_base(const char* n) {
     if (!strcmp(n, "x86_x1")) return base_keccaktree_keccak256_x86_x1;
     if (!strcmp(n, "avx512_x8")) return base_keccaktree_keccak256_avx512_x8;
     if (!strcmp(n, "avx512vl_x4")) return base_keccaktree_keccak256_avx512vl_x4;
+    if (!strcmp(n, "avx512_x9")) return base_keccaktree_keccak256_avx512_x9;
 #endif
 #ifdef __aarch64__
     if (!strcmp(n, "neon_x2")) return base_keccaktree_keccak256_neon_x2;

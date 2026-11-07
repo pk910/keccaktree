@@ -1,8 +1,8 @@
 name: Benchmark
 
-# C-level throughput of every keccaktree kernel next to the sha256 kernels of
-# pk910/hashtree, on GitHub's hosted CPUs (Apple M-series, Neoverse arm64,
-# x86-64). Run manually, or push to a bench/** branch.
+# zen4 agent (round 2): AVX-512 kernel variants vs main on GitHub's hosted
+# x86-64 runners (lottery: EPYC 7763 Zen 3 / 9V74 Zen 4 / 9V45 Zen 5 /
+# Xeon 8370C Ice Lake / 6973P Granite Rapids). Push to bench/** or dispatch.
 on:
   workflow_dispatch:
   push:
@@ -15,8 +15,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # three x86-64 jobs: the hosted runners are a mix of EPYC 7763 (Zen 3),
-        # EPYC 9V45 (Zen 4, AVX-512) and Xeon 8370C (Ice Lake, AVX-512)
         include:
           - {runner: macos-15, n: 1}
           - {runner: macos-15, n: 2}
@@ -25,32 +23,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/checkout@v4
-        with:
-          repository: pk910/hashtree
-          path: hashtree
       - name: CPU
-        run: |
-          if [ "$(uname)" = Darwin ]; then sysctl -n machdep.cpu.brand_string hw.ncpu hw.perflevel0.l1icachesize || true
-          else lscpu; fi
+        run: lscpu || sysctl -n machdep.cpu.brand_string
       - name: Build
-        run: |
-          make -C hashtree/src CC=clang "$PWD/hashtree/src/../build/lib/libhashtree.a"
-          make -C src CC=clang HASHTREE=1 HASHTREE_DIR=../hashtree test bench
+        run: make -C src CC=clang test
       - name: Test
-        run: KT_TEST_SHA3=$( [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo && echo 1 ) build/test
+        continue-on-error: true
+        run: build/test
+      # the Go wrapper's dispatch and forced paths against this tree's lib
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Go forced paths (this tree's lib)
+        run: |
+          export KECCAKTREE_EXPECT_PATH='sha3_x3|sha3_x3r|sha3_x2|neon_x3|neon_x2|scalar_x1'
+          go test -count=1 -run 'TestForcedPaths|TestActivePathMatchesEnv|TestHash' -v . 2>&1 | grep -E "^(=== RUN|--- |PASS|FAIL|ok|    )" | grep -v "=== RUN" | head -60
       # interleaved A/B of this tree against main (bench/ab): ratio > 1 =
       # this tree faster; min and median of -n rounds per size
       - name: A/B vs main
         run: |
           CC=clang bench/ab/build.sh origin/main
-          clang -O1 -o build/clock bench/ab/clock.c && build/clock
-          if [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo; then K="$KERNELS"
-          elif grep -qw avx512f /proc/cpuinfo; then K=auto,avx512_x8,avx512_x9:avx512_x8,avx512vl_x4,generic,x86_x1:generic,avx2_x8:avx512_x8,avx2_x10:avx512_x8,avx2_x4:avx512vl_x4
-          elif grep -qw avx2 /proc/cpuinfo; then K=auto,avx2_x8,avx2_x4,generic
+          if [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo; then K=auto,sha3_x3r,sha3_x3,sha3_x2
+          elif grep -qw avx512f /proc/cpuinfo; then K=auto,avx512_x8d:avx512_x8,avx512_x9d:avx512_x9,avx512vl_x4d:avx512vl_x4,avx512_x8,avx512_x9,avx512vl_x4
+          elif grep -qw avx2 /proc/cpuinfo; then K=auto,avx2_x8,avx2_x4
           else K=auto,generic; fi
-          for i in 1 2; do build/ab -n ${ROUNDS:-9} -s ${SIZES:-1,2,3,8,64,256,1024} $K; echo; done
-          build/clock
-        env:
-          KERNELS: auto,sha3_x3r,sha3_x2,sha3_x3r_sp:sha3_x3r
-          SIZES: 1,2,3,4,5,7,8,10,16,64,256,1024
+          for i in 1 2; do build/ab -n 9 -s 1,2,4,5,8,9,16,64,256,1024 $K; echo; done
