@@ -87,9 +87,13 @@ class X86:
         self.addr2idx = {r[0]: i for i, r in enumerate(raw)}
         self.entry = self.addr2idx[symaddr[self.func]]
         self.instrs = []
+        self.texts = []
         for addr, text, reloc, end in raw:
+            self.texts.append(re.sub(r'\s+#.*$', '', text))
             self.instrs.append(self.translate(addr, text, reloc, end))
         self.check_flags()
+        self.check_r32()
+        self.check_vzeroupper()
 
     # flag-setting instructions the model implements, and those it does not (data ALU: flags unchanged)
     FLAG_OK = ('.cmpi', '.cmpr', '.cmpm', '.cmprm', '.test', '.dec', '.decm', '.sub', '.xorz', '.bt')
@@ -109,12 +113,146 @@ class X86:
             while j >= 0:
                 op = self.instrs[j].split()[0]
                 if op in self.FLAG_OK:
+                    # `sub` sets the model's flags only on a number (a pointer leaves them unchanged,
+                    # the CPU does not): as a flag source only on the count register rdx
+                    if op == '.sub' and self.instrs[j].split()[1] != '2':
+                        raise ValueError('flags of sub on a possible pointer (%d %s) used by jcc %d' % (j, self.instrs[j], i))
                     break
                 if op in self.FLAG_BAD or op in ('.jmp', '.jcc', '.call', '.ret', '.tailcall', '.repmovsb') or j in targets:
                     raise ValueError('flags of instruction %d (%s) used by jcc %d are not modelled' % (j, self.instrs[j], i))
                 j -= 1
             else:
                 raise ValueError('jcc %d without a flag setter' % i)
+
+    def succs(self, i):
+        """control-flow successors of instruction i (calls: the callee; returns: every return site)"""
+        ins = self.instrs[i]
+        op = ins.split()[0]
+        m = re.match(r'^\.(?:jcc \.\w+|jmp|call) (\d+)$', ins)
+        if op == '.jmp':
+            return [int(m.group(1))]
+        if op == '.jcc':
+            return [int(m.group(1)), i + 1]
+        if op == '.call':
+            return [int(m.group(1))]
+        if op == '.ret':
+            return [k + 1 for k, x in enumerate(self.instrs) if x.startswith('.call ')]
+        if op in ('.tailcall',):
+            return []
+        return [i + 1] if i + 1 < len(self.instrs) else []
+
+    # 32-bit general-register forms: the model's 64-bit semantics agree with the CPU's 32-bit
+    # operation only when the upper half of the register is zero.  Allowed: zero-extending writes
+    # (`mov r32, imm >= 0`, `xor r32, r32`, `dec r32`) anywhere; reads (`dec r32`, `cmp r32, imm >= 0`,
+    # `test r32, r32`) only where a forward must-analysis shows the upper half is zero.
+    R32_WRITE = re.compile(r'^(mov\s+(e[a-d]x|e[sd]i|e[sb]p|r\d+d),\s*0x[0-9a-f]+|xor\s+(\w+),\s*\3|dec\s+(e[a-d]x|e[sd]i|e[sb]p|r\d+d))$')
+    R32_READ = re.compile(r'^(dec\s+(\w+)|cmp\s+(\w+),\s*0x[0-9a-f]+|test\s+(\w+),\s*\4)$')
+
+    def gpr_writes(self, i):
+        """64-bit register numbers instruction i writes (by its text)"""
+        t = self.texts[i]
+        parts = t.split(None, 1)
+        op = parts[0]
+        args = self.split_args(parts[1]) if len(parts) > 1 else []
+        ws = set()
+        if op in ('cmp', 'test', 'bt', 'push', 'jmp', 'call', 'ret', 'nop', 'nopw', 'nopl', 'data16', 'cs', 'vzeroupper') \
+                or op.startswith('j') or op == 'kmovw':
+            pass
+        elif op == 'rep':
+            ws = {1, 6, 7}
+        elif op == 'xchg' and len(args) == 2:
+            ws = {gpr(a) for a in args if a in GPR or a in GPR32}
+        elif op == 'pop':
+            ws = {gpr(args[0]), 4}
+        elif args and (args[0] in GPR or args[0] in GPR32):
+            ws = {gpr(args[0])}
+        if op in ('push', 'call', 'ret'):
+            ws.add(4)
+        return ws
+
+    def check_r32(self):
+        uses = [i for i, t in enumerate(self.texts) if re.search(r'\b(e[a-d]x|e[sd]i|e[sb]p|r\d+d)\b', t)]
+        if not uses:
+            return
+        for i in uses:
+            t = self.texts[i]
+            if not (self.R32_WRITE.match(t) or self.R32_READ.match(t)):
+                raise ValueError('32-bit form not modelled: %d %s' % (i, t))
+            m = re.match(r'^mov\s+\w+,\s*0x([0-9a-f]+)$', t)
+            if m and int(m.group(1), 16) >= 1 << 31:
+                raise ValueError('32-bit immediate (sign-extended by the model): %d %s' % (i, t))
+        n = len(self.instrs)
+        ALL = frozenset(range(16))
+        # must-analysis: Z = registers whose upper half is zero, NZ = registers known non-zero (32-bit)
+        top = (ALL, ALL)
+        st = [top] * n
+        st[self.entry] = (frozenset(), frozenset())
+        succ = [self.succs(i) for i in range(n)]
+
+        def out(i, j):
+            z, nz = set(st[i][0]), set(st[i][1])
+            ws = self.gpr_writes(i)
+            z -= ws
+            nz -= ws
+            t = self.texts[i]
+            if self.R32_WRITE.match(t):
+                z |= ws
+                m = re.match(r'^mov\s+\w+,\s*0x([0-9a-f]+)$', t)
+                if m and int(m.group(1), 16) != 0:
+                    nz |= ws
+            # a taken `jne` after `dec r32` / `test r32, r32`: the register is non-zero
+            if t.split()[0] in ('jne', 'jnz') and i > 0 and j != i + 1:
+                p = self.texts[i - 1]
+                m = re.match(r'^(?:dec\s+(\w+)|test\s+(\w+),\s*\2)$', p)
+                if m and (m.group(1) or m.group(2)) in GPR32:
+                    nz.add(gpr(m.group(1) or m.group(2)))
+            return frozenset(z), frozenset(nz)
+        changed = True
+        while changed:
+            changed = False
+            ins = [[] for _ in range(n)]
+            for i in range(n):
+                for j in succ[i]:
+                    if j < n:
+                        ins[j].append(out(i, j))
+            for i in range(n):
+                if i == self.entry:
+                    continue
+                ps = ins[i]
+                v = (frozenset.intersection(*[p[0] for p in ps]), frozenset.intersection(*[p[1] for p in ps])) if ps else top
+                if v != st[i]:
+                    st[i] = v
+                    changed = True
+        for i in uses:
+            m = self.R32_READ.match(self.texts[i])
+            if not m:
+                continue
+            r = gpr(m.group(2) or m.group(3) or m.group(4))
+            if r not in st[i][0]:
+                raise ValueError('32-bit read of a register whose upper half may be non-zero: %d %s' % (i, self.texts[i]))
+            if m.group(2) and r not in st[i][1]:
+                raise ValueError('32-bit dec of a register that may be zero (wraps to 2^32-1 on the CPU): %d %s' % (i, self.texts[i]))
+
+    def check_vzeroupper(self):
+        """the model's `vzeroupper` keeps the upper lanes: no vector instruction may follow it before the
+        function returns or tail-calls (the CPU zeroes bits 128.. of ymm/zmm0-15)"""
+        for i, ins in enumerate(self.instrs):
+            if ins != '.vzeroupper':
+                continue
+            seen, todo = set(), [i + 1]
+            while todo:
+                j = todo.pop()
+                if j in seen or j >= len(self.instrs):
+                    continue
+                seen.add(j)
+                op = self.instrs[j].split()[0]
+                if op.startswith('.v') and op != '.vzeroupper' or op in ('.kmovw',):
+                    raise ValueError('vector instruction %d (%s) after vzeroupper %d' % (j, self.instrs[j], i))
+                if op == '.ret':
+                    continue
+                if op == '.call':
+                    raise ValueError('call after vzeroupper %d' % i)
+                todo.extend(self.succs(j))
 
     def rodata_target(self, reloc, end):
         off, typ, val = reloc
@@ -211,7 +349,12 @@ class X86:
             _, a, _ = self.vreg(args[1])
             return '.vpshufd %d %d %d %d' % (lanes, d, a, imm(args[2]))
         if op == 'kmovw':
-            return '.kmovw %d %s' % (int(args[0][1:]), self.memop(args[1], reloc, end))
+            mo = self.memop(args[1], reloc, end)
+            # the model reads the 16-bit mask from one 8-byte word: the byte offset must be known and <= 6
+            m = re.match(r'^\(\.rip (\d+)\)$', mo)
+            if not m or int(m.group(1)) % 8 == 7:
+                raise ValueError('kmovw from a base register or across a word boundary: %x %s' % (addr, text))
+            return '.kmovw %d %s' % (int(args[0][1:]), mo)
         if op == 'vzeroupper':
             return '.vzeroupper'
         def gsrc(a):
@@ -237,6 +380,8 @@ class X86:
         if op == 'add' and ismem(args[0]):
             return '.addm %s (%d)' % (self.memop(args[0], reloc, end), simm64(args[1]))
         if op in ('add', 'sub') and isimm(args[1]):
+            if op == 'sub' and simm64(args[1]) < 0:
+                raise ValueError('sub with a negative immediate (flags not modelled): %x %s' % (addr, text))
             return '.%s %d (%d)' % (op, gpr(args[0]), simm64(args[1]))
         if op == 'and' and args[0] == 'rsp':
             return '.andi %d (%d)' % (gpr(args[0]), simm64(args[1]))
@@ -262,6 +407,8 @@ class X86:
             if ismem(args[1]):
                 return '.cmprm %d %s' % (gpr(args[0]), self.memop(args[1], reloc, end))
             if isimm(args[1]):
+                if simm64(args[1]) < 0:
+                    raise ValueError('cmp with a negative immediate (the model compares signed offsets): %x %s' % (addr, text))
                 return '.cmpi %d (%d)' % (gpr(args[0]), simm64(args[1]))
             return '.cmpr %d %d' % (gpr(args[0]), gpr(args[1]))
         if op == 'test':
@@ -351,6 +498,35 @@ class Arm:
         self.addr2idx = {a: i for i, (a, _) in enumerate(raw)}
         self.entry = self.addr2idx[symaddr[self.func]]
         self.instrs = [self.translate(a, t) for a, t in raw]
+        self.check_dload()
+
+    def check_dload(self):
+        """`ldr d`/`ldp d` leave lane 1 of the register unchanged in the model, the CPU zeroes it: no vector
+        instruction and no q/d store may follow before the function returns or tail-calls"""
+        for i, ins in enumerate(self.instrs):
+            if not re.match(r'^\.(ldr|ldp) \(\.d ', ins):
+                continue
+            seen, todo = set(), [i + 1]
+            while todo:
+                j = todo.pop()
+                if j in seen or j >= len(self.instrs):
+                    continue
+                seen.add(j)
+                x = self.instrs[j]
+                op = x.split()[0]
+                if re.match(r'^\.(ldr|ldp) \(\.d ', x) or re.match(r'^\.(ldr|ldp|str|stp) \(\.x ', x) or op in (
+                        '.eorx', '.bicx', '.rorx', '.movx', '.movi', '.add', '.sub', '.subs', '.cmp', '.csel', '.nop'):
+                    todo.append(j + 1)
+                    continue
+                if op in ('.ret', '.tailcall'):
+                    continue
+                m = re.match(r'^\.(cbz \d+|bcond \.\w+|b) (\d+)$', x)
+                if m:
+                    todo.append(int(m.group(2)))
+                    if op != '.b':
+                        todo.append(j + 1)
+                    continue
+                raise ValueError('instruction %d (%s) after the d-register load %d (%s)' % (j, x, i, ins))
 
     def word64(self, addr):
         return self.words[addr] | (self.words[addr + 4] << 32)
@@ -426,17 +602,20 @@ class Arm:
         if op == 'csel': return '.csel %d %d %d .%s' % (X(args[0]), X(args[1]), X(args[2]), args[3])
         if op == 'ldr':
             if args[1].startswith('['):
-                b, o, wb = self.memop(args[1]); assert wb == 0
+                # the memory operand is everything after the register (`[x1], #8` is post-indexed)
+                b, o, wb = self.memop(', '.join(args[1:])); assert wb == 0, text
                 return '.ldr %s %d (%d)' % (self.lreg(args[0]), b, o)
             m = re.match(r'^([0-9a-f]+) <', args[1]); a = int(m.group(1), 16)
             r = self.lreg(args[0])
             if r.startswith('(.q'): return '.ldrlit %s (0x%016x#64) (0x%016x#64)' % (r, self.word64(a), self.word64(a + 8))
             return '.ldrlit %s (0x%016x#64) (0#64)' % (r, self.word64(a))
         if op == 'str':
-            b, o, wb = self.memop(args[1]); assert wb == 0
+            b, o, wb = self.memop(', '.join(args[1:])); assert wb == 0, text
             return '.str %s %d (%d)' % (self.lreg(args[0]), b, o)
         if op in ('ldp', 'stp'):
-            b, o, wb = self.memop(args[2])
+            # `[sp], #16` (post-index) is split into two arguments by the comma split above: rejoin, or
+            # the write-back of the base register is lost
+            b, o, wb = self.memop(', '.join(args[2:]))
             return '.%s %s %s %d (%d) %d' % (op, self.lreg(args[0]), self.lreg(args[1]), b, o, wb)
         if op == 'cbz': return '.cbz %d %d' % (X(args[0]), self.target(args[1]))
         if op.startswith('b.'):
