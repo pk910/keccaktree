@@ -25,6 +25,24 @@ structure IsHom [LaneOps α] [LaneOps β] (f : α → β) : Prop where
   ptr : ∀ a, f (LaneOps.ptr a) = LaneOps.ptr a
   asAddr : ∀ x a, LaneOps.asAddr x = some a → LaneOps.asAddr (f x) = some a
 
+/-- The lane-operation part of `IsHom` (what the purely lane-wise lemmas need;
+relocation is such a map but moves pointers). -/
+structure IsLaneHom [LaneOps α] [LaneOps β] (f : α → β) : Prop where
+  const : ∀ v, f (LaneOps.const v) = LaneOps.const v
+  xor : ∀ a b, f (LaneOps.xor a b) = LaneOps.xor (f a) (f b)
+  and : ∀ a b, f (LaneOps.and a b) = LaneOps.and (f a) (f b)
+  or : ∀ a b, f (LaneOps.or a b) = LaneOps.or (f a) (f b)
+  not : ∀ a, f (LaneOps.not a) = LaneOps.not (f a)
+  shl : ∀ a n, f (LaneOps.shl a n) = LaneOps.shl (f a) n
+  shr : ∀ a n, f (LaneOps.shr a n) = LaneOps.shr (f a) n
+  rol : ∀ a n, f (LaneOps.rol a n) = LaneOps.rol (f a) n
+  add : ∀ a b, f (LaneOps.add a b) = LaneOps.add (f a) (f b)
+  ternlog : ∀ imm a b c, f (LaneOps.ternlog imm a b c) = LaneOps.ternlog imm (f a) (f b) (f c)
+  asConst : ∀ a v, LaneOps.asConst a = some v → LaneOps.asConst (f a) = some v
+
+theorem IsHom.lane [LaneOps α] [LaneOps β] {f : α → β} (hf : IsHom f) : IsLaneHom f :=
+  ⟨hf.const, hf.xor, hf.and, hf.or, hf.not, hf.shl, hf.shr, hf.rol, hf.add, hf.ternlog, hf.asConst⟩
+
 theorem E.eval_isHom (env : Nat → BitVec 64) : IsHom (E.eval env) where
   const _ := rfl
   xor _ _ := rfl
@@ -182,12 +200,14 @@ theorem storeWords_err (st s' : State α) (a : Addr) (vs : List α) (h : st.stor
   · cases h; rfl
   · cases h
 
-theorem getD_map (l : List α) (i : Nat) : (l.map f).getD i (LaneOps.const 0) = f (l.getD i (LaneOps.const 0)) := by
+omit hf in
+theorem getD_map (hl : IsLaneHom f) (l : List α) (i : Nat) : (l.map f).getD i (LaneOps.const 0) = f (l.getD i (LaneOps.const 0)) := by
   simp only [List.getD_eq_getElem?_getD, List.getElem?_map]
-  cases l[i]? <;> simp [hf.const]
+  cases l[i]? <;> simp [hl.const]
 
-theorem headD_map (l : List α) : (l.map f).headD (LaneOps.const 0) = f (l.headD (LaneOps.const 0)) := by
-  cases l <;> simp [hf.const]
+omit hf in
+theorem headD_map (hl : IsLaneHom f) (l : List α) : (l.map f).headD (LaneOps.const 0) = f (l.headD (LaneOps.const 0)) := by
+  cases l <;> simp [hl.const]
 
 theorem writeV_map (s : State α) (n lanes : Nat) (vs : List α) :
     writeV (mapState f s) n lanes (vs.map f) = mapState f (writeV s n lanes vs) := by
@@ -212,15 +232,18 @@ theorem foldl_hom {γ δ ι : Type} (g : γ → δ) (step : γ → ι → γ) (s
   | nil => rfl
   | cons i l ih => simp only [List.foldl_cons, ih, h]
 
-theorem lane128_map (xs : List α) (j : Nat) : lane128 (xs.map f) j = (lane128 xs j).map f := by
-  simp only [lane128, List.map_cons, List.map_nil, getD_map hf]
+omit hf in
+theorem lane128_map (hl : IsLaneHom f) (xs : List α) (j : Nat) : lane128 (xs.map f) j = (lane128 xs j).map f := by
+  simp only [lane128, List.map_cons, List.map_nil, getD_map hl]
 
-theorem optGetD_map (o : Option α) : (o.map f).getD (LaneOps.const 0) = f (o.getD (LaneOps.const 0)) := by
-  rcases o with _ | x <;> simp [hf.const]
+omit hf in
+theorem optGetD_map (hl : IsLaneHom f) (o : Option α) : (o.map f).getD (LaneOps.const 0) = f (o.getD (LaneOps.const 0)) := by
+  rcases o with _ | x <;> simp [hl.const]
 
-theorem getElem?_map_getD (l : List α) (i : Nat) :
+omit hf in
+theorem getElem?_map_getD (hl : IsLaneHom f) (l : List α) (i : Nat) :
     (l.map f)[i]?.getD (LaneOps.const 0) = f (l[i]?.getD (LaneOps.const 0)) := by
-  rw [List.getElem?_map]; exact optGetD_map hf _
+  rw [List.getElem?_map]; exact optGetD_map hl _
 
 omit hf in
 theorem map_ite (c : Prop) [Decidable c] (x y : α) : f (if c then x else y) = if c then f x else f y := by
@@ -231,10 +254,11 @@ theorem map_ite_list (c : Prop) [Decidable c] (l1 l2 : List α) :
     (if c then l1 else l2).map f = if c then l1.map f else l2.map f := by
   split <;> rfl
 
-theorem alignr_map (bs as_ : List α) (j : Nat) :
+omit hf in
+theorem alignr_map (hl : IsLaneHom f) (bs as_ : List α) (j : Nat) :
     lane128 (bs.map f) j ++ lane128 (as_.map f) j ++ [LaneOps.const 0, LaneOps.const 0] =
       (lane128 bs j ++ lane128 as_ j ++ [LaneOps.const 0, LaneOps.const 0]).map f := by
-  simp only [lane128_map hf, List.map_append, List.map_cons, List.map_nil, hf.const]
+  simp only [lane128_map hl, List.map_append, List.map_cons, List.map_nil, hl.const]
 
 omit hf in
 theorem ite_map (c : Prop) [Decidable c] (x y : α) : (if c then f x else f y) = f (if c then x else y) := by
@@ -266,8 +290,9 @@ theorem zipWith_map_hom (g : α → α → α) (g' : β → β → β) (hg : ∀
   | nil => simp
   | cons x l ih => cases l2 <;> simp [ih, hg]
 
+omit hf in
 /-- If every symbolic lane is a known constant, the mapped lanes are the same constants. -/
-theorem asConst_map_all (l : List α) (h : (l.map LaneOps.asConst).all Option.isSome = true) :
+theorem asConst_map_all (hl : IsLaneHom f) (l : List α) (h : (l.map LaneOps.asConst).all Option.isSome = true) :
     (l.map f).map LaneOps.asConst = l.map LaneOps.asConst := by
   induction l with
   | nil => rfl
@@ -275,20 +300,22 @@ theorem asConst_map_all (l : List α) (h : (l.map LaneOps.asConst).all Option.is
     simp only [List.map_cons, List.all_cons, Bool.and_eq_true] at h
     rcases hx : LaneOps.asConst x with _ | v
     · simp [hx] at h
-    · simp only [List.map_cons, hf.asConst x v hx, hx, ih h.2]
+    · simp only [List.map_cons, hl.asConst x v hx, hx, ih h.2]
 
-theorem allSome_map (l : List (Option α)) : allSome (l.map (Option.map f)) = (allSome l).map (List.map f) := by
+omit hf in
+theorem allSome_map (hl : IsLaneHom f) (l : List (Option α)) : allSome (l.map (Option.map f)) = (allSome l).map (List.map f) := by
   simp only [allSome, List.all_map, Function.comp_def, Option.isSome_map]
   split
   · simp only [Option.map_some, List.map_map]
     congr 1
     apply List.map_congr_left
     intro o _
-    cases o <;> simp [hf.const]
+    cases o <;> simp [hl.const]
   · rfl
 
+omit hf in
 /-- One word of `vpshufb`: the fold commutes with `f`. -/
-theorem shufbWord_map (lo hi : α) (cw : BitVec 64) :
+theorem shufbWord_map (hl : IsLaneHom f) (lo hi : α) (cw : BitVec 64) :
     (List.range 8).foldl (fun acc i =>
         let m := ((cw >>> (8 * i)) &&& 0xff#64).toNat
         if m &&& 0x80 ≠ 0 then acc
@@ -303,20 +330,22 @@ theorem shufbWord_map (lo hi : α) (cw : BitVec 64) :
           let src := if (m &&& 15) < 8 then LaneOps.and (LaneOps.shr lo (8 * (m &&& 15))) (LaneOps.const 0xff#64)
                      else LaneOps.and (LaneOps.shr hi (8 * ((m &&& 15) - 8))) (LaneOps.const 0xff#64)
           LaneOps.or acc (LaneOps.shl src (8 * i))) (LaneOps.const 0)) := by
-  rw [foldl_hom f _ _ ?_ _ _, hf.const]
+  rw [foldl_hom f _ _ ?_ _ _, hl.const]
   intro acc i
   dsimp only
   split
   · rfl
-  · simp only [hf.or, hf.shl]; split <;> simp [hf.and, hf.shr, hf.const]
+  · simp only [hl.or, hl.shl]; split <;> simp [hl.and, hl.shr, hl.const]
 
-theorem shufb128_map' (lo hi : α) (c0 c1 : BitVec 64) :
+omit hf in
+theorem shufb128_map' (hl : IsLaneHom f) (lo hi : α) (c0 c1 : BitVec 64) :
     shufb128 (f lo) (f hi) c0 c1 = (f (shufb128 lo hi c0 c1).1, f (shufb128 lo hi c0 c1).2) := by
   simp only [shufb128]
-  exact Prod.ext (shufbWord_map hf lo hi c0) (shufbWord_map hf lo hi c1)
+  exact Prod.ext (shufbWord_map hl lo hi c0) (shufbWord_map hl lo hi c1)
 
-theorem aluOp_map (op : AluOp) (x y : α) : aluOp op (f x) (f y) = f (aluOp op x y) := by
-  cases op <;> simp [aluOp, hf.xor, hf.and, hf.or, hf.add]
+omit hf in
+theorem aluOp_map (hl : IsLaneHom f) (op : AluOp) (x y : α) : aluOp op (f x) (f y) = f (aluOp op x y) := by
+  cases op <;> simp [aluOp, hl.xor, hl.and, hl.or, hl.add]
 
 /-! ## Registers as words, addresses -/
 
@@ -422,7 +451,7 @@ theorem readG_map (rodata : Array (BitVec 64)) (s : State α) (b : GSrc) (k : α
     intro a _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ hne3
-    rw [headD_map hf]; exact hk _ hne3
+    rw [headD_map hf.lane]; exact hk _ hne3
 
 omit hf in
 theorem binop_err {rodata : Array (BitVec 64)} {s : State α} {lanes d a : Nat} {b : Src} {g : α → α → α}
@@ -446,10 +475,10 @@ macro_rules
   | `(tactic| x86_vec) => `(tactic| (
       rw [← next_map]; apply congrArg next
       apply writeV_map' hf
-      simp only [getV_map hf, ← List.map_take, List.map_map, Function.comp_def, getD_map hf,
-        getElem?_map_getD hf, optGetD_map hf, lane128_map hf, List.map_append, List.map_cons, List.map_nil,
+      simp only [getV_map hf, ← List.map_take, List.map_map, Function.comp_def, getD_map hf.lane,
+        getElem?_map_getD hf.lane, optGetD_map hf.lane, lane128_map hf.lane, List.map_append, List.map_cons, List.map_nil,
         hf.const, hf.xor, hf.and, hf.or, hf.not, hf.shl, hf.shr, hf.rol, hf.add, hf.ternlog, map_ite,
-        foldr_cons2_map, foldr_append_map, shufb128_map' hf]
+        foldr_cons2_map, foldr_append_map, shufb128_map' hf.lane]
       try rfl))
 
 /-- `exec` commutes with a lane homomorphism, as long as the (symbolic) run does not fail;
@@ -467,7 +496,7 @@ theorem exec_map_vmov (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (
     cases mask with
     | none => rfl
     | some k =>
-      simp only [getV_map hf, List.map_map, Function.comp_def, getD_map hf, map_ite]
+      simp only [getV_map hf, List.map_map, Function.comp_def, getD_map hf.lane, map_ite]
   · simp [exec, mapState, hh]
 
 theorem exec_map_vstore (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (dst : _) (src : _)
@@ -551,7 +580,7 @@ theorem exec_map_vpsllvq (rodata : Array (BitVec 64)) (st : State α) (lanes : _
     intro bs _ hne2
     rcases hall : (bs.map LaneOps.asConst).all Option.isSome with _ | _
     · simp only [hall, Bool.false_eq_true, ↓reduceIte, fail_err] at hne2; exact absurd hne2 (by decide)
-    · simp only [asConst_map_all hf bs hall, hall, ↓reduceIte]; x86_vec
+    · simp only [asConst_map_all hf.lane bs hall, hall, ↓reduceIte]; x86_vec
   · simp [exec, mapState, hh]
 
 theorem exec_map_vpsrlvq (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (d : _) (a : _) (b : _)
@@ -563,7 +592,7 @@ theorem exec_map_vpsrlvq (rodata : Array (BitVec 64)) (st : State α) (lanes : _
     intro bs _ hne2
     rcases hall : (bs.map LaneOps.asConst).all Option.isSome with _ | _
     · simp only [hall, Bool.false_eq_true, ↓reduceIte, fail_err] at hne2; exact absurd hne2 (by decide)
-    · simp only [asConst_map_all hf bs hall, hall, ↓reduceIte]; x86_vec
+    · simp only [asConst_map_all hf.lane bs hall, hall, ↓reduceIte]; x86_vec
   · simp [exec, mapState, hh]
 
 theorem exec_map_vpternlogq (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (d : _) (a : _) (b : _) (imm : _)
@@ -584,10 +613,10 @@ theorem exec_map_vpshufb (rodata : Array (BitVec 64)) (st : State α) (lanes : _
     intro cs _ hne2
     rcases hall : (cs.map LaneOps.asConst).all Option.isSome with _ | _
     · simp only [hall, Bool.false_eq_true, ↓reduceIte, fail_err] at hne2; exact absurd hne2 (by decide)
-    · simp only [asConst_map_all hf cs hall, hall, ↓reduceIte]
+    · simp only [asConst_map_all hf.lane cs hall, hall, ↓reduceIte]
       rw [← next_map]; apply congrArg next
       apply writeV_map' hf
-      simp only [getV_map hf, ← List.map_take, getD_map hf, shufb128_map' hf, foldr_cons2_map]
+      simp only [getV_map hf, ← List.map_take, getD_map hf.lane, shufb128_map' hf.lane, foldr_cons2_map]
   · simp [exec, mapState, hh]
 
 theorem exec_map_vpshufd (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (d : _) (a : _) (imm : _)
@@ -599,8 +628,8 @@ theorem exec_map_vpshufd (rodata : Array (BitVec 64)) (st : State α) (lanes : _
         (((mapState f st).getV a).take lanes).getD (2 * (i / 2) + q) (LaneOps.const 0)) =
         ((List.range lanes).map fun i => (qwordSel imm (i % 2)).map fun q =>
         ((st.getV a).take lanes).getD (2 * (i / 2) + q) (LaneOps.const 0)).map (Option.map f) := by
-      simp only [List.map_map, Function.comp_def, Option.map_map, getV_map hf, ← List.map_take, getD_map hf]
-    rw [hl, allSome_map hf]
+      simp only [List.map_map, Function.comp_def, Option.map_map, getV_map hf, ← List.map_take, getD_map hf.lane]
+    rw [hl, allSome_map hf.lane]
     rcases hs : allSome ((List.range lanes).map fun i => (qwordSel imm (i % 2)).map fun q =>
         ((st.getV a).take lanes).getD (2 * (i / 2) + q) (LaneOps.const 0)) with _ | r
     · simp only [hs, fail_err] at hne; exact absurd hne (by decide)
@@ -627,9 +656,9 @@ theorem exec_map_vpblendd (rodata : Array (BitVec 64)) (st : State α) (lanes : 
       simp only [List.map_map, Function.comp_def, getV_map hf, ← List.map_take]
       apply List.map_congr_left; intro i _
       split
-      · simp only [Option.map_some, map_ite, getD_map hf]
+      · simp only [Option.map_some, map_ite, getD_map hf.lane]
       · rfl
-    rw [hl, allSome_map hf]
+    rw [hl, allSome_map hf.lane]
     rcases hs : allSome ((List.range lanes).map fun i =>
         if imm.testBit (2 * i) = imm.testBit (2 * i + 1) then
           some (if imm.testBit (2 * i) then bs.getD i (LaneOps.const 0)
@@ -651,7 +680,7 @@ theorem exec_map_vpalignr (rodata : Array (BitVec 64)) (st : State α) (lanes : 
       rw [← next_map]; apply congrArg next
       apply writeV_map' hf
       rw [getV_map hf, ← List.map_take]
-      simp only [alignr_map hf, getD_map hf, foldr_cons2_map]
+      simp only [alignr_map hf.lane, getD_map hf.lane, foldr_cons2_map]
     · simp only [hc, ↓reduceIte, fail_err] at hne2; exact absurd hne2 (by decide)
   · simp [exec, mapState, hh]
 
@@ -684,7 +713,7 @@ theorem exec_map_vperm2i128 (rodata : Array (BitVec 64)) (st : State α) (d : _)
     apply writeV_map' hf
     have hz : ([LaneOps.const 0, LaneOps.const 0] : List β) = [LaneOps.const 0, LaneOps.const 0].map f := by simp [hf.const]
     rw [getV_map hf, ← List.map_take]
-    simp only [hz, lane128_map hf, List.map_append]
+    simp only [hz, lane128_map hf.lane, List.map_append]
     congr 1 <;> (split <;> (try rfl) <;> split <;> rfl)
   · simp [exec, mapState, hh]
 
@@ -698,7 +727,7 @@ theorem exec_map_vinserti128 (rodata : Array (BitVec 64)) (st : State α) (d : _
     rw [← next_map]; apply congrArg next
     apply writeV_map' hf
     rw [getV_map hf, ← List.map_take]
-    simp only [map_ite_list, List.map_append, lane128_map hf]
+    simp only [map_ite_list, List.map_append, lane128_map hf.lane]
   · simp [exec, mapState, hh]
 
 theorem exec_map_vextracti128 (rodata : Array (BitVec 64)) (st : State α) (m : _) (a : _) (imm : _)
@@ -708,7 +737,7 @@ theorem exec_map_vextracti128 (rodata : Array (BitVec 64)) (st : State α) (m : 
   · simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte] at hne ⊢
     apply withMem_map hf _ _ _ _ hne
     intro ad _ hne2
-    apply withStore_map hf _ _ _ _ (by rw [getV_map hf, ← List.map_take, lane128_map hf]) _ _ hne2
+    apply withStore_map hf _ _ _ _ (by rw [getV_map hf, ← List.map_take, lane128_map hf.lane]) _ _ hne2
     intro s' _ _; rfl
   · simp [exec, mapState, hh]
 
@@ -722,7 +751,7 @@ theorem exec_map_vshufi64x2 (rodata : Array (BitVec 64)) (st : State α) (lanes 
     rw [← next_map]; apply congrArg next
     apply writeV_map' hf
     rw [getV_map hf, ← List.map_take]
-    simp only [ite_map_list, lane128_map hf, foldr_append_map]
+    simp only [ite_map_list, lane128_map hf.lane, foldr_append_map]
   · simp [exec, mapState, hh]
 
 theorem exec_map_vpermt2q (rodata : Array (BitVec 64)) (st : State α) (lanes : _) (d : _) (idx : _) (b : _)
@@ -737,12 +766,12 @@ theorem exec_map_vpermt2q (rodata : Array (BitVec 64)) (st : State α) (lanes : 
     rw [hv]
     rcases hall : (((st.getV idx).take lanes).map LaneOps.asConst).all Option.isSome with _ | _
     · simp only [hall, Bool.false_eq_true, ↓reduceIte, fail_err] at hne2; exact absurd hne2 (by decide)
-    · rw [asConst_map_all hf _ hall]
+    · rw [asConst_map_all hf.lane _ hall]
       simp only [hall, ↓reduceIte]
       rw [← next_map]; apply congrArg next
       apply writeV_map' hf
       rw [getV_map hf, ← List.map_take]
-      simp only [List.map_map, Function.comp_def, getD_map hf, map_ite]
+      simp only [List.map_map, Function.comp_def, getD_map hf.lane, map_ite]
   · simp [exec, mapState, hh]
 
 theorem exec_map_kmovw (rodata : Array (BitVec 64)) (st : State α) (k : _) (m : _)
@@ -840,7 +869,9 @@ theorem exec_map_dec (rodata : Array (BitVec 64)) (st : State α) (d : _)
   cases hh : st.halted
   · simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte] at hne ⊢
     apply withX_map hf _ _ _ _ hne
-    intro a _ _; rw [← next_map, setX_map hf]; rfl
+    intro a _ _; split
+    · rw [← next_map, setX_map hf]; rfl
+    · simp only [fail_map]
   · simp [exec, mapState, hh]
 
 theorem exec_map_xorz (rodata : Array (BitVec 64)) (st : State α) (d : _)
@@ -880,7 +911,7 @@ theorem exec_map_cmpm (rodata : Array (BitVec 64)) (st : State α) (m : _) (b : 
     intro ad _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ hne3
-    rw [headD_map hf]
+    rw [headD_map hf.lane]
     rcases hc : LaneOps.asAddr (ws.headD (LaneOps.const 0)) with _ | v
     · simp only [hc, fail_err] at hne3; exact absurd hne3 (by decide)
     · simp only [hc] at hne3; simp only [hf.asAddr _ _ hc]
@@ -897,7 +928,7 @@ theorem exec_map_cmprm (rodata : Array (BitVec 64)) (st : State α) (a : _) (m :
     intro ad _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ hne3
-    rw [headD_map hf]
+    rw [headD_map hf.lane]
     rcases hc : LaneOps.asAddr (ws.headD (LaneOps.const 0)) with _ | v
     · simp only [hc, fail_err] at hne3; exact absurd hne3 (by decide)
     · simp only [hc] at hne3; simp only [hf.asAddr _ _ hc]
@@ -943,7 +974,7 @@ theorem exec_map_alu (rodata : Array (BitVec 64)) (st : State α) (op : _) (d : 
   · simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte] at hne ⊢
     apply readG_map hf _ _ _ _ _ hne
     intro y _
-    rw [← next_map]; exact congrArg next (setGD_map' _ _ _ _ (by simp [getGD_map hf, aluOp_map hf]))
+    rw [← next_map]; exact congrArg next (setGD_map' _ _ _ _ (by simp [getGD_map hf, aluOp_map hf.lane]))
   · simp [exec, mapState, hh]
 
 theorem exec_map_andn (rodata : Array (BitVec 64)) (st : State α) (d : _) (a : _) (b : _)
@@ -975,7 +1006,7 @@ theorem exec_map_xorm (rodata : Array (BitVec 64)) (st : State α) (m : _) (src 
     intro a _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ hne3
-    apply withStore_map hf _ _ _ _ (by rw [headD_map hf, getGD_map hf]; simp only [List.map_cons, List.map_nil, hf.xor]) _ _ hne3
+    apply withStore_map hf _ _ _ _ (by rw [headD_map hf.lane, getGD_map hf]; simp only [List.map_cons, List.map_nil, hf.xor]) _ _ hne3
     intro s' _ _; rfl
   · simp [exec, mapState, hh]
 
@@ -999,7 +1030,7 @@ theorem exec_map_addm (rodata : Array (BitVec 64)) (st : State α) (m : _) (imm 
     intro a _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ hne3
-    apply withStore_map hf _ _ _ _ (by rw [headD_map hf]; simp only [List.map_cons, List.map_nil, hf.add, hf.const]) _ _ hne3
+    apply withStore_map hf _ _ _ _ (by rw [headD_map hf.lane]; simp only [List.map_cons, List.map_nil, hf.add, hf.const]) _ _ hne3
     intro s' _ _; rfl
   · simp [exec, mapState, hh]
 
@@ -1012,12 +1043,15 @@ theorem exec_map_decm (rodata : Array (BitVec 64)) (st : State α) (m : _)
     intro a _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ hne3
-    rw [headD_map hf]
+    rw [headD_map hf.lane]
     rcases hc : LaneOps.asAddr (ws.headD (LaneOps.const 0)) with _ | v
     · simp only [hc, fail_err] at hne3; exact absurd hne3 (by decide)
     · simp only [hc] at hne3; simp only [hf.asAddr _ _ hc]
-      apply withStore_map hf _ _ _ _ (by simp [hf.ptr]) _ _ hne3
-      intro s' _ _; rfl
+      by_cases hv : v.region = 0
+      · simp only [hv, ↓reduceIte] at hne3 ⊢
+        apply withStore_map hf _ _ _ _ (by simp [hf.ptr]) _ _ hne3
+        intro s' _ _; rfl
+      · simp only [hv, ↓reduceIte, fail_map]
   · simp [exec, mapState, hh]
 
 theorem exec_map_jcc (rodata : Array (BitVec 64)) (st : State α) (c : _) (t : _)
@@ -1065,7 +1099,7 @@ theorem exec_map_ret (rodata : Array (BitVec 64)) (st : State α)
       intro sp _ hne2
       apply withLoad_map hf _ _ _ _ _ _ hne2
       intro ws _ hne3
-      rw [headD_map hf]
+      rw [headD_map hf.lane]
       rcases hc : LaneOps.asAddr (ws.headD (LaneOps.const 0)) with _ | ra
       · simp only [hc, fail_err] at hne3; exact absurd hne3 (by decide)
       · simp only [hf.asAddr _ _ hc]
@@ -1092,7 +1126,7 @@ theorem exec_map_pop (rodata : Array (BitVec 64)) (st : State α) (d : _)
     intro sp _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ _
-    rw [headD_map hf, setGD_map, setX_map hf, next_map]
+    rw [headD_map hf.lane, setGD_map, setX_map hf, next_map]
   · simp [exec, mapState, hh]
 
 theorem exec_map_storeq (rodata : Array (BitVec 64)) (st : State α) (m : _) (src : _)
@@ -1115,7 +1149,7 @@ theorem exec_map_loadq (rodata : Array (BitVec 64)) (st : State α) (d : _) (m :
     intro a _ hne2
     apply withLoad_map hf _ _ _ _ _ _ hne2
     intro ws _ _
-    rw [headD_map hf, setGD_map, next_map]
+    rw [headD_map hf.lane, setGD_map, next_map]
   · simp [exec, mapState, hh]
 
 set_option linter.deprecated false in

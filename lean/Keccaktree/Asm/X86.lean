@@ -420,10 +420,12 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
     else next (setX s d ⟨a.region, a.off - imm⟩)
   | .andi d imm => withX s d fun a =>
     -- only used to align the stack pointer: `and rsp, -64`; region bases are 64-byte aligned
-    if imm = -64 then next (setX s d ⟨a.region, a.off - (a.off % 64)⟩) else s.fail
+    if imm = -64 ∧ a.region = rStack then next (setX s d ⟨a.region, a.off - (a.off % 64)⟩) else s.fail
   | .shl d imm => withX s d fun a =>
     if a.region = 0 then next (setX s d ⟨0, a.off * 2 ^ imm⟩) else s.fail
-  | .dec d => withX s d fun a => next { setX s d ⟨a.region, a.off - 1⟩ with zf := a.off - 1 = 0 }
+  | .dec d => withX s d fun a =>
+    -- a counter: zf is only meaningful for plain numbers
+    if a.region = 0 then next { setX s d ⟨a.region, a.off - 1⟩ with zf := a.off - 1 = 0 } else s.fail
   | .xorz d => next { setX s d (Addr.num 0) with zf := true, cf := false }
   | .cmpi a imm => withX s a fun x => next (setFlagsSub s x (Addr.num imm))
   | .cmpr a b => withX s a fun x => withX s b fun y => next (setFlagsSub s x y)
@@ -455,7 +457,9 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
     withStore s a [add (ws.headD (const 0)) (const (BitVec.ofInt 64 imm))] next
   | .decm m => withMem s m fun a => withLoad rodata s a 1 fun ws =>
     match asAddr (ws.headD (const 0)) with
-    | some v => withStore s a [ptr ⟨v.region, v.off - 1⟩] fun s' => next { s' with zf := v.off - 1 = 0 }
+    | some v =>
+      if v.region = 0 then withStore s a [ptr ⟨v.region, v.off - 1⟩] fun s' => next { s' with zf := v.off - 1 = 0 }
+      else s.fail
     | none => s.fail
   | .jcc c t => { s with pc := if condHolds s c then t else s.pc + 1 }
   | .jmp t => { s with pc := t }
@@ -480,6 +484,41 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   | .repmovsb => withX s 1 fun n => withX s 6 fun src => withX s 7 fun dst => repBody rodata s n src dst
   | .tailcall name => { s with halted := true, tail := some name }
   | .nop => next s
+
+/-- The lane values an instruction decodes as addresses (pointers, counts): the
+base registers of its memory operands, its pointer/count registers, and the
+words it loads as addresses.  Relocation (`Keccaktree.Asm.Reloc`) only needs
+these to stay representable. -/
+def decodes (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : List α :=
+  let mb : MemOp → List α := fun m => match m with | .base g _ => [s.getGD g] | .rip _ => []
+  let sb : Src → List α := fun b => match b with | .mem m | .bcst m => mb m | .reg _ => []
+  let gb : GSrc → List α := fun b => match b with | .mem m => mb m | _ => []
+  let word : MemOp → List α := fun m => match memAddr? s m with
+    | some a => match s.loadWords rodata a 1 with | some ws => [ws.headD (const 0)] | none => []
+    | none => []
+  let spWord : List α := match gx s 4 with
+    | some sp => match s.loadWords rodata sp 1 with | some ws => [ws.headD (const 0)] | none => []
+    | none => []
+  match i with
+  | .vmov _ _ src _ => sb src
+  | .vstore _ m _ => mb m
+  | .vpxor _ _ _ b | .vpand _ _ _ b | .vpandn _ _ _ b | .vpor _ _ _ b | .vpaddq _ _ _ b
+  | .vpsllvq _ _ _ b | .vpsrlvq _ _ _ b | .vpternlogq _ _ _ b _ | .vpshufb _ _ _ b
+  | .vpblendd _ _ _ b _ | .vpalignr _ _ _ b _ | .vpunpcklqdq _ _ _ b | .vpunpckhqdq _ _ _ b
+  | .vperm2i128 _ _ b _ | .vinserti128 _ _ b _ | .vshufi64x2 _ _ _ b _ | .vpermt2q _ _ _ b => sb b
+  | .vextracti128 m _ _ | .kmovw _ m | .lea _ m | .xorm m _ | .storeqi m _ | .addm m _
+  | .storeq m _ | .loadq _ m => mb m
+  | .add d _ | .sub d _ | .andi d _ | .shl d _ | .dec d | .cmpi d _ => [s.getGD d]
+  | .cmpr a b | .test a b => [s.getGD a, s.getGD b]
+  | .cmpm m b => mb m ++ word m ++ [s.getGD b]
+  | .cmprm a m => mb m ++ word m ++ [s.getGD a]
+  | .bt _ b => [s.getGD b]
+  | .alu _ _ b | .andn _ _ b | .rorx _ b _ => gb b
+  | .decm m => mb m ++ word m
+  | .call _ | .push _ | .pop _ => [s.getGD 4]
+  | .ret => [s.getGD 4] ++ spWord
+  | .repmovsb => [s.getGD 1, s.getGD 6, s.getGD 7]
+  | _ => []
 
 def step (rodata : Array (BitVec 64)) (prog : Array Instr) (s : State α) : State α := exec rodata (prog.getD s.pc .nop) s
 

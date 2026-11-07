@@ -29,7 +29,7 @@ theorem setR_map' (s : State α) (n : Nat) (x : α) (x' : β) (hx : f x = x') :
   · exact setGD_map' s n x x' hx
 
 theorem lane_map (s : State α) (n l : Nat) : lane (mapState f s) n l = f (lane s n l) := by
-  simp only [lane, getV_map hf, X86.getD_map hf]
+  simp only [lane, getV_map hf, X86.getD_map hf.lane]
 
 theorem setActive_map' (s : State α) (d : Nat) (g : Nat → α) (g' : Nat → β) (hg : ∀ l, f (g l) = g' l) :
     setActive (mapState f s) d g' = mapState f (setActive s d g) := by
@@ -168,7 +168,7 @@ theorem exec_map (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (st : St
         · rfl
         · simp only [Option.map_some]
           rw [← next_map]; congr 1
-          exact (foldl_hom (mapState f) _ _ (fun acc i => (setActive_map' hf acc (d + i) _ _ (fun l => (X86.getD_map hf ws _).symm)).symm) _ _).symm
+          exact (foldl_hom (mapState f) _ _ (fun acc i => (setActive_map' hf acc (d + i) _ _ (fun l => (X86.getD_map hf.lane ws _).symm)).symm) _ _).symm
     | vsseg src base nf =>
       simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, withAddr, vl_map] at hne ⊢
       rcases ha : addr st base 0 with _ | a
