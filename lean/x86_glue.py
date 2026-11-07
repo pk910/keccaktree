@@ -652,6 +652,15 @@ theorem afterB (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)
 
     # ------------------------------------------------------------------ after the prologue: the guard
     G_pc = A['G']
+    def policy_path0(cv):
+        ch = FrChain(prog, rodata, 'x', [], 0)
+        ch.vals = {2: Val('c', cv)}; ch.pc = entry
+        while X.fr_step(prog, rodata, ch.pc, {k: v.rep for k, v in ch.vals.items()}, bool(ch.zf), bool(ch.cf)) is not None:
+            k_, info = ch.step()
+            if k_ == 'tail':
+                return 'tail'
+        return ch.pc
+    Mlow = min(cv for cv in range(A['maxc'] + 1) if policy_path0(cv) == A['P0'])
     GA = 40
     for pv in p_names:
         GP = gen(pv)
@@ -660,7 +669,7 @@ set_option maxHeartbeats 40000000 in
 /-- **After the prologue** (`{pv}`): the loop guard, then the loop or an exit. -/
 theorem afterP_{pv} (off c : Nat) (input : Int → BitVec 64) (S0 T : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54)
     (hcut : relocState (rho off) (cutOf {GP}.facts.ctlK {GP}.facts.scK) = cutOf {GP}.facts.ctlK T)
-    (hI : Inv off c input S0 T 0) (hrdx : T.getGD 2 = BitVec.ofInt 64 (c : Int)) :
+    (hI : Inv off c input S0 T 0) (hrdx : T.getGD 2 = BitVec.ofInt 64 (c : Int)) (hlow : {Mlow} ≤ c) :
     DoneK off c input S0 T ({GA} + LI * c + XM) := by
   have hc55 : (c : Int) < 36028797018963968 := by
     have : (2 : Nat) ^ 54 = 18014398509481984 := rfl
@@ -686,7 +695,7 @@ have hd := afterB off c input S0 hb _ 0 _ (Nat.le_refl _) (by omega) (by simpa o
 rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI XM; omega)""".split('\n'):
                 out.append(' ' * ind + t)
-        L.extend(emit_dispatch(2, 'f0', '(c : Int)', 0, 'c', 0, G_pc, 'off', 0, '0', on_H_P))
+        L.extend(emit_dispatch(2, 'f0', '(c : Int)', 0, 'c', Mlow, G_pc, 'off', 0, '0', on_H_P))
         L.append('')
     # ------------------------------------------------------------------ the entry
     ENT = entry
@@ -740,8 +749,8 @@ theorem norm_thm : NormThm rodata prog {ENT} steps targets := by
             cnd, name, hi = info
             sym = name if name.startswith('keccaktree_') else SYM(name)
             oo(f'have hr := {f}.jcct_taken .{cnd} "{sym}" {hi} (by fr_cond)')
-            oo(f'intro n hn')
-            oo(f'rw [show n = ({ch.i} + 1) + (n - ({ch.i} + 1)) by omega, Isa.run_add, hr, Isa.run_halted _ _ _ _ _ rfl]')
+            oo(f'rw [show steps off c = ({ch.i} + 1) + (steps off c - ({ch.i} + 1)) by unfold steps; omega, Isa.run_add, hr,')
+            oo(f'  Isa.run_halted _ _ _ _ _ rfl]')
             oo(f'refine ⟨rfl, {f}.err, fun q _ => by rw [{f}.near.2.2.2.2.2.2.1], Or.inr ⟨"{sym}", 0, rfl, by decide, by omega,')
             oo(f'  fun n hn => absurd hn (Nat.not_lt_zero _), ?_⟩⟩')
             oo(f'simp only [Nat.add_zero, Nat.sub_zero]')
@@ -764,10 +773,9 @@ have e2 : (X86.isa.run rodata prog {GP}.facts.len (X86.isa.run rodata prog {ch.i
   exact {GP}.facts_rdx _ (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok
 have hd := afterP_{pv} off c input S _ hb cut1 I1 (by
   rw [e2, {f}.vals (2, {vals[2].lean if cv == 'sym' else f'((({cv} : Nat)) : Int)'}) (by simp [setVal])]
-  try rfl)
+  try rfl) (by omega)
 rw [len_{pv}] at hd
-intro n hn
-exact (Done.run rfl (Done.run rfl hd)) n (by unfold steps at hn; omega)""".split('\n'):
+exact (Done.run rfl (Done.run rfl hd)) (steps off c) (by unfold steps; omega)""".split('\n'):
             oo(t)
         return out
     if Mp == 0:
