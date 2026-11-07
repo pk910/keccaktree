@@ -106,3 +106,17 @@ Open: the same for RISC-V `vl` (RVV kernels: `vl` at a call is unspecified by th
 vl = 0) — the static-successor approach applies (RISC-V kernels make no calls either); x86 masks for the AVX-512
 kernels need `run_ovr_path` on the segment paths (the x86 batch is a `call`ed subroutine, so its `ret` has a
 dynamic successor).
+
+## 6. RISC-V vector length at entry (DONE)
+`Asm/RiscvEntryCtl.lean`: `Riscv.exec_ovr` (reads `vl`: every vector instruction; writes: `vsetvli`), `exec_pc`,
+`AnnOk`, **`run_ovr_ann`**, `vlAnn`/`vlAnnOk` interval certificates, `annotate`/`vlIntervals`.
+`Asm/LibRv.lean`: `NormThmRv vlmax`, **`mkKernelRv`**.  `Kernels/RvVl.lean`: certificates for rv64_x1, zbb_x1,
+rvv, rvv_zvkb (entry index 1): rvv [(1,13),(383,384)], rvv_zvkb [(1,13),(240,241)] — `vl` is set by `vsetvli`
+before any vector instruction on every path.  Axioms: propext, Quot.sound (no bv_decide).
+
+## Summary of open items (lib)
+* x86 AVX-512 masks at entry: `mkKernel`'s static check fails for the six AVX-512 kernels (masked moves); the
+  x86 agent must use `run_ovr_path` along the batch path (the batch starts with `kmovw k1`) or a dirty-set
+  annotation with call/return handling (the x86 batch is `call`ed: `ret` has a dynamic successor).
+* Thresholds ≥ 2^56 (model decodes them as pointers); VLENs without RVV kernel proofs.
+* Calibration runs alias input and output (`fns[i](buf, buf, n)`): outside the model (results discarded).
