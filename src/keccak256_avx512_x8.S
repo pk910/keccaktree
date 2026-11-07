@@ -117,7 +117,11 @@
 #define LOOP_CNT	r9 + 10*64
 #endif
 
+#ifdef KT_DFORM
+#include "keccak256_avx512d.inc"
+#else
 #include "keccak256_avx512.inc"
+#endif
 
 /* digest words o0..o3 (8 nodes each) -> 8 x 32 bytes at [BOUT].
  * o0..o3 can be any registers; once the first four instructions have read
@@ -201,7 +205,11 @@
 	vshufi64x2	zmm5, zmm10, zmm14, 0xDD
 	vshufi64x2	zmm3, zmm11, zmm15, 0x88
 	vshufi64x2	zmm7, zmm11, zmm15, 0xDD
-#if defined(KT_AVX512_UNROLLED) && !defined(NS)
+#if defined(KT_DFORM) && defined(KT_AVX512_UNROLLED)
+	KECCAK_F_D
+#elif defined(KT_DFORM)
+	KECCAK_F_D_LOOP
+#elif defined(KT_AVX512_UNROLLED) && !defined(NS)
 	KECCAK_F
 #else
 	KECCAK_F_LOOP

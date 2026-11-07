@@ -203,6 +203,9 @@ int main(void) {
         test_backend("avx512_x8al", keccaktree_keccak256_avx512_x8al);
         test_backend("avx512_x9b", keccaktree_keccak256_avx512_x9b);
         test_backend("avx512_x9c", keccaktree_keccak256_avx512_x9c);
+        test_backend("avx512_x8d", keccaktree_keccak256_avx512_x8d);
+        test_backend("avx512_x8du", keccaktree_keccak256_avx512_x8du);
+        test_backend("avx512_x9d", keccaktree_keccak256_avx512_x9d);
     } else {
         printf("  %-48s [ no CPU support ]\n", "avx512");
     }

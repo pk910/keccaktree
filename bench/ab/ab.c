@@ -119,6 +119,7 @@ WEAK(keccaktree_keccak256_avx512_x9b)
 WEAK(keccaktree_keccak256_avx512_x9c)
 WEAK(keccaktree_keccak256_avx512_x8d)
 WEAK(keccaktree_keccak256_avx512_x9d)
+WEAK(keccaktree_keccak256_avx512_x8du)
 #else
 #define keccaktree_keccak256_avx2_x4 NULL
 #define keccaktree_keccak256_avx2_x8 NULL
@@ -149,6 +150,7 @@ WEAK(keccaktree_keccak256_avx512_x9d)
 #define keccaktree_keccak256_avx512_x9c NULL
 #define keccaktree_keccak256_avx512_x8d NULL
 #define keccaktree_keccak256_avx512_x9d NULL
+#define keccaktree_keccak256_avx512_x8du NULL
 #endif
 
 static double now(void) {
@@ -226,6 +228,7 @@ static fn lookup_cand(const char* n) {
     if (!strcmp(n, "avx512_x9c")) return keccaktree_keccak256_avx512_x9c;
     if (!strcmp(n, "avx512_x8d")) return keccaktree_keccak256_avx512_x8d;
     if (!strcmp(n, "avx512_x9d")) return keccaktree_keccak256_avx512_x9d;
+    if (!strcmp(n, "avx512_x8du")) return keccaktree_keccak256_avx512_x8du;
     if (!strcmp(n, "sha3_x4")) return keccaktree_keccak256_sha3_x4;
     if (!strcmp(n, "sha3_x3b")) return keccaktree_keccak256_sha3_x3b;
     return NULL;

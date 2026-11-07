@@ -65,6 +65,9 @@ void keccaktree_keccak256_avx512_x8b10(unsigned char* output, const unsigned cha
 void keccaktree_keccak256_avx512_x8al(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x9b(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x9c(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_avx512_x8d(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_avx512_x8du(unsigned char* output, const unsigned char* input, uint64_t count);
+void keccaktree_keccak256_avx512_x9d(unsigned char* output, const unsigned char* input, uint64_t count);
 /* one node at a time in the general registers (BMI1 + BMI2); the AVX2
  * kernels hand their single remaining node to it */
 void keccaktree_keccak256_x86_x1(unsigned char* output, const unsigned char* input, uint64_t count);
