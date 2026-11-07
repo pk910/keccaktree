@@ -23,16 +23,32 @@ proofs.
 namespace Keccaktree.Asm.Library
 open Keccaktree.Asm Keccaktree.Asm.X86
 
+/-- What a kernel call on `count` nodes at node offset `off` (entry state `S`) must achieve, for
+the final state `Sf`: halted without a model fault, the earlier output words untouched, and either
+no tail call with every node's digest in place, or a tail call to one of `targets` with the
+first `done` nodes finished and the remaining ones handed over from that kernel's entry state
+(pointers advanced). -/
+def Outcome (EntryAt : String → Nat → Nat → (Int → BitVec 64) → State (BitVec 64) → Prop)
+    (Digest : (Int → BitVec 64) → State (BitVec 64) → Nat → Prop) (targets : List String)
+    (off count : Nat) (input : Int → BitVec 64) (S Sf : State (BitVec 64)) : Prop :=
+  Sf.halted = true ∧ Sf.err = false ∧
+  (∀ q : Int, q < 4 * off → Sf.mem rOutput q = S.mem rOutput q) ∧
+  ((Sf.tail = none ∧ ∀ n, n < count → Digest input Sf (off + n)) ∨
+   ∃ (next : String) (done : Nat), Sf.tail = some next ∧ next ∈ targets ∧ done ≤ count ∧
+     (∀ n, n < done → Digest input Sf (off + n)) ∧
+     (done = 0 → count > 0) ∧
+     EntryAt next (off + done) (count - done) input { Sf with halted := false, tail := none })
+
 /-- A kernel of the library with its all-count theorem.  `thm` is what the generated proofs
 provide for every count: from an entry state at node offset `off`, `steps off count` steps of the
-fetch-execute loop halt without a model fault, with the digests of the nodes the kernel finished
-in place, the earlier output words untouched, and either no tail call (every node finished) or a
-tail call to `next` with the remaining nodes, from that kernel's entry state (pointers advanced). -/
+fetch-execute loop reach an `Outcome`.  `targets` lists the kernels it may tail-call (static, from
+the program's `tailcall`/`jcct` instructions; all of lower `rank`). -/
 structure KernelThm (isa : Isa)
     (EntryAt : String → Nat → Nat → (Int → BitVec 64) → State (BitVec 64) → Prop)
     (Digest : (Int → BitVec 64) → State (BitVec 64) → Nat → Prop) where
   name : String
   rank : Nat
+  targets : List String
   rodata : Array (BitVec 64)
   prog : Array isa.Instr
   /-- the kernel's first instruction in `prog` (a call or a tail jump continues there) -/
@@ -40,14 +56,7 @@ structure KernelThm (isa : Isa)
   steps : Nat → Nat → Nat
   thm : ∀ (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)),
     EntryAt name off count input S →
-    let Sf := isa.run rodata prog (steps off count) { S with pc := entry }
-    Sf.halted = true ∧ Sf.err = false ∧
-    (∀ q : Int, q < 4 * off → Sf.mem rOutput q = S.mem rOutput q) ∧
-    ((Sf.tail = none ∧ ∀ n, n < count → Digest input Sf (off + n)) ∨
-     ∃ (next : String) (done : Nat), Sf.tail = some next ∧ done ≤ count ∧
-       (∀ n, n < done → Digest input Sf (off + n)) ∧
-       (done = 0 → count > 0) ∧
-       EntryAt next (off + done) (count - done) input { Sf with halted := false, tail := none })
+    Outcome EntryAt Digest targets off count input S (isa.run rodata prog (steps off count) { S with pc := entry })
 
 variable {isa : Isa}
   {EntryAt : String → Nat → Nat → (Int → BitVec 64) → State (BitVec 64) → Prop}
@@ -75,14 +84,24 @@ inductive LibRun (T : Table isa EntryAt Digest) : String → Nat → Nat → Sta
 /-- The measure of a call: a hand-over finishes nodes or goes down in rank. -/
 def measure (maxRank : Nat) (count rank : Nat) : Nat := count * (maxRank + 1) + rank
 
-/-- Every hand-over goes to a kernel of lower rank unless it finished nodes. -/
+/-- Every tail-call target of a kernel is a kernel of the table of lower rank. -/
 def RanksOk (T : Table isa EntryAt Digest) : Prop :=
-  ∀ (K : KernelThm isa EntryAt Digest), K ∈ T →
-    ∀ (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)), EntryAt K.name off count input S →
-    ∀ (next : String) (done : Nat),
-      (isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry }).tail = some next →
-      EntryAt next (off + done) (count - done) input { isa.run K.rodata K.prog (K.steps off count) { S with pc := K.entry } with halted := false, tail := none } →
-      ∃ K' ∈ T, K'.name = next ∧ (done = 0 → K'.rank < K.rank)
+  ∀ (K : KernelThm isa EntryAt Digest), K ∈ T → ∀ t ∈ K.targets, ∃ K' ∈ T, K'.name = t ∧ K'.rank < K.rank
+
+/-- The shape of a table: name, rank and targets of each kernel. -/
+def Table.shape (T : Table isa EntryAt Digest) : List (String × Nat × List String) :=
+  T.map fun K => (K.name, K.rank, K.targets)
+
+/-- The rank condition on a table shape (decidable). -/
+def shapeOk (sh : List (String × Nat × List String)) : Bool :=
+  sh.all fun (_, r, ts) => ts.all fun t => sh.any fun (n', r', _) => n' == t && decide (r' < r)
+
+theorem ranksOk_of_shape (T : Table isa EntryAt Digest) (h : shapeOk T.shape = true) : RanksOk T := by
+  intro K hK t ht
+  simp only [shapeOk, Table.shape, List.all_map, List.any_map, List.all_eq_true, List.any_eq_true,
+    Function.comp_def, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at h
+  obtain ⟨K', hK', hn, hr⟩ := h K hK t ht
+  exact ⟨K', hK', hn, hr⟩
 
 /-- The digest predicate only looks at the output words of the node: a state that agrees with
 another on those words has the same digests. -/
@@ -108,11 +127,11 @@ theorem lib_step (T : Table isa EntryAt Digest) (maxRank : Nat)
     (hμ : measure maxRank count K.rank ≤ μ) (hS : EntryAt K.name off count input S) :
     LibOk T K off count input S := by
   have h := K.thm off count input S hS
-  simp only at h
   obtain ⟨hh, he, hpres, hout⟩ := h
-  rcases hout with ⟨hnone, hd⟩ | ⟨next, done, htail, hdone, hd, hpos, hnext⟩
+  rcases hout with ⟨hnone, hd⟩ | ⟨next, done, htail, hmem, hdone, hd, hpos, hnext⟩
   · exact ⟨_, LibRun.stop K hK off count S hnone, hh, he, hpres, hd⟩
-  · obtain ⟨K', hK', hname, hlt⟩ := hranks K hK off count input S hS next done htail hnext
+  · obtain ⟨K', hK', hname, hlt'⟩ := hranks K hK next hmem
+    have hlt : done = 0 → K'.rank < K.rank := fun _ => hlt'
     subst hname
     have hμ' : measure maxRank (count - done) K'.rank < μ := by
       have hr := hrank K' hK'
