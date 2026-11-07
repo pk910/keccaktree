@@ -91,7 +91,9 @@ theorem exec_map (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (st : St
     | not d a =>
       simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]
       rw [← next_map]; exact congrArg next (setR_map' _ _ _ _ (by simp [getR_map hf, hf.not]))
-    | lea d a => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, setX_map hf, next_map]
+    | lea d a =>
+      simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]
+      split <;> simp only [setX_map hf, next_map, fail_map]
     | ld d base off =>
       simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, withAddr] at hne ⊢
       rcases ha : addr st base off with _ | a

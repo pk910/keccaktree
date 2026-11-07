@@ -128,7 +128,7 @@ def exec (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α) :
   | .li d imm => next (setR s d (const imm))
   | .mv d a => next (setR s d (getR s a))
   | .not d a => next (setR s d (not (getR s a)))
-  | .lea d a => next (setX s d a)
+  | .lea d a => if a.region = rRodata then next (setX s d a) else s.fail   -- `auipc` into the constants
   | .ld d base off => withAddr s base off fun a =>
     match s.loadWords rodata a 1 with
     | some [w] => next (setR s d w)
