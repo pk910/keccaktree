@@ -203,6 +203,7 @@ def parallel_move(src_of, free):
     sources. Returns the number of copies."""
     pending = dict(src_of)  # dst -> src
     pending = {d: s for d, s in pending.items() if d != s}
+    dsts = set(pending)
     n = 0
     while pending:
         # a destination that is not the source of another pending move
@@ -217,7 +218,7 @@ def parallel_move(src_of, free):
         # only cycles left: break one with a scratch register
         d = next(iter(pending))
         srcs = set(pending.values())
-        t = [f for f in free if f not in srcs and f not in pending][0]
+        t = [f for f in free if f not in srcs and f not in dsts][0]
         ins("vmovdqa64", V(t), V(d))  # save the value of d
         n += 1
         # whoever wanted d's value now takes it from t

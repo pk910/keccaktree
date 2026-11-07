@@ -4945,7 +4945,7 @@
 	vmovdqa64	VREG(13), VREG(7)
 	vmovdqa64	VREG(1), VREG(30)
 	vmovdqa64	VREG(7), VREG(3)
-	vmovdqa64	VREG(26), VREG(11)
+	vmovdqa64	VREG(31), VREG(11)
 	vmovdqa64	VREG(11), VREG(14)
 	vmovdqa64	VREG(14), VREG(24)
 	vmovdqa64	VREG(24), VREG(21)
@@ -4954,7 +4954,7 @@
 	vmovdqa64	VREG(15), VREG(9)
 	vmovdqa64	VREG(9), VREG(16)
 	vmovdqa64	VREG(16), VREG(10)
-	vmovdqa64	VREG(10), VREG(26)
+	vmovdqa64	VREG(10), VREG(31)
 	/* 25 copies */
 	add		RCP, 32
 	dec		qword ptr [LOOP_CNT]
