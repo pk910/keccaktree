@@ -98,7 +98,7 @@ theorem L_mk (f : Fin 5 → Fin 5 → BitVec 64) (k : Nat) :
 (30..34), the partial parities over 2, 3, 4 rows (35..49), theta's output
 lanes (50..74) and, after the round constants of the tools (75..98), the partial
 parities over every other 2..4-row subset (99..208). -/
-def specQuantity (A : Keccak.Spec.State) (kind : Nat) : BitVec 64 :=
+def specQuantity0 (A : Keccak.Spec.State) (kind : Nat) : BitVec 64 :=
   match kind with
   | 0 => L A 0
   | 1 => L A 1
@@ -177,118 +177,39 @@ def specQuantity (A : Keccak.Spec.State) (kind : Nat) : BitVec 64 :=
   | 72 => L A 22 ^^^ ((L A 1 ^^^ L A 6 ^^^ L A 11 ^^^ L A 16 ^^^ L A 21) ^^^ (L A 3 ^^^ L A 8 ^^^ L A 13 ^^^ L A 18 ^^^ L A 23).rotateLeft 1)
   | 73 => L A 23 ^^^ ((L A 2 ^^^ L A 7 ^^^ L A 12 ^^^ L A 17 ^^^ L A 22) ^^^ (L A 4 ^^^ L A 9 ^^^ L A 14 ^^^ L A 19 ^^^ L A 24).rotateLeft 1)
   | 74 => L A 24 ^^^ ((L A 3 ^^^ L A 8 ^^^ L A 13 ^^^ L A 18 ^^^ L A 23) ^^^ (L A 0 ^^^ L A 5 ^^^ L A 10 ^^^ L A 15 ^^^ L A 20).rotateLeft 1)
-  -- partial column parities over any other 2..4-row subset (the AVX2 pair kernel sums rows 0, 1, 2, 4 first): kinds 99..208
-  | 99 => L A 0 ^^^ L A 10
-  | 100 => L A 0 ^^^ L A 15
-  | 101 => L A 0 ^^^ L A 20
-  | 102 => L A 5 ^^^ L A 10
-  | 103 => L A 5 ^^^ L A 15
-  | 104 => L A 5 ^^^ L A 20
-  | 105 => L A 10 ^^^ L A 15
-  | 106 => L A 10 ^^^ L A 20
-  | 107 => L A 15 ^^^ L A 20
-  | 108 => L A 0 ^^^ L A 5 ^^^ L A 15
-  | 109 => L A 0 ^^^ L A 5 ^^^ L A 20
-  | 110 => L A 0 ^^^ L A 10 ^^^ L A 15
-  | 111 => L A 0 ^^^ L A 10 ^^^ L A 20
-  | 112 => L A 0 ^^^ L A 15 ^^^ L A 20
-  | 113 => L A 5 ^^^ L A 10 ^^^ L A 15
-  | 114 => L A 5 ^^^ L A 10 ^^^ L A 20
-  | 115 => L A 5 ^^^ L A 15 ^^^ L A 20
-  | 116 => L A 10 ^^^ L A 15 ^^^ L A 20
-  | 117 => L A 0 ^^^ L A 5 ^^^ L A 10 ^^^ L A 20
-  | 118 => L A 0 ^^^ L A 5 ^^^ L A 15 ^^^ L A 20
-  | 119 => L A 0 ^^^ L A 10 ^^^ L A 15 ^^^ L A 20
-  | 120 => L A 5 ^^^ L A 10 ^^^ L A 15 ^^^ L A 20
-  | 121 => L A 1 ^^^ L A 11
-  | 122 => L A 1 ^^^ L A 16
-  | 123 => L A 1 ^^^ L A 21
-  | 124 => L A 6 ^^^ L A 11
-  | 125 => L A 6 ^^^ L A 16
-  | 126 => L A 6 ^^^ L A 21
-  | 127 => L A 11 ^^^ L A 16
-  | 128 => L A 11 ^^^ L A 21
-  | 129 => L A 16 ^^^ L A 21
-  | 130 => L A 1 ^^^ L A 6 ^^^ L A 16
-  | 131 => L A 1 ^^^ L A 6 ^^^ L A 21
-  | 132 => L A 1 ^^^ L A 11 ^^^ L A 16
-  | 133 => L A 1 ^^^ L A 11 ^^^ L A 21
-  | 134 => L A 1 ^^^ L A 16 ^^^ L A 21
-  | 135 => L A 6 ^^^ L A 11 ^^^ L A 16
-  | 136 => L A 6 ^^^ L A 11 ^^^ L A 21
-  | 137 => L A 6 ^^^ L A 16 ^^^ L A 21
-  | 138 => L A 11 ^^^ L A 16 ^^^ L A 21
-  | 139 => L A 1 ^^^ L A 6 ^^^ L A 11 ^^^ L A 21
-  | 140 => L A 1 ^^^ L A 6 ^^^ L A 16 ^^^ L A 21
-  | 141 => L A 1 ^^^ L A 11 ^^^ L A 16 ^^^ L A 21
-  | 142 => L A 6 ^^^ L A 11 ^^^ L A 16 ^^^ L A 21
-  | 143 => L A 2 ^^^ L A 12
-  | 144 => L A 2 ^^^ L A 17
-  | 145 => L A 2 ^^^ L A 22
-  | 146 => L A 7 ^^^ L A 12
-  | 147 => L A 7 ^^^ L A 17
-  | 148 => L A 7 ^^^ L A 22
-  | 149 => L A 12 ^^^ L A 17
-  | 150 => L A 12 ^^^ L A 22
-  | 151 => L A 17 ^^^ L A 22
-  | 152 => L A 2 ^^^ L A 7 ^^^ L A 17
-  | 153 => L A 2 ^^^ L A 7 ^^^ L A 22
-  | 154 => L A 2 ^^^ L A 12 ^^^ L A 17
-  | 155 => L A 2 ^^^ L A 12 ^^^ L A 22
-  | 156 => L A 2 ^^^ L A 17 ^^^ L A 22
-  | 157 => L A 7 ^^^ L A 12 ^^^ L A 17
-  | 158 => L A 7 ^^^ L A 12 ^^^ L A 22
-  | 159 => L A 7 ^^^ L A 17 ^^^ L A 22
-  | 160 => L A 12 ^^^ L A 17 ^^^ L A 22
-  | 161 => L A 2 ^^^ L A 7 ^^^ L A 12 ^^^ L A 22
-  | 162 => L A 2 ^^^ L A 7 ^^^ L A 17 ^^^ L A 22
-  | 163 => L A 2 ^^^ L A 12 ^^^ L A 17 ^^^ L A 22
-  | 164 => L A 7 ^^^ L A 12 ^^^ L A 17 ^^^ L A 22
-  | 165 => L A 3 ^^^ L A 13
-  | 166 => L A 3 ^^^ L A 18
-  | 167 => L A 3 ^^^ L A 23
-  | 168 => L A 8 ^^^ L A 13
-  | 169 => L A 8 ^^^ L A 18
-  | 170 => L A 8 ^^^ L A 23
-  | 171 => L A 13 ^^^ L A 18
-  | 172 => L A 13 ^^^ L A 23
-  | 173 => L A 18 ^^^ L A 23
-  | 174 => L A 3 ^^^ L A 8 ^^^ L A 18
-  | 175 => L A 3 ^^^ L A 8 ^^^ L A 23
-  | 176 => L A 3 ^^^ L A 13 ^^^ L A 18
-  | 177 => L A 3 ^^^ L A 13 ^^^ L A 23
-  | 178 => L A 3 ^^^ L A 18 ^^^ L A 23
-  | 179 => L A 8 ^^^ L A 13 ^^^ L A 18
-  | 180 => L A 8 ^^^ L A 13 ^^^ L A 23
-  | 181 => L A 8 ^^^ L A 18 ^^^ L A 23
-  | 182 => L A 13 ^^^ L A 18 ^^^ L A 23
-  | 183 => L A 3 ^^^ L A 8 ^^^ L A 13 ^^^ L A 23
-  | 184 => L A 3 ^^^ L A 8 ^^^ L A 18 ^^^ L A 23
-  | 185 => L A 3 ^^^ L A 13 ^^^ L A 18 ^^^ L A 23
-  | 186 => L A 8 ^^^ L A 13 ^^^ L A 18 ^^^ L A 23
-  | 187 => L A 4 ^^^ L A 14
-  | 188 => L A 4 ^^^ L A 19
-  | 189 => L A 4 ^^^ L A 24
-  | 190 => L A 9 ^^^ L A 14
-  | 191 => L A 9 ^^^ L A 19
-  | 192 => L A 9 ^^^ L A 24
-  | 193 => L A 14 ^^^ L A 19
-  | 194 => L A 14 ^^^ L A 24
-  | 195 => L A 19 ^^^ L A 24
-  | 196 => L A 4 ^^^ L A 9 ^^^ L A 19
-  | 197 => L A 4 ^^^ L A 9 ^^^ L A 24
-  | 198 => L A 4 ^^^ L A 14 ^^^ L A 19
-  | 199 => L A 4 ^^^ L A 14 ^^^ L A 24
-  | 200 => L A 4 ^^^ L A 19 ^^^ L A 24
-  | 201 => L A 9 ^^^ L A 14 ^^^ L A 19
-  | 202 => L A 9 ^^^ L A 14 ^^^ L A 24
-  | 203 => L A 9 ^^^ L A 19 ^^^ L A 24
-  | 204 => L A 14 ^^^ L A 19 ^^^ L A 24
-  | 205 => L A 4 ^^^ L A 9 ^^^ L A 14 ^^^ L A 24
-  | 206 => L A 4 ^^^ L A 9 ^^^ L A 19 ^^^ L A 24
-  | 207 => L A 4 ^^^ L A 14 ^^^ L A 19 ^^^ L A 24
-  | 208 => L A 9 ^^^ L A 14 ^^^ L A 19 ^^^ L A 24
   | _ => 0#64
+
+/-- Partial column parities of column `x` over the row subsets not among 35..49 (22 per column). -/
+def specQuantityCol (A : Keccak.Spec.State) (x s : Nat) : BitVec 64 :=
+  match s with
+  | 0 => L A (x + 5 * 0) ^^^ L A (x + 5 * 2)
+  | 1 => L A (x + 5 * 0) ^^^ L A (x + 5 * 3)
+  | 2 => L A (x + 5 * 0) ^^^ L A (x + 5 * 4)
+  | 3 => L A (x + 5 * 1) ^^^ L A (x + 5 * 2)
+  | 4 => L A (x + 5 * 1) ^^^ L A (x + 5 * 3)
+  | 5 => L A (x + 5 * 1) ^^^ L A (x + 5 * 4)
+  | 6 => L A (x + 5 * 2) ^^^ L A (x + 5 * 3)
+  | 7 => L A (x + 5 * 2) ^^^ L A (x + 5 * 4)
+  | 8 => L A (x + 5 * 3) ^^^ L A (x + 5 * 4)
+  | 9 => L A (x + 5 * 0) ^^^ L A (x + 5 * 1) ^^^ L A (x + 5 * 3)
+  | 10 => L A (x + 5 * 0) ^^^ L A (x + 5 * 1) ^^^ L A (x + 5 * 4)
+  | 11 => L A (x + 5 * 0) ^^^ L A (x + 5 * 2) ^^^ L A (x + 5 * 3)
+  | 12 => L A (x + 5 * 0) ^^^ L A (x + 5 * 2) ^^^ L A (x + 5 * 4)
+  | 13 => L A (x + 5 * 0) ^^^ L A (x + 5 * 3) ^^^ L A (x + 5 * 4)
+  | 14 => L A (x + 5 * 1) ^^^ L A (x + 5 * 2) ^^^ L A (x + 5 * 3)
+  | 15 => L A (x + 5 * 1) ^^^ L A (x + 5 * 2) ^^^ L A (x + 5 * 4)
+  | 16 => L A (x + 5 * 1) ^^^ L A (x + 5 * 3) ^^^ L A (x + 5 * 4)
+  | 17 => L A (x + 5 * 2) ^^^ L A (x + 5 * 3) ^^^ L A (x + 5 * 4)
+  | 18 => L A (x + 5 * 0) ^^^ L A (x + 5 * 1) ^^^ L A (x + 5 * 2) ^^^ L A (x + 5 * 4)
+  | 19 => L A (x + 5 * 0) ^^^ L A (x + 5 * 1) ^^^ L A (x + 5 * 3) ^^^ L A (x + 5 * 4)
+  | 20 => L A (x + 5 * 0) ^^^ L A (x + 5 * 2) ^^^ L A (x + 5 * 3) ^^^ L A (x + 5 * 4)
+  | 21 => L A (x + 5 * 1) ^^^ L A (x + 5 * 2) ^^^ L A (x + 5 * 3) ^^^ L A (x + 5 * 4)
+  | _ => 0#64
+
+/-- The quantity of kind `kind`: 0..74 as above (75..98 are the tools' round constants, 0 here);
+99..208 the partial parities `specQuantityCol A ((kind - 99) / 22) ((kind - 99) % 22)`. -/
+def specQuantity (A : Keccak.Spec.State) (kind : Nat) : BitVec 64 :=
+  if kind < 99 then specQuantity0 A kind else specQuantityCol A ((kind - 99) / 22) ((kind - 99) % 22)
 
 /-- `Fin 5` indices built with `Fin.mk` as literals (for `bv_decide`'s atom matching). -/
 theorem Fin.mk5_0 (h : 0 < 5) : (⟨0, h⟩ : Fin 5) = 0 := rfl
