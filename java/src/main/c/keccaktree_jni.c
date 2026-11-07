@@ -36,9 +36,13 @@ typedef struct {
 static int cpu_supports(const char* name) {
 #if defined(__x86_64__)
     __builtin_cpu_init();
-    if (!strcmp(name, "avx2_x4") || !strcmp(name, "avx2_x8")) return __builtin_cpu_supports("avx2");
-    if (!strcmp(name, "avx512vl_x4") || !strcmp(name, "avx512_x8"))
-        return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl");
+    /* every AVX2 kernel hands single nodes to x86_x1 (BMI1 andn, BMI2 rorx) */
+    if (!strcmp(name, "x86_x1")) return __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
+    if (!strncmp(name, "avx2_", 5))
+        return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
+    if (!strncmp(name, "avx512", 6))
+        return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl") &&
+               __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
 #elif defined(__aarch64__) && defined(__APPLE__)
     if (!strncmp(name, "sha3_", 5))
         return sysctl_flag("hw.optional.arm.FEAT_SHA3") || sysctl_flag("hw.optional.armv8_2_sha3");
@@ -58,12 +62,20 @@ static const kernel kernels[] = {
 #ifdef __x86_64__
     {"avx2_x4", keccaktree_keccak256_avx2_x4},
     {"avx2_x8", keccaktree_keccak256_avx2_x8},
+    {"avx2_x5", keccaktree_keccak256_avx2_x5},
+    {"avx2_x6", keccaktree_keccak256_avx2_x6},
+    {"avx2_x9", keccaktree_keccak256_avx2_x9},
+    {"avx2_x10", keccaktree_keccak256_avx2_x10},
+    {"avx2_x2", keccaktree_keccak256_avx2_x2},
+    {"x86_x1", keccaktree_keccak256_x86_x1},
     {"avx512vl_x4", keccaktree_keccak256_avx512vl_x4},
     {"avx512_x8", keccaktree_keccak256_avx512_x8},
+    {"avx512_x9", keccaktree_keccak256_avx512_x9},
 #endif
 #ifdef __aarch64__
     {"neon_x2", keccaktree_keccak256_neon_x2},
     {"scalar_x1", keccaktree_keccak256_scalar_x1},
+    {"neon_x3", keccaktree_keccak256_neon_x3},
     {"sha3_x2", keccaktree_keccak256_sha3_x2},
     {"sha3_x3", keccaktree_keccak256_sha3_x3},
     {"sha3_x3r", keccaktree_keccak256_sha3_x3r},

@@ -15,9 +15,18 @@
  * The 16 ymm registers only hold one batch's working set, so the parities
  * of the batch that is not in flight stay in memory: STORE_C writes them
  * after each round and the other batch's round reads them for theta, which
- * adds loads and stores but no ALU work. Fewer than 8 remaining nodes go to
- * keccaktree_keccak256_avx2_x4 (which hands a single node to the scalar
- * code).
+ * adds loads and stores but no ALU work. Tail: 5 remaining nodes go to
+ * keccaktree_keccak256_avx2_x5 (one vector batch plus a scalar node),
+ * 2..4 and 6..7 to keccaktree_keccak256_avx2_x4 (which hands 2 to the
+ * lane-pair kernel, pads 3 and runs 6..7 as a batch and a tail), a single
+ * one straight to the scalar code; whole calls of 5 or 6 nodes go to
+ * avx2_x5 (6: with its scalar tail) before the prologue. Measured against
+ * x4 for everything above 1: 5 nodes 1.54x on Zen 3, 1.31x on Gracemont,
+ * 0.99x on Golden Cove; 6 nodes 1.21x / 1.40x / 1.00x; 13 nodes 1.14x /
+ * 1.10x / 0.99x. A padded batch here for 6..7 remaining nodes won on
+ * Zen 3 (1.06x, 1.12x) but lost 5..10% on Golden Cove and 1..6% on
+ * Gracemont, and x5 with its scalar tail for 6 lost 2% on Zen 3 (the
+ * scalar kernel runs cold then), so those stay with x4.
  *
  * Registers: ymm0..15; rcx, rsi here and the frame's r9..r11.
  */
@@ -27,8 +36,13 @@
 #define NODES		8
 #define VBYTES		32
 #define SLOTS		(110*32)		/* 4 state buffers, 2 parity rows */
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1
 #define SMALL_TAIL	keccaktree_keccak256_avx2_x4
 #define SMALL_TAIL_MAX	7
+#define SMALL_TAIL_MID	keccaktree_keccak256_avx2_x5
+#define SMALL_TAIL_MID_MASK	(1 << 5)
+#define ENTRY_ALT	keccaktree_keccak256_avx2_x5
+#define ENTRY_ALT_MASK	((1 << 5) | (1 << 6))
 #include "keccak256_x86_frame.inc"
 
 #define RCP		rsi			/* round constants (broadcast) */

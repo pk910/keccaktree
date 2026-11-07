@@ -5,8 +5,11 @@
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 8 at a time: node j
  * of a batch lives in qword lane j of every zmm register. AVX-512F + VL.
  * The rounds are in keccak256_avx512.inc, the frame (loop, tail, Windows ABI)
- * in keccak256_x86_frame.inc. 1..4 remaining nodes go to the ymm kernel,
- * which takes the same time for them; 5..7 are padded to a batch.
+ * in keccak256_x86_frame.inc. A single node (a whole call or the last
+ * one) goes to keccaktree_keccak256_x86_x1 (BMI1 + BMI2, which every
+ * AVX-512 core has: keccaktree_detect checks), 2..4 remaining nodes to the
+ * ymm kernel, which takes the same time for them; 5..7 are padded to a
+ * batch.
  *
  * The transposes between batches matter more than their size suggests: the
  * shuffles run on port 5 only, and while the next batch waits for its
@@ -17,7 +20,17 @@
 #ifdef __x86_64__
 .intel_syntax noprefix
 
+/* With NS defined (keccak256_avx512_x9.S: NS = 1) the batch also hashes
+ * NS nodes in the general registers (keccak256_x86_scalar.inc), their
+ * round chunks spread through the vector round by VHOOK; see that file. */
+#ifdef NS
+#define NODES		(8 + NS)
+#define SLOTS		(10*64 + NS*448 + 64 + 64)
+#define SAVE_GPRS
+#else
 #define NODES		8
+#define SLOTS		(10*64 + 64)
+#endif
 #define VBYTES		64
 #define VR		zmm
 #define VREG(n)		VREG_(n)
@@ -26,12 +39,84 @@
 #define RC(r)		qword ptr [rip + .LKECCAK_RC + 8*(r)]{1to8}
 #define K1		qword ptr [rip + .LK1]{1to8}
 #define K63		qword ptr [rip + .LK63]{1to8}
+#define RCP		r8
+#define RCL(k)		qword ptr [RCP + 8*(k)]{1to8}
 #define ROT8		zmmword ptr [rip + .LROT8]
 #define ROT56		zmmword ptr [rip + .LROT56]
+#ifndef KERNEL_NAME
+#define KERNEL_NAME	keccaktree_keccak256_avx512_x8
+#endif
+#define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1	/* a single node: scalar */
 #define SMALL_TAIL	keccaktree_keccak256_avx512vl_x4
 #define SMALL_TAIL_MAX	4
+#ifdef NS
+/* whole calls of a multiple of 8 nodes (below 64) go to the zmm kernel:
+ * a padded batch here costs as much as a full one */
+#define ENTRY_ALT	keccaktree_keccak256_avx512_x8
+#define ENTRY_ALT_MASK	((1 << 8) | (1 << 16) | (1 << 24) | (1 << 32) | (1ULL << 40) | (1ULL << 48) | (1ULL << 56))
+#endif
 
 #include "keccak256_x86_frame.inc"
+
+#ifdef NS
+/* the scalar node: parities / row B, D, temporary; RCP (r8) is shared
+ * with the vector loop, whose count lives in memory */
+#define SC0		rax
+#define SC1		rbx
+#define SC2		rdx
+#define SC3		rdi
+#define SC4		rsi
+#define SD0		r12
+#define SD1		r13
+#define SD2		r14
+#define SD3		r15
+#define SD4		rbp
+#define ST		rcx
+#define SPAR_MEM	0
+/* 65 scalar chunks over the 55 hooks of a vector round */
+#ifndef SNUM
+#define SNUM		6
+#define SDEN		5
+#endif
+#include "keccak256_x86_scalar.inc"
+/* frame layout at r9 (= rsp) after the vector slots: the two scalar
+ * state buffers, the scalar digest, the saved registers, the loop count */
+#define SS0		(10*64)
+#define SS1		(10*64 + 224)
+#define SOUT		(10*64 + 448)
+#define SAVE_RAX	(SOUT + 64)
+#define SAVE_RDX	(SOUT + 72)
+#define SAVE_RDI	(SOUT + 80)
+#define SAVE_RBP	(SOUT + 88)
+#define LOOP_CNT	r9 + SOUT + 96
+/* the scalar round of each vector round: round k reads buffer k&1 and
+ * writes the other; the parities start in SC (even rounds) or SD (odd);
+ * the constant is at [RCP + 8*(k - first round of the stretch)] */
+#define RHOOK_DEFINED
+.macro RHOOK_BEGIN k
+.if \k == 0
+	SROUND_BEGIN	0, SS0, SS1, 0, 0
+.elseif \k == 23
+	SROUND_BEGIN	23, SS1, SOUT, 16, 1
+.elseif \k >= 21
+.if \k & 1
+	SROUND_BEGIN	1, SS1, SS0, 8*(\k - 21), 1
+.else
+	SROUND_BEGIN	1, SS0, SS1, 8*(\k - 21), 0
+.endif
+.elseif \k & 1
+	SROUND_BEGIN	1, SS1, SS0, 8*(\k - 1), 1
+.else
+	SROUND_BEGIN	1, SS0, SS1, 8*(\k - 1), 0
+.endif
+.endm
+.macro RHOOK_END
+	SFLUSH
+.endm
+#else
+#define LOOP_CNT	r9 + 10*64
+#endif
+
 #include "keccak256_avx512.inc"
 
 /* digest words o0..o3 (8 nodes each) -> 8 x 32 bytes at [BOUT].
@@ -65,8 +150,19 @@
 
 .text
 .p2align 6
-/* one batch: 8 nodes at [BIN] -> 8 digests at [BOUT] */
+/* one batch: NODES nodes at [BIN] -> NODES digests at [BOUT] */
 .Lbatch:
+#ifdef NS
+	mov		qword ptr [r9 + SAVE_RAX], rax
+	mov		qword ptr [r9 + SAVE_RDX], rdx
+	mov		qword ptr [r9 + SAVE_RDI], rdi
+	mov		qword ptr [r9 + SAVE_RBP], rbp
+	/* the scalar node's data words to its state buffer */
+	vmovdqu		ymm0, ymmword ptr [BIN + 8*64]
+	vmovdqu		ymm1, ymmword ptr [BIN + 8*64 + 32]
+	vmovdqa		ymmword ptr [r9 + SS0], ymm0
+	vmovdqa		ymmword ptr [r9 + SS0 + 32], ymm1
+#endif
 	/* 8x8 qword transpose: VREG(j) = word j of nodes 0..7. The first
 	 * level interleaves node pairs in the load unit: a load of node 2i and
 	 * a merge-masked load of node 2i+1 shifted by one qword (k1 = odd
@@ -105,10 +201,22 @@
 	vshufi64x2	zmm5, zmm10, zmm14, 0xDD
 	vshufi64x2	zmm3, zmm11, zmm15, 0x88
 	vshufi64x2	zmm7, zmm11, zmm15, 0xDD
+#if defined(KT_AVX512_UNROLLED) && !defined(NS)
 	KECCAK_F
+#else
+	KECCAK_F_LOOP
+#endif
+#ifdef NS
+	vmovdqu		ymm0, ymmword ptr [r9 + SOUT]
+	vmovdqu		ymmword ptr [BOUT + 8*32], ymm0
+	mov		rax, qword ptr [r9 + SAVE_RAX]
+	mov		rdx, qword ptr [r9 + SAVE_RDX]
+	mov		rdi, qword ptr [r9 + SAVE_RDI]
+	mov		rbp, qword ptr [r9 + SAVE_RBP]
+#endif
 	ret
 
-	FUNCTION keccaktree_keccak256_avx512_x8
+	FUNCTION KERNEL_NAME
 
 	KECCAK_RODATA
 .p2align 6
