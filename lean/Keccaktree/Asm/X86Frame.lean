@@ -243,23 +243,20 @@ theorem Fr.bt (h : Fr rodata prog S m pc zf cf vals R) (a b : Nat) (w v : Int)
   simp only [hi, exec, hh, Bool.false_eq_true, ↓reduceIte, withX, hg, hvs _ hw, h0, and_self, next, hp]
   all_goals (cases T; simp only at *; subst_vars; rfl)
 
-/-- `cmp a, qword [rip + off]` against a constant word that is a number (a runtime threshold). -/
-theorem Fr.cmprm (h : Fr rodata prog S m pc zf cf vals R) (a off : Nat) (v wv : Int)
-    (hi : prog.getD pc .nop = .cmprm a (.rip off)) (hal : (off : Int) % 8 = 0)
-    (hw : wordGpr (rodata.getD ((off : Int) / 8).toNat 0) = ⟨0, wv⟩) (hpos : 0 ≤ (off : Int) / 8)
+/-- `cmp a, qword [rip + off]` against a constant word (a runtime threshold): an unsigned compare. -/
+theorem Fr.cmprm (h : Fr rodata prog S m pc zf cf vals R) (a off : Nat) (v : Int)
+    (hi : prog.getD pc .nop = .cmprm a (.rip off)) (hal : (off : Int) % 8 = 0) (hpos : 0 ≤ (off : Int) / 8)
     (hv : (a, v) ∈ vals) (h0 : 0 ≤ v) (h1 : v < 2 ^ 55) :
-    Fr rodata prog S (m + 1) (pc + 1) (decide (v = wv)) (decide (v < wv)) vals R := by
+    Fr rodata prog S (m + 1) (pc + 1) (decide (BitVec.ofInt 64 v = rodata.getD ((off : Int) / 8).toNat 0))
+      (decide ((BitVec.ofInt 64 v).toNat < (rodata.getD ((off : Int) / 8).toNat 0).toNat)) vals R := by
   apply h.flags
   rintro T ⟨hh, hp, -, -, hvs⟩
   have hg := gx_num T a v (hvs _ hv) h0 h1
   simp only [hi, exec, hh, Bool.false_eq_true, ↓reduceIte, withMem, memAddr?, withLoad, State.loadWords, hal,
     List.range_one, List.map_cons, List.map_nil, State.read, rRodata, Int.ofNat_eq_coe, Int.cast_ofNat_Int, Int.add_zero,
     List.headD_cons, ge_iff_le, hpos]
-  have ha : LaneOps.asAddr (α := BitVec 64) (LaneOps.const (α := BitVec 64) (rodata.getD ((off : Int) / 8).toNat 0#64)) = some ⟨0, wv⟩ := by
-    show some (wordGpr (rodata.getD ((off : Int) / 8).toNat 0#64)) = _
-    exact congrArg some hw
-  rw [ha]
-  simp only [withX, hg, setFlagsSub, Addr.num, next, hp, ↓reduceIte, hh]
+  simp only [withX, hg, setFlagsNum, next, hp, ↓reduceIte, hh]
+  rfl
 
 /-! ## Handing a count-step state over to the next segment -/
 

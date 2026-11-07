@@ -118,8 +118,8 @@ class FrChain:
             v = V[a[0]]
             off = int(re.search(r'\d+', a[1]).group(0))
             wv = self.rodata[off // 8]
-            self.nxt(f'{p}.cmprm {a[0]} {off} {v.lean} ({wv}) {hi} (by decide) (by decide +kernel) (by decide) {self.mem()} (by fr_lo) (by fr_hi)')
-            self.zf_lean = f'{v.lean} = {wv}'
+            self.nxt(f'{p}.cmprm {a[0]} {off} {v.lean} {hi} (by decide) (by decide) {self.mem()} (by fr_lo) (by fr_hi)')
+            self.zf_lean = f'BitVec.ofInt 64 {v.lean} = rodata.getD (({off} : Int) / 8).toNat 0'
             self.zf, self.cf = v.rep == wv, v.rep < wv
             self.flags_known = v.py is not None
             self.pc = pc + 1
@@ -303,7 +303,7 @@ macro "fr_lo" : tactic => `(tactic| first | decide | omega)
 macro "fr_hi" : tactic => `(tactic| first | decide | (rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; omega))
 macro "fr_eq" : tactic => `(tactic| first | decide +kernel | (rw [decide_eq_true (by omega)]; decide +kernel) | (rw [decide_eq_false (by omega)]; decide +kernel))
 macro "wok_in" : tactic => `(tactic| (intro q; rfl))
-macro "wok_out " g:ident : tactic => `(tactic| (intro q hq; simp only [$g:ident]; first | rfl | (simp <;> omega)))
+macro "wok_out " g:ident : tactic => `(tactic| (intro q hq; simp only [$g:ident]; first | rfl | (simp [rOutput, rInput, rStack] <;> omega)))
 
 abbrev DoneK := Done rodata prog targets
 """)
@@ -617,9 +617,12 @@ theorem afterB_step (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
   (PreCut.of_cut _ (rho_ok _) _ _ _ hcut) {ch.cur()} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel) (by fr_eq) (by fr_eq) (by decide +kernel)
 rw [rho_add, show off + {N} * k + {N} = off + {N} * (k + 1) by omega] at hx
 obtain ⟨hc', hI', hr'⟩ := body_{nm} off c input S0 _ ({N} * (k + 1)) hx (hI.fr {ch.cur()}) (by omega)
+have e2 : (X86.isa.run rodata prog (Gen{nm}.facts.len + GenBb.facts.len) (X86.isa.run rodata prog {ch.i} T)).getGD 2 =
+    (X86.isa.run rodata prog {ch.i} T).getGD 2 := by
+  rw [← envOf_gdVar _ 2 (by decide), ← envOf_gdVar _ 2 (by decide)]; exact hr'
 have hd := cont (by omega) _ hc' hI' (by
-  rw [← envOf_gdVar _ 2 (by decide), hr', envOf_gdVar _ 2 (by decide), {ch.cur()}.vals (2, {e}) (by simp [setVal])]
-  congr 1; push_cast; omega)
+  rw [e2, {ch.cur()}.vals (2, {e}) (by simp [setVal])]
+  congr 1 <;> (try push_cast) <;> omega)
 rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI; omega)""".split('\n'):
             out.append(' ' * ind + t)
@@ -674,9 +677,12 @@ theorem afterP_{pv} (off c : Nat) (input : Int → BitVec 64) (S0 T : State (Bit
   (PreCut.of_cut _ (rho_ok _) _ _ _ hcut) {ch.cur()} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel) (by fr_eq) (by fr_eq) (by decide +kernel)
 rw [rho_add] at hx
 obtain ⟨hc', hI', hr'⟩ := body_{nm} off c input S0 _ 0 hx (hI.fr {ch.cur()}) (by omega)
+have e2 : (X86.isa.run rodata prog (Gen{nm}.facts.len + GenBb.facts.len) (X86.isa.run rodata prog {ch.i} T)).getGD 2 =
+    (X86.isa.run rodata prog {ch.i} T).getGD 2 := by
+  rw [← envOf_gdVar _ 2 (by decide), ← envOf_gdVar _ 2 (by decide)]; exact hr'
 have hd := afterB off c input S0 hb _ 0 _ (Nat.le_refl _) (by omega) (by simpa only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] using hc') (by simpa only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using hI') (by
-  rw [← envOf_gdVar _ 2 (by decide), hr', envOf_gdVar _ 2 (by decide), {ch.cur()}.vals (2, {e}) (by simp [setVal])]
-  congr 1; push_cast; omega)
+  rw [e2, {ch.cur()}.vals (2, {e}) (by simp [setVal])]
+  congr 1 <;> (try push_cast) <;> omega)
 rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI XM; omega)""".split('\n'):
                 out.append(' ' * ind + t)
@@ -752,9 +758,13 @@ theorem norm_thm : NormThm rodata prog {ENT} steps targets := by
 rw [rho_add, Nat.add_zero] at hx
 obtain ⟨ok1, cut1⟩ := {GP}.facts.run (rho off) (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok
 have I1 := (I0.fr {f}).seg {GP}.facts off (by omega) hmb hx (by wok_in) (by wok_out {GP}.facts)
+have e2 : (X86.isa.run rodata prog {GP}.facts.len (X86.isa.run rodata prog {ch.i or 0} S)).getGD 2 =
+    (X86.isa.run rodata prog {ch.i or 0} S).getGD 2 := by
+  rw [← envOf_gdVar _ 2 (by decide), ← envOf_gdVar _ 2 (by decide)]
+  exact {GP}.facts_rdx _ (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok
 have hd := afterP_{pv} off c input S _ hb cut1 I1 (by
-  rw [← envOf_gdVar _ 2 (by decide), {GP}.facts_rdx _ (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok,
-    envOf_gdVar _ 2 (by decide), {f}.vals (2, {vals[2].lean if cv == 'sym' else f'((({cv} : Nat)) : Int)'}) (by simp [setVal])])
+  rw [e2, {f}.vals (2, {vals[2].lean if cv == 'sym' else f'((({cv} : Nat)) : Int)'}) (by simp [setVal])]
+  try rfl)
 rw [len_{pv}] at hd
 intro n hn
 exact (Done.run rfl (Done.run rfl hd)) n (by unfold steps at hn; omega)""".split('\n'):
