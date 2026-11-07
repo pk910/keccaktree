@@ -258,6 +258,11 @@ def shufb128 (lo hi : α) (c0 c1 : BitVec 64) : α × α :=
 /-- 128-bit lane `j` (two words) of a register value. -/
 def lane128 (xs : List α) (j : Nat) : List α := [xs.getD (2 * j) (const 0), xs.getD (2 * j + 1) (const 0)]
 
+/-- Flags of `cmp x, w` for a number `x` and a data word `w`: ZF = equal, CF = `x <u w`
+(64-bit unsigned). -/
+def setFlagsNum (s : State α) (x : Int) (w : BitVec 64) : State α :=
+  { s with zf := decide (BitVec.ofInt 64 x = w), cf := decide ((BitVec.ofInt 64 x).toNat < w.toNat) }
+
 def setFlagsSub (s : State α) (a b : Addr) : State α :=
   if a.region = b.region then { s with zf := a.off = b.off, cf := a.off < b.off } else s.fail
 
@@ -434,8 +439,10 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
     | some v => withX s b fun y => next (setFlagsSub s v y)
     | none => s.fail
   | .cmprm a m => withMem s m fun ad => withLoad rodata s ad 1 fun ws =>
-    match asAddr (ws.headD (const 0)) with
-    | some v => withX s a fun x => next (setFlagsSub s x v)
+    -- `cmp count, qword ptr [m]` against a data word (the calibrated thresholds): an unsigned
+    -- comparison of the two 64-bit numbers, as the hardware does (the word is never a pointer)
+    match asConst (ws.headD (const 0)) with
+    | some w => withX s a fun x => if x.region = 0 then next (setFlagsNum s x.off w) else s.fail
     | none => s.fail
   | .test a b => withX s a fun x => withX s b fun y =>
     if x.region = 0 ∧ y.region = 0 then
@@ -511,7 +518,7 @@ def decodes (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : List α :=
   | .add d _ | .sub d _ | .andi d _ | .shl d _ | .dec d | .cmpi d _ => [s.getGD d]
   | .cmpr a b | .test a b => [s.getGD a, s.getGD b]
   | .cmpm m b => mb m ++ word m ++ [s.getGD b]
-  | .cmprm a m => mb m ++ word m ++ [s.getGD a]
+  | .cmprm a m => mb m ++ [s.getGD a]
   | .bt _ b => [s.getGD b]
   | .alu _ _ b | .andn _ _ b | .rorx _ b _ => gb b
   | .decm m => mb m ++ word m

@@ -320,25 +320,34 @@ theorem pathW_reloc (ρ : Reloc) (hρ : ρ.ok) (rodata : Array (BitVec 64)) (pro
 
 /-! ## The policy compare and the behaviour classes -/
 
-/-- `cmp reg, qword ptr [rip + 8w]` with word `w` holding the number `v` (and `reg` the number `x`). -/
-theorem exec_cmprm_word (rodata : Array (BitVec 64)) (S : State (BitVec 64)) (a : Gpr) (w : Nat) (x : Int) (v : Nat)
-    (hh : S.halted = false) (hx : S.getGD a = gprWord ⟨0, x⟩) (hxwf : (⟨0, x⟩ : Addr).wf)
-    (hv : rodata.getD w 0#64 = BitVec.ofNat 64 v) (hv55 : v < 2 ^ 55) :
-    exec rodata (.cmprm a (.rip (8 * w))) S = next { S with zf := decide (x = v), cf := decide (x < v) } := by
+/-- `cmp reg, qword ptr [rip + 8w]` with word `w` holding any 64-bit number `v` (and `reg` the
+number `x`): an unsigned comparison. -/
+theorem exec_cmprm_word (rodata : Array (BitVec 64)) (S : State (BitVec 64)) (a : Gpr) (w : Nat) (x : Nat) (v : Nat)
+    (hh : S.halted = false) (hx : S.getGD a = gprWord ⟨0, x⟩) (hxwf : (⟨0, (x : Int)⟩ : Addr).wf)
+    (hv : rodata.getD w 0#64 = BitVec.ofNat 64 v) (hv64 : v < 2 ^ 64) :
+    exec rodata (.cmprm a (.rip (8 * w))) S =
+      next { S with zf := decide ((x : Int) = v), cf := decide ((x : Int) < v) } := by
   have hg := gx_of_word S a ⟨0, x⟩ hx hxwf
-  have hwf : (⟨0, (v : Int)⟩ : Addr).wf := by show 0 ≤ (v : Int) ∧ (v : Int) < 2 ^ 55; omega
-  have hvw : wordGpr (BitVec.ofNat 64 v) = ⟨0, (v : Int)⟩ := by
-    have h1 : gprWord ⟨0, (v : Int)⟩ = BitVec.ofNat 64 v := by
-      simp only [gprWord, ↓reduceIte]; exact BitVec.ofInt_natCast 64 v
-    rw [← h1, wordGpr_gprWord _ hwf]
-  have hA : (LaneOps.asAddr (LaneOps.const (BitVec.ofNat 64 v) : BitVec 64) : Option Addr) = some ⟨0, (v : Int)⟩ := by
-    show some (wordGpr (BitVec.ofNat 64 v)) = _; rw [hvw]
+  have hx64 : x < 2 ^ 64 := by have := hxwf.2; simp only at this; omega
   have hw8 : ((8 * w : Nat) : Int) / 8 = (w : Int) := by omega
   have hm8 : ((8 * w : Nat) : Int) % 8 = 0 := by omega
   simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withMem, memAddr?, withLoad, State.loadWords, hm8,
-    State.read, rRodata, List.range_one, List.map_cons, List.map_nil, hw8, List.headD_cons, withX, hg, setFlagsSub]
+    State.read, rRodata, List.range_one, List.map_cons, List.map_nil, hw8, List.headD_cons, withX, hg]
   have hz : (w : Int) + Int.ofNat 0 = w := by show (w : Int) + 0 = w; omega
-  simp only [hz, ge_iff_le, Int.natCast_nonneg, ↓reduceIte, Int.toNat_natCast, hv, hA]
+  have hc : (LaneOps.asConst (LaneOps.const (BitVec.ofNat 64 v) : BitVec 64) : Option (BitVec 64)) =
+      some (BitVec.ofNat 64 v) := rfl
+  simp only [hz, ge_iff_le, Int.natCast_nonneg, ↓reduceIte, Int.toNat_natCast, hv, hc, setFlagsNum]
+  have e0 : BitVec.ofInt 64 (x : Int) = BitVec.ofNat 64 x := BitVec.ofInt_natCast 64 x
+  have e1 : (BitVec.ofNat 64 x = BitVec.ofNat 64 v) ↔ ((x : Int) = v) := by
+    constructor
+    · intro h; have := congrArg BitVec.toNat h; simp only [BitVec.toNat_ofNat] at this
+      rw [Nat.mod_eq_of_lt hx64, Nat.mod_eq_of_lt hv64] at this; omega
+    · intro h; have : x = v := by omega
+      rw [this]
+  have e2 : (BitVec.ofNat 64 x).toNat < (BitVec.ofNat 64 v).toNat ↔ ((x : Int) < v) := by
+    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hx64, Nat.mod_eq_of_lt hv64]; omega
+  rw [e0]
+  simp only [decide_eq_decide.mpr e1, decide_eq_decide.mpr e2, hh]
 
 /-- The class representative of a threshold `v` for a compare whose register lies in `[lo, hi]`:
 `x > v ↔ x > classRep lo hi v` for every such `x` (`ja` after `cmp x, v`). -/
@@ -375,16 +384,16 @@ theorem setWord_getD (rodata : Array (BitVec 64)) (w v : Nat) (hw : w < rodata.s
 in ZF/CF afterwards (dirty flags, to be written before their next read: `run_ovr_path`). -/
 theorem policy_ja_class (rodata : Array (BitVec 64)) (prog : Array Instr) (S : State (BitVec 64)) (a : Gpr) (w : Nat)
     (t : Nat) (x : Nat) (lo hi v : Nat) (hw : w < rodata.size) (hlo : 1 ≤ lo) (hx1 : lo ≤ x) (hx2 : x ≤ hi)
-    (hhi : hi < 2 ^ 55) (hv55 : v < 2 ^ 55)
+    (hhi : hi < 2 ^ 64) (hv64 : v < 2 ^ 64)
     (hi1 : prog.getD S.pc .nop = .cmprm a (.rip (8 * w))) (hi2 : prog.getD (S.pc + 1) .nop = .jcc .a t)
     (hh : S.halted = false) (hx : S.getGD a = gprWord ⟨0, x⟩) (hxwf : (⟨0, (x : Int)⟩ : Addr).wf) :
     X86.isa.run (setWord rodata w v) prog 2 S =
       ovr { zf := true, cf := true } { ctl0 with zf := decide ((x : Int) = v), cf := decide ((x : Int) < v) }
         (X86.isa.run (setWord rodata w (classRep lo hi v)) prog 2 S) := by
-  have hrep : classRep lo hi v < 2 ^ 55 := by simp only [classRep]; omega
+  have hrep : classRep lo hi v < 2 ^ 64 := by simp only [classRep]; omega
   have hgt := classRep_gt lo hi v x hlo hx1 hx2
   rw [x86_run_succ _ _ _ _ hh, x86_run_succ _ _ _ _ hh, hi1,
-    exec_cmprm_word _ S a w x v hh hx hxwf (setWord_getD rodata w v hw) hv55,
+    exec_cmprm_word _ S a w x v hh hx hxwf (setWord_getD rodata w v hw) hv64,
     exec_cmprm_word _ S a w x _ hh hx hxwf (setWord_getD rodata w _ hw) hrep]
   simp only [next]
   rw [x86_run_succ _ _ _ _ (by simpa using hh), x86_run_succ _ _ _ _ (by simpa using hh)]
