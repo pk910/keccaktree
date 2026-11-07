@@ -528,12 +528,12 @@ theorem iter_b (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)
   refine ⟨?_, hUok, fun q hq => (hbo q (by omega)).trans (hpre q hq), fun n hn => hdig' n (by omega)⟩
   apply cut_transfer (rho (off + 2 * k)) _ hρ hρ GenSBe.ctl25 GenSX.ctl0 GenSBe.sc25 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
     (hL_dec _ _ (by decide +kernel)) (hL GenSX.sc0 _ (by decide +kernel)) (hval_same _ _ _ _ _ (by decide +kernel))
-    refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
-    · show U.g = _; rw [hUg, fb.1]; decide +kernel
-    · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
-    · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
-    · show U.pc = _; rw [hUpc]; decide +kernel
-    · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
+  refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
+  · show U.g = _; rw [hUg, fb.1]; decide +kernel
+  · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
+  · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
+  · show U.pc = _; rw [hUpc]; decide +kernel
+  · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -667,12 +667,12 @@ theorem iter_c (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)
   refine ⟨?_, hUok, fun q hq => (hbo q (by omega)).trans (hpre q hq), fun n hn => hdig' n (by omega)⟩
   apply cut_transfer (rho (off + 2 * k)) _ hρ hρ GenSBo.ctl25 GenSX.ctl0 GenSBo.sc25 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
     (hL_dec _ _ (by decide +kernel)) (hL GenSX.sc0 _ (by decide +kernel)) (hval_same _ _ _ _ _ (by decide +kernel))
-    refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
-    · show U.g = _; rw [hUg, fb.1]; decide +kernel
-    · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
-    · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
-    · show U.pc = _; rw [hUpc]; decide +kernel
-    · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
+  refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
+  · show U.g = _; rw [hUg, fb.1]; decide +kernel
+  · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
+  · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
+  · show U.pc = _; rw [hUpc]; decide +kernel
+  · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
 
 
 /-- **One batch**: from the loop head before batch `k` (`2k < c`), `1594` steps reach the loop head

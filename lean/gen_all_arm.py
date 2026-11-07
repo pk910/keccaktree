@@ -200,6 +200,7 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
     · show U.pc = _; rw [hUpc]; decide +kernel
     · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
 '''
+    ctl2 = '\n'.join(l[2:] for l in ctl.splitlines()) + '\n'
     if kind == 'a':
         s += f'''  refine ⟨?_, hUok, ?_, hbi, fun q hq => (hbo q (by omega)).trans (hpre q hq), fun n hn => hdig' n (by omega)⟩
   · rw [show off + 2 * (k + 1) = (off + 2 * k) + 2 by omega, ← rho_add]
@@ -213,7 +214,7 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
         s += f'''  refine ⟨?_, hUok, fun q hq => (hbo q (by omega)).trans (hpre q hq), fun n hn => hdig' n (by omega)⟩
   apply cut_transfer (rho (off + 2 * k)) _ hρ hρ {BX}.ctl{KB} GenSX.ctl0 {BX}.sc{KB} GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
     (hL_dec _ _ (by decide +kernel)) (hL GenSX.sc0 _ (by decide +kernel)) (hval_same _ _ _ _ _ (by decide +kernel))
-{ctl}
+{ctl2}
 '''
     return s
 
