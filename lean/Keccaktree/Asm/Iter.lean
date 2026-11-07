@@ -250,6 +250,133 @@ theorem step (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S : State (BitVec 64
     · rw [hconc]
       exact ⟨hg, hk, hz, hcf, hn, hv, hvl, hpc, hd⟩
 
+/-- **The lane invariants at a relocated position**: reading the base variables at their relocated
+locations, the state after the relocated slice holds the base symbolic lanes evaluated in the
+relocated environment of the state before (for locations whose trees carry no pointer). -/
+theorem data (ρ : Reloc) (hρ : ρ.ok) (S : State (BitVec 64)) (v : Nat) (hv : (readVar C.res v).noPtr = true) :
+    envOf (mapState (E.eval (envOf S)) (relocState ρ C.res)) (ρ.var v) =
+      E.eval (fun i => envOf S (ρ.var i)) (readVar C.res v) := by
+  rw [envOf_mapState, readVar_relocState_var, E.eval_reloc_noPtr ρ _ _ hv]
+
+/-- **The frame at a relocated position**: a memory cell the base run does not store to (at its
+base location) keeps its value. -/
+theorem frame (F : isa.Footprint) (ρ : Reloc) (S : State (BitVec 64))
+    (hc : relocState ρ (cutOf C.ctl C.sc) = cutOf C.ctl S) (r : Region) (q : Int)
+    (hw : (r, q - ρ.wshift r) ∉ F.traceWrites rodata C.slice C.cut) :
+    (mapState (E.eval (envOf S)) (relocState ρ C.res)).mem r q = S.mem r q := by
+  have h1 := F.execTrace_frame rodata C.slice C.cut C.res_err r (q - ρ.wshift r) hw
+  have h2 : (relocState ρ (cutOf C.ctl C.sc)).mem r q = (cutOf C.ctl S).mem r q := by rw [hc]
+  simp only [relocState] at h2
+  show E.eval (envOf S) (E.reloc ρ (C.res.mem r (q - ρ.wshift r))) = S.mem r q
+  rw [show C.res.mem r (q - ρ.wshift r) = C.cut.mem r (q - ρ.wshift r) from h1]
+  show E.eval (envOf S) (E.reloc ρ ((cutOf C.ctl C.sc).mem r (q - ρ.wshift r))) = S.mem r q
+  rw [h2]
+  show E.eval (envOf S) (cutVar C.ctl S (memVar r q)) = S.mem r q
+  rw [eval_cutVar, envOf_mem]
+
 end SliceCert
+
+/-! ## Identity and composition of relocations -/
+
+/-- No relocation. -/
+def Reloc.id : Reloc := ⟨fun _ => 0⟩
+
+theorem Reloc.id_ok : Reloc.id.ok := by
+  refine ⟨rfl, rfl, rfl, fun r => ⟨by simp [Reloc.id], by simp [Reloc.id]⟩⟩
+
+theorem Reloc.id_within (B : Int) (hB : B ≤ 2 ^ 55) : Reloc.id.within B := by
+  intro r; simp only [Reloc.id]; omega
+
+theorem Reloc.id_var (i : Nat) : Reloc.id.var i = i := by
+  by_cases h : i < 288
+  · exact Reloc.var_lt _ i h
+  · simp only [Reloc.var, h, ↓reduceIte, Reloc.wshift, Reloc.id]
+    simp only [Int.zero_ediv, Int.add_zero]
+    exact memVar_region_index i (by omega)
+
+theorem E.reloc_id (e : E) : e.reloc Reloc.id = e := by
+  induction e with
+  | var i => simp only [E.reloc, Reloc.id_var]
+  | const v => rfl
+  | ptr a => simp only [E.reloc, Reloc.addr, Reloc.id, Int.add_zero]
+  | xor a b iha ihb => simp only [E.reloc, iha, ihb]
+  | and a b iha ihb => simp only [E.reloc, iha, ihb]
+  | or a b iha ihb => simp only [E.reloc, iha, ihb]
+  | not a ih => simp only [E.reloc, ih]
+  | shl a n ih => simp only [E.reloc, ih]
+  | shr a n ih => simp only [E.reloc, ih]
+  | rol a n ih => simp only [E.reloc, ih]
+  | add a b iha ihb => simp only [E.reloc, iha, ihb]
+  | ternlog imm a b c iha ihb ihc => simp only [E.reloc, iha, ihb, ihc]
+
+theorem Reloc.id_wshift (r : Region) : Reloc.id.wshift r = 0 := by
+  simp only [Reloc.wshift, Reloc.id]; rfl
+
+theorem relocState_id (s : State E) : relocState Reloc.id s = s := by
+  cases s with
+  | mk v g gd k zf cf nf vf vl mem pc depth err halted tail =>
+    simp only [relocState, State.mk.injEq, true_and, and_true]
+    refine ⟨?_, ?_, ?_⟩
+    · apply Vector.ext; intro r hr; apply Vector.ext; intro l hl
+      simp only [Vector.getElem_map, E.reloc_id]
+    · apply Vector.ext; intro n hn
+      simp only [Vector.getElem_map, E.reloc_id]
+    · funext r q
+      rw [Reloc.id_wshift, Int.sub_zero, E.reloc_id]
+
+/-- Two relocations one after the other. -/
+def Reloc.add (ρ σ : Reloc) : Reloc := ⟨fun r => ρ.δ r + σ.δ r⟩
+
+theorem Reloc.add_ok (ρ σ : Reloc) (hρ : ρ.ok) (hσ : σ.ok) : (ρ.add σ).ok := by
+  obtain ⟨a1, a2, a3, a4⟩ := hρ
+  obtain ⟨b1, b2, b3, b4⟩ := hσ
+  refine ⟨by simp [Reloc.add, a1, b1], by simp [Reloc.add, a2, b2], by simp [Reloc.add, a3, b3], fun r => ?_⟩
+  obtain ⟨c1, c2⟩ := a4 r
+  obtain ⟨d1, d2⟩ := b4 r
+  exact ⟨by simp only [Reloc.add]; omega, Int.dvd_add c2 d2⟩
+
+theorem Reloc.add_wshift (ρ σ : Reloc) (hρ : ρ.ok) (hσ : σ.ok) (r : Region) :
+    (ρ.add σ).wshift r = ρ.wshift r + σ.wshift r := by
+  have h1 := ρ.δ_eq hρ r
+  have h2 := σ.δ_eq hσ r
+  simp only [Reloc.wshift, Reloc.add] at *
+  omega
+
+theorem Reloc.add_var (ρ σ : Reloc) (hρ : ρ.ok) (hσ : σ.ok) (i : Nat) : (ρ.add σ).var i = ρ.var (σ.var i) := by
+  by_cases h : i < 288
+  · rw [Reloc.var_lt _ i h, Reloc.var_lt _ i h, Reloc.var_lt _ i h]
+  · have hge := memVar_ge (memVarRegion i) (memVarIndex i + σ.wshift (memVarRegion i))
+    simp only [Reloc.var, h, ↓reduceIte, show ¬ memVar (memVarRegion i) (memVarIndex i + σ.wshift (memVarRegion i)) < 288 by omega,
+      memVarRegion_memVar, memVarIndex_memVar, Reloc.add_wshift ρ σ hρ hσ]
+    congr 1; omega
+
+theorem E.reloc_add (ρ σ : Reloc) (hρ : ρ.ok) (hσ : σ.ok) (e : E) : (e.reloc σ).reloc ρ = e.reloc (ρ.add σ) := by
+  induction e with
+  | var i => simp only [E.reloc, Reloc.add_var ρ σ hρ hσ]
+  | const v => rfl
+  | ptr a => simp only [E.reloc, Reloc.addr, Reloc.add, E.ptr.injEq]; simp only [Addr.mk.injEq, true_and]; omega
+  | xor a b iha ihb => simp only [E.reloc, iha, ihb]
+  | and a b iha ihb => simp only [E.reloc, iha, ihb]
+  | or a b iha ihb => simp only [E.reloc, iha, ihb]
+  | not a ih => simp only [E.reloc, ih]
+  | shl a n ih => simp only [E.reloc, ih]
+  | shr a n ih => simp only [E.reloc, ih]
+  | rol a n ih => simp only [E.reloc, ih]
+  | add a b iha ihb => simp only [E.reloc, iha, ihb]
+  | ternlog imm a b c iha ihb ihc => simp only [E.reloc, iha, ihb, ihc]
+
+theorem relocState_add (ρ σ : Reloc) (hρ : ρ.ok) (hσ : σ.ok) (s : State E) :
+    relocState ρ (relocState σ s) = relocState (ρ.add σ) s := by
+  cases s with
+  | mk v g gd k zf cf nf vf vl mem pc depth err halted tail =>
+    simp only [relocState, State.mk.injEq, true_and, and_true]
+    refine ⟨?_, ?_, ?_⟩
+    · apply Vector.ext; intro r hr; apply Vector.ext; intro l hl
+      simp only [Vector.getElem_map, E.reloc_add ρ σ hρ hσ]
+    · apply Vector.ext; intro n hn
+      simp only [Vector.getElem_map, E.reloc_add ρ σ hρ hσ]
+    · funext r q
+      rw [E.reloc_add ρ σ hρ hσ, Reloc.add_wshift ρ σ hρ hσ]
+      congr 2; omega
 
 end Keccaktree.Asm
