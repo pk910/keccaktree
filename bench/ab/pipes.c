@@ -296,6 +296,99 @@ DEF(tlrol11dep_z, 24, TL("zmm", 0, 24, 25) ROL("zmm", 0, 0, 7) TL("zmm", 2, 24, 
 /* chi alone: five rows of five dependent ternlogs */
 DEF(chi_z, 25, CHI5("zmm", 0, 1, 2, 3, 4, N1) CHI5("zmm", 5, 6, 7, 8, 9, N1) CHI5("zmm", 10, 11, 12, 13, 14, N1) CHI5("zmm", 15, 16, 17, 18, 19, N1) CHI5("zmm", 20, 21, 22, 23, 24, N1))
 
+/* shifts: on Zen 4 vpsllq/vpsrlq zmm run on FP2/3 (uops.info) while vprolq
+ * runs on FP0/1: a rotate as sll + srl + or moves work off FP0/1 */
+#define SLL(V, d, a, r) "vpsllq $" #r ", %%" V #a ", %%" V #d "\n\t"
+#define SRL(V, d, a, r) "vpsrlq $" #r ", %%" V #a ", %%" V #d "\n\t"
+#define OR(V, d, a, b)  "vporq %%" V #b ", %%" V #a ", %%" V #d "\n\t"
+#define M_SLL(V, i) SLL(V, i, i, 7)
+#define M_SRL(V, i) SRL(V, i, i, 7)
+DEF(sll_z, 24, X24(M_SLL, "zmm"))
+DEF(srl_z, 24, X24(M_SRL, "zmm"))
+DEF(rolsll_z, 24, ROL("zmm", 0, 0, 7) SLL("zmm", 1, 1, 7) ROL("zmm", 2, 2, 7) SLL("zmm", 3, 3, 7) ROL("zmm", 4, 4, 7) SLL("zmm", 5, 5, 7)
+    ROL("zmm", 6, 6, 7) SLL("zmm", 7, 7, 7) ROL("zmm", 8, 8, 7) SLL("zmm", 9, 9, 7) ROL("zmm", 10, 10, 7) SLL("zmm", 11, 11, 7)
+    ROL("zmm", 12, 12, 7) SLL("zmm", 13, 13, 7) ROL("zmm", 14, 14, 7) SLL("zmm", 15, 15, 7) ROL("zmm", 16, 16, 7) SLL("zmm", 17, 17, 7)
+    ROL("zmm", 18, 18, 7) SLL("zmm", 19, 19, 7) ROL("zmm", 20, 20, 7) SLL("zmm", 21, 21, 7) ROL("zmm", 22, 22, 7) SLL("zmm", 23, 23, 7))
+/* rotate as shifts: t = a >> (64-r); a <<= r; a |= t  (t: register 28/29) */
+#define ROLS(V, d, a, r, rr, t) SRL(V, t, a, rr) SLL(V, d, a, r) OR(V, d, d, t)
+/* the kernel mix with the five theta rotations and four rho rotations (one
+ * per row 1..4) as shift pairs: 18 vprolq + 2 vpshufb stay on FP0/1 */
+#define THETA_CS(V, d, t) TL(V, d, 22, 23) TL(V, d, 24, 25) ROLS(V, d, d, 1, 63, t)
+#define RHOS2(V, d, r, rr, t) TL(V, d, 26, 27) ROLS(V, d, d, r, rr, t)
+#define MIX_S(V) \
+    THETA_CS(V, 0, 28) THETA_CS(V, 1, 29) THETA_CS(V, 2, 28) THETA_CS(V, 3, 29) THETA_CS(V, 4, 28) \
+    TL(V, 5, 0, 1) RHO(V, 6, 44, N1, N1) RHO(V, 7, 43, N1, N1) RHO(V, 8, 21, N1, N1) RHO(V, 9, 14, N1, N1) CHI5(V, 5, 6, 7, 8, 9, N1) \
+    RHOS2(V, 10, 28, 36, 29) RHO(V, 11, 20, N1, N1) RHO(V, 12, 3, N1, N1) RHO(V, 13, 45, N1, N1) RHO(V, 14, 61, N1, N1) CHI5(V, 10, 11, 12, 13, 14, N1) \
+    RHOS2(V, 15, 1, 63, 28) RHO(V, 16, 6, N1, N1) RHO(V, 17, 25, N1, N1) RHOS(V, 18, 30, N1, N1) RHO(V, 19, 18, N1, N1) CHI5(V, 15, 16, 17, 18, 19, N1) \
+    RHOS2(V, 20, 27, 37, 29) RHO(V, 21, 36, N1, N1) RHO(V, 0, 10, N1, N1) RHO(V, 1, 15, N1, N1) RHOS(V, 2, 31, N1, N1) CHI5(V, 20, 21, 0, 1, 2, N1) \
+    RHOS2(V, 3, 62, 2, 28) RHO(V, 4, 55, N1, N1) RHO(V, 5, 39, N1, N1) RHO(V, 6, 41, N1, N1) RHO(V, 7, 2, N1, N1) CHI5(V, 3, 4, 5, 6, 7, N1) \
+    XOR(V, 8, 8, 30)
+DEF(mixs_z, 108, MIX_S("zmm"))
+
+/* ternlog dependency tests: latency chain, source written by the previous
+ * op (distance 1), 2, 4, 8 ops earlier, two fresh sources, xor equivalents */
+#define Y(V, i) "%%" V #i
+DEF(tl_lat, 24, TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25)
+    TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25)
+    TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25)
+    TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25) TL("zmm", 0, 24, 25))
+DEF(tl_lat_y, 24, TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25)
+    TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25)
+    TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25)
+    TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25) TL("ymm", 0, 24, 25))
+DEF(xor_lat, 24, XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24)
+    XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24)
+    XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24)
+    XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24) XOR("zmm", 0, 0, 24))
+DEF(rol_lat, 24, ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7)
+    ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7)
+    ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7)
+    ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7) ROL("zmm", 0, 0, 7))
+/* source 2 = the destination of the op k before (12 independent chains of
+ * such pairs for k = 1; register i reads i-k) */
+#define TLP(V, i, k) TL(V, i, k, 25)
+DEF(tl_d1, 24, TL("zmm", 0, 23, 25) TL("zmm", 1, 0, 25) TL("zmm", 2, 1, 25) TL("zmm", 3, 2, 25) TL("zmm", 4, 3, 25) TL("zmm", 5, 4, 25)
+    TL("zmm", 6, 5, 25) TL("zmm", 7, 6, 25) TL("zmm", 8, 7, 25) TL("zmm", 9, 8, 25) TL("zmm", 10, 9, 25) TL("zmm", 11, 10, 25)
+    TL("zmm", 12, 11, 25) TL("zmm", 13, 12, 25) TL("zmm", 14, 13, 25) TL("zmm", 15, 14, 25) TL("zmm", 16, 15, 25) TL("zmm", 17, 16, 25)
+    TL("zmm", 18, 17, 25) TL("zmm", 19, 18, 25) TL("zmm", 20, 19, 25) TL("zmm", 21, 20, 25) TL("zmm", 22, 21, 25) TL("zmm", 23, 22, 25))
+DEF(tl_d2, 24, TL("zmm", 0, 22, 25) TL("zmm", 1, 23, 25) TL("zmm", 2, 0, 25) TL("zmm", 3, 1, 25) TL("zmm", 4, 2, 25) TL("zmm", 5, 3, 25)
+    TL("zmm", 6, 4, 25) TL("zmm", 7, 5, 25) TL("zmm", 8, 6, 25) TL("zmm", 9, 7, 25) TL("zmm", 10, 8, 25) TL("zmm", 11, 9, 25)
+    TL("zmm", 12, 10, 25) TL("zmm", 13, 11, 25) TL("zmm", 14, 12, 25) TL("zmm", 15, 13, 25) TL("zmm", 16, 14, 25) TL("zmm", 17, 15, 25)
+    TL("zmm", 18, 16, 25) TL("zmm", 19, 17, 25) TL("zmm", 20, 18, 25) TL("zmm", 21, 19, 25) TL("zmm", 22, 20, 25) TL("zmm", 23, 21, 25))
+DEF(tl_d4, 24, TL("zmm", 0, 20, 25) TL("zmm", 1, 21, 25) TL("zmm", 2, 22, 25) TL("zmm", 3, 23, 25) TL("zmm", 4, 0, 25) TL("zmm", 5, 1, 25)
+    TL("zmm", 6, 2, 25) TL("zmm", 7, 3, 25) TL("zmm", 8, 4, 25) TL("zmm", 9, 5, 25) TL("zmm", 10, 6, 25) TL("zmm", 11, 7, 25)
+    TL("zmm", 12, 8, 25) TL("zmm", 13, 9, 25) TL("zmm", 14, 10, 25) TL("zmm", 15, 11, 25) TL("zmm", 16, 12, 25) TL("zmm", 17, 13, 25)
+    TL("zmm", 18, 14, 25) TL("zmm", 19, 15, 25) TL("zmm", 20, 16, 25) TL("zmm", 21, 17, 25) TL("zmm", 22, 18, 25) TL("zmm", 23, 19, 25))
+DEF(tl_d8, 24, TL("zmm", 0, 16, 25) TL("zmm", 1, 17, 25) TL("zmm", 2, 18, 25) TL("zmm", 3, 19, 25) TL("zmm", 4, 20, 25) TL("zmm", 5, 21, 25)
+    TL("zmm", 6, 22, 25) TL("zmm", 7, 23, 25) TL("zmm", 8, 0, 25) TL("zmm", 9, 1, 25) TL("zmm", 10, 2, 25) TL("zmm", 11, 3, 25)
+    TL("zmm", 12, 4, 25) TL("zmm", 13, 5, 25) TL("zmm", 14, 6, 25) TL("zmm", 15, 7, 25) TL("zmm", 16, 8, 25) TL("zmm", 17, 9, 25)
+    TL("zmm", 18, 10, 25) TL("zmm", 19, 11, 25) TL("zmm", 20, 12, 25) TL("zmm", 21, 13, 25) TL("zmm", 22, 14, 25) TL("zmm", 23, 15, 25))
+/* two fresh sources (written 1 and 2 ops earlier) */
+DEF(tl_2f, 24, TL("zmm", 0, 23, 22) TL("zmm", 1, 0, 23) TL("zmm", 2, 1, 0) TL("zmm", 3, 2, 1) TL("zmm", 4, 3, 2) TL("zmm", 5, 4, 3)
+    TL("zmm", 6, 5, 4) TL("zmm", 7, 6, 5) TL("zmm", 8, 7, 6) TL("zmm", 9, 8, 7) TL("zmm", 10, 9, 8) TL("zmm", 11, 10, 9)
+    TL("zmm", 12, 11, 10) TL("zmm", 13, 12, 11) TL("zmm", 14, 13, 12) TL("zmm", 15, 14, 13) TL("zmm", 16, 15, 14) TL("zmm", 17, 16, 15)
+    TL("zmm", 18, 17, 16) TL("zmm", 19, 18, 17) TL("zmm", 20, 19, 18) TL("zmm", 21, 20, 19) TL("zmm", 22, 21, 20) TL("zmm", 23, 22, 21))
+/* the xor equivalent of tl_d1 */
+DEF(xor_d1, 24, XOR("zmm", 0, 0, 23) XOR("zmm", 1, 1, 0) XOR("zmm", 2, 2, 1) XOR("zmm", 3, 3, 2) XOR("zmm", 4, 4, 3) XOR("zmm", 5, 5, 4)
+    XOR("zmm", 6, 6, 5) XOR("zmm", 7, 7, 6) XOR("zmm", 8, 8, 7) XOR("zmm", 9, 9, 8) XOR("zmm", 10, 10, 9) XOR("zmm", 11, 11, 10)
+    XOR("zmm", 12, 12, 11) XOR("zmm", 13, 13, 12) XOR("zmm", 14, 14, 13) XOR("zmm", 15, 15, 14) XOR("zmm", 16, 16, 15) XOR("zmm", 17, 17, 16)
+    XOR("zmm", 18, 18, 17) XOR("zmm", 19, 19, 18) XOR("zmm", 20, 20, 19) XOR("zmm", 21, 21, 20) XOR("zmm", 22, 22, 21) XOR("zmm", 23, 23, 22))
+/* ymm chi, chi as andn + xor, chi with the dependent ops of all rows last */
+DEF(chi_y, 25, CHI5("ymm", 0, 1, 2, 3, 4, N1) CHI5("ymm", 5, 6, 7, 8, 9, N1) CHI5("ymm", 10, 11, 12, 13, 14, N1) CHI5("ymm", 15, 16, 17, 18, 19, N1) CHI5("ymm", 20, 21, 22, 23, 24, N1))
+#define AX(V, a, b, c, t) ANDN(V, t, b, c) XOR(V, a, a, t)
+#define CHI5AX(V, a, b, c, d, e) AX(V, a, b, c, 25) AX(V, b, c, d, 26) AX(V, c, d, e, 27) AX(V, d, e, a, 28) AX(V, e, a, b, 29)
+DEF(chi_ax, 50, CHI5AX("zmm", 0, 1, 2, 3, 4) CHI5AX("zmm", 5, 6, 7, 8, 9) CHI5AX("zmm", 10, 11, 12, 13, 14) CHI5AX("zmm", 15, 16, 17, 18, 19) CHI5AX("zmm", 20, 21, 22, 23, 24))
+#define CHI3(V, a, b, c, d, e) TLD(V, a, b, c) TLD(V, b, c, d) TLD(V, c, d, e)
+#define CHI2(V, a, b, c, d, e) TLD(V, d, e, a) TLD(V, e, a, b)
+DEF(chi_r, 25, CHI3("zmm", 0, 1, 2, 3, 4) CHI3("zmm", 5, 6, 7, 8, 9) CHI3("zmm", 10, 11, 12, 13, 14) CHI3("zmm", 15, 16, 17, 18, 19) CHI3("zmm", 20, 21, 22, 23, 24)
+    CHI2("zmm", 0, 1, 2, 3, 4) CHI2("zmm", 5, 6, 7, 8, 9) CHI2("zmm", 10, 11, 12, 13, 14) CHI2("zmm", 15, 16, 17, 18, 19) CHI2("zmm", 20, 21, 22, 23, 24))
+/* chi where the inputs come from rotates (as in the round): 5 rotates then chi, per row */
+DEF(rolchi_z, 50, ROL("zmm", 0, 0, 3) ROL("zmm", 1, 1, 3) ROL("zmm", 2, 2, 3) ROL("zmm", 3, 3, 3) ROL("zmm", 4, 4, 3) CHI5("zmm", 0, 1, 2, 3, 4, N1)
+    ROL("zmm", 5, 5, 3) ROL("zmm", 6, 6, 3) ROL("zmm", 7, 7, 3) ROL("zmm", 8, 8, 3) ROL("zmm", 9, 9, 3) CHI5("zmm", 5, 6, 7, 8, 9, N1)
+    ROL("zmm", 10, 10, 3) ROL("zmm", 11, 11, 3) ROL("zmm", 12, 12, 3) ROL("zmm", 13, 13, 3) ROL("zmm", 14, 14, 3) CHI5("zmm", 10, 11, 12, 13, 14, N1)
+    ROL("zmm", 15, 15, 3) ROL("zmm", 16, 16, 3) ROL("zmm", 17, 17, 3) ROL("zmm", 18, 18, 3) ROL("zmm", 19, 19, 3) CHI5("zmm", 15, 16, 17, 18, 19, N1)
+    ROL("zmm", 20, 20, 3) ROL("zmm", 21, 21, 3) ROL("zmm", 22, 22, 3) ROL("zmm", 23, 23, 3) ROL("zmm", 24, 24, 3) CHI5("zmm", 20, 21, 22, 23, 24, N1))
+
 struct t { const char* name; void (*f)(long, void*); int ops; };
 #define T(n) {#n, n##_f, n##_ops}
 
@@ -346,7 +439,7 @@ int main(int argc, char** argv) {
     memset(buf, 0, 8192);
     struct t tests[] = {T(tl_z), T(tl_y), T(tld_z), T(tlm_z), T(xor_z), T(xor_y), T(andn_z), T(rol_z), T(rol_y), T(shuf_z),
                         T(shuf_y), T(msh_z), T(mov_z), T(ld_z), T(st_z), T(tlrol_z), T(xorrol_z), T(mix_z), T(mixm_z),
-                        T(mix_y), T(mixm_y), T(hyb_z), T(hyb_y), T(sc), T(mixb5_z), T(mixb5_y), T(mixall_z), T(mixall_y), T(mixind_z), T(mixx_z), T(tlroldep_z), T(tlrol11_z), T(tlrol11dep_z), T(chi_z)};
+                        T(mix_y), T(mixm_y), T(hyb_z), T(hyb_y), T(sc), T(mixb5_z), T(mixb5_y), T(mixall_z), T(mixall_y), T(mixind_z), T(mixx_z), T(tlroldep_z), T(tlrol11_z), T(tlrol11dep_z), T(chi_z), T(sll_z), T(srl_z), T(rolsll_z), T(mixs_z), T(tl_lat), T(tl_lat_y), T(xor_lat), T(rol_lat), T(tl_d1), T(tl_d2), T(tl_d4), T(tl_d8), T(tl_2f), T(xor_d1), T(chi_y), T(chi_ax), T(chi_r), T(rolchi_z)};
     /* clock: a dependent add chain runs one add per cycle */
     double ghz = 0;
     for (int i = 0; i < 3; i++) {
