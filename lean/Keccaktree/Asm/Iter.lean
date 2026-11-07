@@ -134,6 +134,34 @@ def ctlTreeOk (B : Int) : E → Bool
   | .const _ => true
   | _ => false
 
+/-- A pointer plus a constant, folded into the pointer (a counter pointer stepped by `add`: the
+next cut holds the folded pointer). -/
+def E.fold : E → E
+  | .add (.ptr a) (.const k) => .ptr ⟨a.region, a.off + (k.toNat : Int)⟩
+  | e => e
+
+theorem gprWord_add_const (a : Addr) (k : BitVec 64) :
+    gprWord a + k = gprWord ⟨a.region, a.off + (k.toNat : Int)⟩ := by
+  have h : BitVec.ofInt 64 (a.off + (k.toNat : Int)) = BitVec.ofInt 64 a.off + k := by
+    rw [BitVec.ofInt_add, BitVec.ofInt_natCast, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+  unfold gprWord
+  simp only
+  split
+  · rw [h]
+  · rw [h, BitVec.add_assoc]
+
+theorem E.eval_reloc_fold (ρ : Reloc) (env : Nat → BitVec 64) (e : E) :
+    E.eval env (E.reloc ρ (E.fold e)) = E.eval env (E.reloc ρ e) := by
+  unfold E.fold
+  split
+  · rename_i a k
+    simp only [E.reloc, E.eval, Reloc.addr]
+    rw [gprWord_add_const]
+    show gprWord ⟨a.region, a.off + (k.toNat : Int) + ρ.δ a.region⟩ = gprWord ⟨a.region, a.off + ρ.δ a.region + (k.toNat : Int)⟩
+    congr 2
+    omega
+  · rfl
+
 /-- The closed facts about one slice at its base position. -/
 structure SliceCert (isa : Isa) (R : isa.Relocatable) (rodata : Array (BitVec 64)) (prog : Array isa.Instr) (B : Int) where
   ctl : List Nat
@@ -143,7 +171,7 @@ structure SliceCert (isa : Isa) (R : isa.Relocatable) (rodata : Array (BitVec 64
   sc' : State (BitVec 64)
   path : isa.pathOk rodata prog idx (cutOf ctl sc) = true
   dec : (R.traceDecodes rodata (idx.map (prog.getD · isa.nop)) (cutOf ctl sc)).all (E.addrsBelow B) = true
-  glue : ctl'.all (fun v => readVar (isa.execTrace rodata (idx.map (prog.getD · isa.nop)) (cutOf ctl sc)) v ==
+  glue : ctl'.all (fun v => E.fold (readVar (isa.execTrace rodata (idx.map (prog.getD · isa.nop)) (cutOf ctl sc)) v) ==
     cutVar ctl' sc' v && ctlTreeOk B (cutVar ctl' sc' v)) = true
   cells : ctl'.all (fun v => decide (v < 288) || decide (memVarRegion v = rStack)) = true
   ctrl : let t := isa.execTrace rodata (idx.map (prog.getD · isa.nop)) (cutOf ctl sc)
@@ -241,7 +269,7 @@ theorem step (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S : State (BitVec 64
           E.eval (envOf S) (E.reloc ρ (cutVar C.ctl' C.sc' i)) := by
         rw [hconc, envOf_mapState, ← hvar, readVar_relocState_var, hvar]
         show E.eval (envOf S) (E.reloc ρ (readVar C.res i)) = _
-        rw [show readVar C.res i = cutVar C.ctl' C.sc' i from hgl]
+        rw [← E.eval_reloc_fold, show E.fold (readVar C.res i) = cutVar C.ctl' C.sc' i from hgl]
       exact cutVar_reloc_closed C.ctl' C.sc' _ i hi ρ hρ B hw htree _ henv
     · intro i hi hge
       have hcell := List.all_eq_true.mp C.cells i hi

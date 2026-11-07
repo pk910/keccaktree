@@ -742,7 +742,7 @@ def cert{c} : SliceCert X86.isa X86.isaReloc rodata prog B where
   path := path{c}
   dec := dec{c}
   glue := by
-    show List.all ctl{c + 1} (fun v => readVar result{c} v == cutVar ctl{c + 1} sc{c + 1} v &&
+    show List.all ctl{c + 1} (fun v => E.fold (readVar result{c} v) == cutVar ctl{c + 1} sc{c + 1} v &&
       ctlTreeOk B (cutVar ctl{c + 1} sc{c + 1} v)) = true
     """ + (f"simp only [{glue_simp}]\n    decide +kernel" if ctln else "rfl") + f"""
   cells := by decide +kernel
