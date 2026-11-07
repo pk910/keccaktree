@@ -174,6 +174,14 @@ def sc_gd(seg_path, idx):
     return [int(x.split('#')[0], 16) for x in gds[0].split(', ')]
 
 
+def sc_pc(seg_path, idx):
+    """the pc of the closed state `sc<idx>`"""
+    txt = open(seg_path).read()
+    m = re.search(rf'^def sc{idx} : State \(BitVec 64\) := (.*)$', txt, re.M)
+    mm = re.search(r'\(memLit \[.*?\]\) (\d+) (\d+) (?:true|false) (?:true|false) ', m.group(1))
+    return int(mm.group(1))
+
+
 def ptr_off(word):
     return word & 0x00ffffffffffffff
 
@@ -337,7 +345,7 @@ abbrev DoneK := Done rodata prog targets
       exact this
 """
         else:
-            data = f"""  have hI' := hI.seg {G}.facts m (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
+            data = f"""  have hI' := hI.seg' {G}.facts m {b0} (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
   have hdig : ∀ n, n < done + 0 → Digest input (X86.isa.run rodata prog {G}.facts.len U) (off + n) :=
     fun n hn => hI'.dig n (by omega)
 """
@@ -374,7 +382,10 @@ theorem exit_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVe
             if kind == 'tailcall':
                 term = f"run_tail rodata prog _ hok.2.1 \"{sym}\" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)"
             else:
-                term = (f"run_jcct rodata prog _ hok.2.1 _ \"{sym}\" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel) "
+                tpc = sc_pc(segp, kx)
+                top, ta = X.parse(prog[tpc])
+                assert top == 'jcct', (nm, tpc, prog[tpc])
+                term = (f"run_jcct rodata prog _ hok.2.1 .{ta[0]} \"{sym}\" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel) "
                         f"(by rw [fK.2.2.1, fK.2.2.2.1]; decide +kernel)")
             w(f"""set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -749,7 +760,8 @@ theorem norm_thm : NormThm rodata prog {ENT} steps targets := by
             cnd, name, hi = info
             sym = name if name.startswith('keccaktree_') else SYM(name)
             oo(f'have hr := {f}.jcct_taken .{cnd} "{sym}" {hi} (by fr_cond)')
-            oo(f'rw [show steps off c = ({ch.i} + 1) + (steps off c - ({ch.i} + 1)) by unfold steps; omega, Isa.run_add, hr,')
+            cc = 'c' if cv == 'sym' else str(cv)
+            oo(f'rw [show steps off {cc} = ({ch.i} + 1) + (steps off {cc} - ({ch.i} + 1)) by unfold steps; omega, Isa.run_add, hr,')
             oo(f'  Isa.run_halted _ _ _ _ _ rfl]')
             oo(f'refine ⟨rfl, {f}.err, fun q _ => by rw [{f}.near.2.2.2.2.2.2.1], Or.inr ⟨"{sym}", 0, rfl, by decide, by omega,')
             oo(f'  fun n hn => absurd hn (Nat.not_lt_zero _), ?_⟩⟩')
@@ -775,7 +787,7 @@ have hd := afterP_{pv} off c input S _ hb cut1 I1 (by
   rw [e2, {f}.vals (2, {vals[2].lean if cv == 'sym' else f'((({cv} : Nat)) : Int)'}) (by simp [setVal])]
   try rfl) (by omega)
 rw [len_{pv}] at hd
-exact (Done.run rfl (Done.run rfl hd)) (steps off c) (by unfold steps; omega)""".split('\n'):
+exact (Done.run rfl (Done.run rfl hd)) (steps off {'c' if cv == 'sym' else cv}) (by unfold steps; omega)""".split('\n'):
             oo(t)
         return out
     if Mp == 0:
