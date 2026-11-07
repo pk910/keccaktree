@@ -10,14 +10,21 @@ on:
 
 jobs:
   bench:
-    name: ${{ matrix.runner }}
+    name: ${{ matrix.runner }}-${{ matrix.n }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, ubuntu-24.04-arm, ubuntu-24.04]
+        # three x86-64 jobs: the hosted runners are a mix of EPYC 7763 (Zen 3),
+        # EPYC 9V45 (Zen 4, AVX-512) and Xeon 8370C (Ice Lake, AVX-512)
+        include:
+          - {runner: macos-15, n: 1}
+          - {runner: macos-15, n: 2}
+          - {runner: ubuntu-24.04-arm, n: 1}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/checkout@v4
         with:
           repository: pk910/hashtree
@@ -32,5 +39,17 @@ jobs:
           make -C src CC=clang HASHTREE=1 HASHTREE_DIR=../hashtree test bench
       - name: Test
         run: KT_TEST_SHA3=$( [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo && echo 1 ) build/test
-      - name: Benchmark
-        run: for i in 1 2 3; do build/bench; echo; done
+      # interleaved A/B of this tree against main (bench/ab): ratio > 1 =
+      # this tree faster; min and median of -n rounds per size
+      - name: A/B vs main
+        run: |
+          CC=clang bench/ab/build.sh origin/main
+          clang -O1 -o build/clock bench/ab/clock.c && build/clock
+          if [ "$(uname)" = Darwin ] || grep -qw sha3 /proc/cpuinfo; then K="$KERNELS"
+          elif grep -qw avx512f /proc/cpuinfo; then K=auto,avx512_x8,avx512_x9:avx512_x8,avx512vl_x4,generic,x86_x1:generic,avx2_x8:avx512_x8,avx2_x10:avx512_x8,avx2_x4:avx512vl_x4
+          elif grep -qw avx2 /proc/cpuinfo; then K=auto,avx2_x8,avx2_x4,generic
+          else K=auto,generic; fi
+          for i in 1 2; do build/ab -n ${ROUNDS:-9} -s ${SIZES:-1,2,3,8,64,256,1024} $K; echo; done
+          build/clock
+        env:
+          KERNELS: auto,sha3_x3r,sha3_x2,sha3_x3,scalar_x1,neon_x3:sha3_x3r,sha3_x3r_n8:sha3_x3r,sha3_x3r_n16:sha3_x3r,sha3_x3r_s16:sha3_x3r,sha3_x2_n16:sha3_x2,sha3_x2_v16:sha3_x2
