@@ -55,6 +55,9 @@ else:
       {.compile(asmDir & "keccak256_avx512_x8.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx512vl_x4.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx512_x9.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx512vl_x4d.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx512_x8d.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx512_x9d.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x8.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x4.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x9.S", asmFlags).}
@@ -126,6 +129,13 @@ when keccaktreeAsm and defined(amd64):
   # avx512_x8 with one extra node in the integer registers (AVX-512F/VL +
   # BMI1 + BMI2)
   func keccaktree_keccak256_avx512_x9*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  # the same three with the D-form rounds (all lanes in registers; AMD)
+  func keccaktree_keccak256_avx512vl_x4d*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  func keccaktree_keccak256_avx512_x8d*(output: pointer, input: pointer, count: uint64) {.
+    keccaktreedecl.}
+  func keccaktree_keccak256_avx512_x9d*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
 
 when keccaktreeAsm and defined(arm64):
