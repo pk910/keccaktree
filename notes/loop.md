@@ -58,9 +58,25 @@ Branch `loop` (worktree `src/wt-loop`), remote workspace `/root/kt-loop` (rsync 
   the base chain under `envShift` (`eval_reloc`), so the digest facts of iteration k follow from the
   base ones with node index n + k·N.
 
-## Integration with `paths`
-* The plan finder needs, per kernel, the loop head / exit / tail instruction indices; `paths`' JSON
-  (segments per count class) replaces `find_plan.py`'s whole-run scan for the segment generator.
+## Integration with `paths` (merged: branch `paths` 4e1c4b0 → loop 719eb96)
+* Segments per kernel from `lean/paths/<kernel>.json` (classes, per-count entry/loop/exit step indices,
+  hand-over states, count-dependent branches): the segment generator takes the loop-head/exit steps from
+  there instead of `find_plan.py`'s whole-run scan; one plan per count *class* (3..29 per kernel; periodic
+  with period NODES beyond 64: counts ≥ 64 reduce to a class representative by relocation of whole
+  batches).
+* Count never reaches hashed data except sha3_x2/neon_x2 (odd count: `csel` duplicates node 1's input
+  pointer in the last batch; digest not stored) and RVV (`vl = min(count, VLMAX)`): for those the
+  last-batch segment is a separate per-count-class plan (as for tails), the body is count-independent.
+* Tail-call graph acyclic: `KernelThm.rank` = depth in that order (x86_x1 / scalar_x1 / sha3_x2 rank 0,
+  …); `RanksOk` then holds for entry hand-overs (`done = 0`, e.g. avx2_x9 → avx2_x8 for 8/12/16).
+* **Runtime thresholds** (avx2_x4 `.Lsmall_tail_max`, avx2_x10 `.Lmid_tail_max`, rodata word 112): the
+  library theorem is stated for every configuration (`lib_correct_cfg`, the table depends on `cfg`).
+  Remaining: per-kernel theorems for every value of the word — plans per behaviour class
+  (`KT_PATCH=112:v`, classes avx2_x4 {≤1, 2, ≥3}, avx2_x10 {≤4,5,6,7,8,≥9}) plus a *rodata-class lemma*:
+  two constant images that differ only in word 112 give the same run as long as every `cmprm` reading it
+  has the same outcome (only the flags of that compare depend on the word); to be proved in the model
+  (one lemma over `exec`, by cases on the instruction: only `cmprm`/`cmpm`/`xor … [rip+…]`/loads read
+  rodata, and the generator can check that word 112 is read only by the policy compare).
 
 ## Commands
     rsync -az --exclude .lake --exclude .git --exclude 'Gen*/' ./ root@2.28.133.253:/root/kt-loop/

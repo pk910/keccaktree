@@ -160,4 +160,17 @@ theorem lib_correct (T : Table isa EntryAt Digest) (maxRank : Nat)
       (fun K hK off count input S h hS => ih K hK off count input S (Nat.le_of_lt_succ h) hS)
       K hK off count input S hμ hS
 
+/-- **The library for every runtime configuration.**  Two kernels read `.data` words that the
+library's calibration sets at runtime (avx2_x4 `.Lsmall_tail_max`, avx2_x10 `.Lmid_tail_max`): the
+constant images, hence the kernels' theorems, depend on a configuration `cfg`.  The library theorem
+holds for every configuration as soon as each configuration's table satisfies the hypotheses (the
+per-kernel theorems are proved per behaviour class of the configuration word: avx2_x4 {≤1, 2, ≥3},
+avx2_x10 {≤4, 5, 6, 7, 8, ≥9}, every value of a class giving the same run). -/
+theorem lib_correct_cfg {Cfg : Type} (T : Cfg → Table isa EntryAt Digest) (maxRank : Nat)
+    (hrank : ∀ cfg, ∀ K ∈ T cfg, K.rank ≤ maxRank) (hranks : ∀ cfg, RanksOk (T cfg)) (hloc : DigestLocal Digest)
+    (cfg : Cfg) (K : KernelThm isa EntryAt Digest) (hK : K ∈ T cfg)
+    (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (hS : EntryAt K.name off count input S) :
+    LibOk (T cfg) K off count input S :=
+  lib_correct (T cfg) maxRank (hrank cfg) (hranks cfg) hloc _ K hK off count input S (Nat.le_refl _) hS
+
 end Keccaktree.Asm.Library
