@@ -17,6 +17,7 @@ import x86_all as X
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIG = 10 ** 6
+THRESH = bool(os.environ.get('THRESH'))
 SYM = lambda k: f'keccaktree_keccak256_{k}'
 
 
@@ -50,6 +51,8 @@ class FrChain:
         self.steps = 0
 
     def cur(self):
+        if getattr(self, 'f0', None) and self.i == 0:
+            return self.f0
         return f'{self.f}{self.i}'
 
     def emit(self, s):
@@ -261,6 +264,58 @@ theorem digest_{name} (input : Int → BitVec 64) (T : State (BitVec 64)) (m : N
 """
     t += "  omega\n\n"
     return t
+
+
+def thresh_transform(text, lib, d, segnames):
+    """the glue for every value `v` of the threshold word 112 (`setWord rodata 112 v`)"""
+    W = '(setWord rodata 112 v)'
+    t = text
+    t = t.replace(f'namespace Keccaktree.Kernels.{d}.All', f'namespace Keccaktree.Kernels.{d}.AllV')
+    t = t.replace(f'end Keccaktree.Kernels.{d}.All', f'end Keccaktree.Kernels.{d}.AllV')
+    t = re.sub(r'import Keccaktree\.Kernels\.(\w+)\.(Gen\w+)\.Seg', r'import Keccaktree.Kernels.\1.\2.PathW', t)
+    t = t.replace('abbrev DoneK := Done rodata prog targets', f'abbrev DoneK (v : Nat) := Done {W} prog targets')
+    t = t.replace('DoneK off', 'DoneK v off')
+    t = t.replace(' rodata prog', f' {W} prog')
+    # segment bundles under the image; the length lemmas stay about the default bundles (defeq)
+    t = re.sub(r'(Gen\w+)\.facts_rdx', r'\1.factsV_rdx v', t)
+    t = re.sub(r'(?<![\w.])(Gen\w+)\.facts(?=[.\s)])', r'(\1.factsV v)', t)
+    t = re.sub(r'\(by wok_out \((Gen\w+)\.factsV v\)\)', r'(by wok_out2 \1.factsV \1.facts)', t)
+    # closed checks: the bundle's closed fields do not depend on `v` (`kt_factsV` rewrites them away)
+    t = t.replace('decide +kernel', 'kdec')
+    t = re.sub(r'theorem len_(\w+) : \(Gen(\w+)\.factsV v\)\.len = (\d+) := by decide \+kernel',
+               r'theorem len0_\1 : Gen\2.facts.len = \3 := by decide +kernel\ntheorem len_\1 (v : Nat) : (Gen\2.factsV v).len = \3 := len0_\1', t)
+    t = re.sub(r'rw \[len_(\w+)\]', r'rw [len_\1 v]', t)
+    t = re.sub(r'rw \[len_(\w+), len_Bb\]', r'rw [len_\1 v, len_Bb v]', t)
+    # data lemmas: the default-image segment facts, moved to the image by `run_agree`
+    t = t.replace('  rw [← sr1.1] at da\n', '  rw [← sr1.1] at da\n  rw [← GBA.run_agree _ (agree_setWord rodata 112 v) _ hρ hw S hcut hI.ok] at da\n')
+    t = t.replace('  rw [← sr2.1] at db\n', '  rw [← sr2.1] at db\n  rw [← GenBb.run_agree _ (agree_setWord rodata 112 v) _ hρ hw _ cut2 ok1] at db\n')
+    t = t.replace('  rw [← sr.1] at dx\n', '  rw [← sr.1] at dx\n  rw [← GX.run_agree _ (agree_setWord rodata 112 v) (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok] at dx\n')
+    # fill in the segment names of the inserted lines from the nearest `have sr*` above
+    out = []
+    lastG = None
+    for ln in t.split('\n'):
+        m = re.search(r'have sr1? := (Gen\w+)\.seg_run', ln)
+        if m:
+            lastG = m.group(1)
+        ln = ln.replace('GBA.run_agree', f'{lastG}.run_agree').replace('GX.run_agree', f'{lastG}.run_agree')
+        out.append(ln)
+    t = '\n'.join(out)
+    # every lemma of the control flow takes the threshold value
+    for nm in ['exit_\\w+', 'body_\\w+', 'afterB_step', 'afterB', 'afterP_\\w+']:
+        t = re.sub(rf'theorem ({nm}) \(', r'theorem \1 (v : Nat) (hv64 : v < 2 ^ 64) (', t)
+        t = re.sub(rf'(?<![\w.])({nm}) off ', r'\1 v hv64 off ', t)
+    t = t.replace('theorem norm_thm :', 'theorem norm_thm (v : Nat) (hv64 : v < 2 ^ 64) :')
+    fl = ', '.join(f'{g}.factsV_{f}' for g in ['Gen' + n for n in segnames] for f in ('ctl0', 'sc0', 'ctlK', 'scK', 'len', 'wok'))
+    t = t.replace('macro "fr_lo"', f'macro "kdec" : tactic => `(tactic| first | decide +kernel | (simp only [{fl}]; decide +kernel))\nmacro "fr_lo"')
+    t = t.replace('macro "wok_in"', 'macro "wok_out2 " g:ident h:ident : tactic => `(tactic| (intro q hq; simp only [$g:ident, $h:ident]; first | rfl | (simp [rOutput, rInput, rStack] <;> omega)))\nmacro "wok_in"')
+    t = t.replace('import Keccaktree.Asm.X86Kernel', 'import Keccaktree.Asm.X86Thresh')
+    lib = lib.replace(f'import Keccaktree.Kernels.{d}.All', f'import Keccaktree.Kernels.{d}.AllV')
+    lib = lib.replace(f'namespace Keccaktree.Kernels.{d}.Lib', f'namespace Keccaktree.Kernels.{d}.LibV')
+    lib = lib.replace(f'end Keccaktree.Kernels.{d}.Lib', f'end Keccaktree.Kernels.{d}.LibV')
+    lib = lib.replace('def kernel :', '/-- The kernel under the threshold value `v` (word 112). -/\ndef kernel (v : Nat) (hv64 : v < 2 ^ 64) :')
+    lib = lib.replace('All.targets rodata prog', 'AllV.targets (setWord rodata 112 v) prog')
+    lib = lib.replace('All.steps', 'AllV.steps').replace('All.norm_thm', '(AllV.norm_thm v hv64)')
+    return t, lib
 
 
 def main():
@@ -545,6 +600,38 @@ def XM : Nat := {XM}
                 return pcs + ['tail']
         return pcs + [ch.pc]
 
+    def run_br(out, ind, ch, finish):
+        """count steps until the loop head or a non-count instruction, then `finish`; under THRESH, the policy
+        compare against the threshold word splits into the three orders of the count and the threshold"""
+        import copy
+        while True:
+            if ch.pc == H:
+                return finish(out, ind, ch, 'stop')
+            if X.fr_step(prog, rodata, ch.pc, {k: v.rep for k, v in ch.vals.items()}, bool(ch.zf), bool(ch.cf)) is None:
+                return finish(out, ind, ch, 'exit')
+            op, a = X.parse(prog[ch.pc])
+            if THRESH and op == 'cmprm':
+                r = ch.vals[a[0]]
+                assert r.py is not None, 'threshold compare on a symbolic count'
+                ch.out = out; ch.ind = ind
+                ch.step()
+                fl = f'(setWord_flags rodata {r.lean} v (by fr_lo) (by fr_hi) hv64 (by decide))'
+                out.append(' ' * ind + f'rw [{fl}.1, {fl}.2] at {ch.cur()}')
+                out.append(' ' * ind + f'rcases Nat.lt_trichotomy v {r.py} with hvr | hvr | hvr')
+                for (vr, nm) in ((r.py - 1, 'v < r'), (r.py, 'v = r'), (r.py + 1, 'v > r')):
+                    b = copy.copy(ch); b.vals = dict(ch.vals)
+                    b.zf, b.cf = (r.py == vr), (r.py < vr); b.flags_known = True
+                    sub = []
+                    b.out = sub; b.ind = ind + 2
+                    run_br(sub, ind + 2, b, finish)
+                    sub[0] = ' ' * ind + '· ' + sub[0].lstrip()
+                    out.extend(sub)
+                return
+            ch.out = out; ch.ind = ind
+            kind, info = ch.step()
+            if kind == 'tail':
+                return finish(out, ind, ch, 'tail')
+
     def emit_dispatch(ind, f0, E0, delta, yvar, ylo, pc0, prev_m, prev_base, done_expr, on_H, msuf=''):
         """count steps from `f0` (at pc0, rdx = E0 = yvar + delta) to the loop head or an exit, for every value of
         the Nat `yvar` ≥ ylo: literal cases below the uniform bound M, then `M ≤ yvar`"""
@@ -560,6 +647,29 @@ def XM : Nat := {XM}
             oo(f"have hcs : {' ∨ '.join([f'{yvar} = {y}' for y in range(ylo, M)] + [f'{M} ≤ {yvar}'])} := by omega")
             oo(f"rcases hcs with {' | '.join(['hy'] * (M - ylo) + ['hy'])}")
         groups = list(range(ylo, M)) + ['sym']
+
+        def finish(o, ind2, ch, kind):
+            q = lambda t: o.append(' ' * ind2 + t)
+            if kind == 'stop':
+                both = ('Bat' + msuf) in ba_names and ('Baf' + msuf) in ba_names
+                if not ch.flags_known and both:
+                    q(f"by_cases hz : {ch.zf_lean}")
+                    for nm in ('Bat' + msuf, 'Baf' + msuf):
+                        ch.zf = nm.startswith('Bat')
+                        hl = []
+                        on_H(hl, ind2 + 2, ch, nm)
+                        hl[0] = ' ' * ind2 + '· ' + hl[0].lstrip()
+                        o.extend(hl)
+                else:
+                    nm = ('Bat' if ch.zf else 'Baf') + msuf
+                    if nm not in ba_names:
+                        nm = [n_ for n_ in ba_names if n_.endswith(msuf) or not msuf][0]
+                    on_H(o, ind2, ch, nm)
+            elif kind == 'exit':
+                emit_exit_call(o, ind2, ch, 'hcut', prev_m, prev_base, done_expr, 'T', bool(msuf))
+            else:
+                raise AssertionError(('dispatch ends in', kind))
+
         for y in groups:
             d0 = 2 if M > ylo else 0
             if M > ylo:
@@ -567,37 +677,16 @@ def XM : Nat := {XM}
             sub = []
             if y == 'sym':
                 vals = {2: Val(E0, None, BIG + delta)}
-                ch, kind, info = run_chain(sub, ind + d0, f0 + 'x', vals, pc0, None, None, {H})
             else:
                 sub.append(' ' * (ind + d0) + f'have hv : {E0} = {lit(y + delta)} := by omega')
                 sub.append(' ' * (ind + d0) + f'rw [hv] at {f0}')
                 vals = {2: Val(lit(y + delta), y + delta)}
-                ch, kind, info = run_chain(sub, ind + d0, f0 + 'x', vals, pc0, None, None, {H})
-            # the chain starts at f0: rename its 0th hypothesis
-            sub = [l.replace(f'{f0}x0', f0) for l in sub]
-            if ch.i == 0:
-                ch.f, ch.i = f0, None
-                ch.cur = (lambda nm=f0: nm)
+            ch = FrChain(prog, rodata, f0 + 'x', sub, ind + d0)
+            ch.vals = dict(vals); ch.pc = pc0; ch.zf = ch.cf = None
+            ch.i = 0
+            ch.f0 = f0   # the 0th hypothesis is f0 itself
+            run_br(sub, ind + d0, ch, finish)
             out.extend(sub)
-            if kind == 'stop':
-                both = ('Bat' + msuf) in ba_names and ('Baf' + msuf) in ba_names
-                if not ch.flags_known and both:
-                    oo(f"by_cases hz : {ch.zf_lean}", d0)
-                    for nm in ('Bat' + msuf, 'Baf' + msuf):
-                        ch.zf = nm.startswith('Bat')
-                        hl = []
-                        on_H(hl, ind + d0 + 2, ch, nm)
-                        hl[0] = ' ' * (ind + d0) + '· ' + hl[0].lstrip()
-                        out.extend(hl)
-                else:
-                    nm = ('Bat' if ch.zf else 'Baf') + msuf
-                    if nm not in ba_names:
-                        nm = [n_ for n_ in ba_names if n_.endswith(msuf) or not msuf][0]
-                    on_H(out, ind + d0, ch, nm)
-            elif kind == 'exit':
-                emit_exit_call(out, ind + d0, ch, 'hcut', prev_m, prev_base, done_expr, 'T', bool(msuf))
-            else:
-                raise AssertionError(('dispatch ends in', kind, y))
         return out
 
     # afterB_step: the loop control, with the continuation as a hypothesis
@@ -807,7 +896,8 @@ exact (Done.run rfl (Done.run rfl hd)) (steps off {'c' if cv == 'sym' else cv}) 
         if X.parse(prog[pc_])[0] in ('test', 'cmpi', 'cmpr'):
             break
         pc_ += 1
-    open(os.path.join(kdir, 'Lib.lean'), 'w').write(f"""import Keccaktree.Kernels.{d}.All
+    text = '\n'.join(L) + f'\nend Keccaktree.Kernels.{d}.All\n'
+    lib = f"""import Keccaktree.Kernels.{d}.All
 import Keccaktree.Asm.LibX86
 set_option linter.unusedSectionVars false
 set_option linter.unusedVariables false
@@ -822,8 +912,14 @@ def kernel : Library.KernelThm X86.isa EntryX86 Digest :=
     (fun _ _ => by unfold All.steps; omega) All.norm_thm
 
 end Keccaktree.Kernels.{d}.Lib
-""")
-    open(os.path.join(kdir, 'All.lean'), 'w').write('\n'.join(L) + f'\nend Keccaktree.Kernels.{d}.All\n')
+"""
+    if THRESH:
+        text, lib = thresh_transform(text, lib, d, sorted(segs))
+        open(os.path.join(kdir, 'AllV.lean'), 'w').write(text)
+        open(os.path.join(kdir, 'LibV.lean'), 'w').write(lib)
+    else:
+        open(os.path.join(kdir, 'Lib.lean'), 'w').write(lib)
+        open(os.path.join(kdir, 'All.lean'), 'w').write(text)
     print('written (exits, body)')
 
 

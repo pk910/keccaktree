@@ -133,6 +133,9 @@ def flags_at(kernel, count, step, patch=None):
 
 def analyze(kernel, patch=None):
     prog, entry, rodata = load_prog(kernel)
+    if patch:
+        for p_ in patch.split(','):
+            w_, v_ = p_.split(':'); rodata[int(w_)] = int(v_)
     pj = json.load(open(os.path.join(HERE, f'paths/{kernel}.json')))
     N = pj['nodes']
     br = pj['batch_region']
@@ -318,7 +321,8 @@ def gen_segments(kernel, patch=None):
                     print(f"  Gen{ex['name']}: kept, ctl0={c0}", flush=True)
                     continue
         src = ex['src']; c = src['count']
-        pl = find_plan(kernel, c, patch=patch) if c > 0 else {'cuts': [], 'rounds': [[]], 'end': src['end']}
+        xpatch = ex.get('patch') or patch
+        pl = find_plan(kernel, c, patch=xpatch) if c > 0 else {'cuts': [], 'rounds': [[]], 'end': src['end']}
         a, b = src['start'], src['end']
         if c > 0:
             r0 = [pl['rounds'][0][n] for n in range(c)]
@@ -338,6 +342,7 @@ def gen_segments(kernel, patch=None):
         env['WRITE_OK'] = (f'fun p => p.1 == 3 || (p.1 == 2 && decide ({lo} ≤ p.2) && decide (p.2 < {hi}))'
                            if nodes else 'fun p => p.1 == 3')
         pln = {'kernel': kernel, 'count': c, 'lanes': lanes_of(kernel), 'entry': a, 'end': b, 'cuts': cuts, 'rounds': rounds}
+        if xpatch: env['KT_PATCH'] = xpatch
         ctl0, nsl = gen(ex['name'], pln, c, env)
         ex_ctl[ex['name']] = ctl0
         info[ex['name']] = {'slices': nsl, 'ctl0': ctl0, 'nodes': nodes, 'count': c, 'start': a, 'end': b,
@@ -441,6 +446,20 @@ def main():
         for ex in res['exits']:
             print(f"  {ex['name']}: pc={ex['pc']} vals={ex['vals']} flags={ex['flags']} term={ex['term']} len={ex['len']} "
                   f"src=count {ex['src']['count']} steps [{ex['src']['start']},{ex['src']['end']}) counts={ex['counts'][:12]}")
+    elif cmd == 'thresholds':
+        # exits reached only under other values of the threshold word 112 (runtime calibration)
+        A = json.load(open(os.path.join(HERE, f'plans/{kernel}_all.json')))
+        key = lambda e: (e['pc'], tuple(sorted(e['vals'].items())), tuple(e['flags']), e.get('kset', False))
+        have = {key(e) for e in A['exits']}
+        for v in [int(x) for x in sys.argv[3].split(',')]:
+            res = analyze(kernel, f'112:{v}')
+            for e in res['exits']:
+                if key(e) not in have:
+                    e = dict(e); e['name'] = f"X{len(A['exits'])}"; e['patch'] = f'112:{v}'
+                    A['exits'].append(e); have.add(key(e))
+                    print(f"  new {e['name']} (word 112 = {v}): pc={e['pc']} vals={e['vals']} flags={e['flags']} term={e['term']}")
+        A['thresh_values'] = sys.argv[3]
+        json.dump(A, open(os.path.join(HERE, f'plans/{kernel}_all.json'), 'w'), indent=1, default=str)
     elif cmd == 'gen':
         gen_segments(kernel, os.environ.get('KT_PATCH'))
 
