@@ -253,9 +253,11 @@ static double kernel_ns_per_node(kfn f, unsigned char* out, const unsigned char*
     return best * 1e9 / (double)(reps * nodes);
 }
 
-int main(void) {
-    void* buf = aligned_alloc(64, 4096);
-    memset(buf, 0, 4096);
+int main(int argc, char** argv) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    int verbose = argc > 1;
+    void* buf = aligned_alloc(64, 8192);
+    memset(buf, 0, 8192);
     struct t tests[] = {T(tl_z), T(tl_y), T(tld_z), T(tlm_z), T(xor_z), T(xor_y), T(andn_z), T(rol_z), T(rol_y), T(shuf_z),
                         T(shuf_y), T(msh_z), T(mov_z), T(ld_z), T(st_z), T(tlrol_z), T(xorrol_z), T(mix_z), T(mixm_z),
                         T(mix_y), T(mixm_y), T(hyb_z), T(hyb_y), T(sc)};
@@ -268,6 +270,7 @@ int main(void) {
     printf("clock (dependent add chain): %.3f GHz\n", ghz);
     printf("%-10s %6s %10s %10s %12s\n", "test", "ops", "ns/op", "cyc/op", "cyc/block");
     for (size_t i = 0; i < sizeof tests / sizeof tests[0]; i++) {
+        if (verbose) fprintf(stderr, "running %s\n", tests[i].name);
         double ns = ns_per_iter(tests[i].f, buf);
         printf("%-10s %6d %10.3f %10.3f %12.1f\n", tests[i].name, tests[i].ops, ns / tests[i].ops, ns / tests[i].ops * ghz,
                ns * ghz);
@@ -286,6 +289,7 @@ int main(void) {
     };
     printf("%-12s %10s %12s %14s\n", "kernel", "ns/node", "ns/round", "cycles/round");
     for (size_t i = 0; i < sizeof ks / sizeof ks[0]; i++) {
+        if (verbose) fprintf(stderr, "running kernel %s\n", ks[i].name);
         double ns = kernel_ns_per_node(ks[i].f, out, in, nodes);
         double nsr = ns * ks[i].batch / 24.0;
         printf("%-12s %10.2f %12.2f %14.1f\n", ks[i].name, ns, nsr, nsr * ghz);

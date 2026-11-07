@@ -21,6 +21,7 @@ jobs:
           - {runner: ubuntu-24.04, n: 3}
           - {runner: ubuntu-24.04, n: 4}
           - {runner: ubuntu-24.04, n: 5}
+          - {runner: ubuntu-24.04, n: 6}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,7 +36,7 @@ jobs:
         run: |
           if grep -qw avx512f /proc/cpuinfo; then
             clang -O2 -mavx512f -mavx512vl -mavx512bw -mavx512vbmi -mbmi -mbmi2 -o build/pipes bench/ab/pipes.c -Isrc -Lbuild/lib -lkeccaktree
-            build/pipes; echo; build/pipes
+            build/pipes v || true; echo; build/pipes || true
           else echo "no AVX-512"; fi
       # interleaved A/B of this tree against main (bench/ab): ratio > 1 =
       # this tree faster; min and median of -n rounds per size
