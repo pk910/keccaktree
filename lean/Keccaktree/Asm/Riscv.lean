@@ -16,7 +16,8 @@ configurations are modelled; the byte-copy paths for unaligned buffers
 (`lbu/sb`, `vle8/vse8`) are `unsupported` and fail.
 -/
 namespace Keccaktree.Asm.Riscv
-open Keccaktree.Asm Keccaktree.Asm.X86
+open Keccaktree.Asm
+open Keccaktree.Asm.X86 hiding gx setX withX next wordGpr
 open Keccaktree.Asm.Arm (gx setX withX addr withAddr)
 open LaneOps
 

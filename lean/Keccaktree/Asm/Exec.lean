@@ -47,12 +47,12 @@ def check (prog : Array Instr) (rodata : Array (BitVec 64)) (entry : Nat) (count
   let (s, tr) := run rodata prog 200000 s0
   let done := match s.tail with
     | none => count
-    | some _ => count - (s.getG 2).off.toNat
+    | some _ => count - ((gx s 2).getD ⟨0, 0⟩).off.toNat
   let outs := (List.range (4 * done)).map fun (q : Nat) => s.mem rOutput (Int.ofNat q)
   let exp := (List.range (4 * done)).map fun q => expectWord (q / 4) (q % 4)
   let handover := match s.tail with
     | none => true
-    | some _ => s.getG 6 == ⟨rInput, 64 * done⟩ && s.getG 7 == ⟨rOutput, 32 * done⟩
+    | some _ => gx s 6 == some ⟨rInput, 64 * done⟩ && gx s 7 == some ⟨rOutput, 32 * done⟩
   (outs == exp && handover, s.err, tr.length, s.tail)
 
 end Keccaktree.Asm.X86

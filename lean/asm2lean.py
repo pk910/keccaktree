@@ -48,14 +48,22 @@ class X86:
         dis = subprocess.run(['objdump', '-d', '-r', '--no-show-raw-insn', '-M', 'intel', obj],
                              capture_output=True, text=True, check=True).stdout
         self.lines = dis.splitlines()
-        rod = subprocess.run(['objdump', '-s', '-j', '.rodata', obj], capture_output=True, text=True, check=True).stdout
-        self.rodata = bytearray()
-        for ln in rod.splitlines():
+        self.rodata = self.section(obj, '.rodata')
+        # `.data` (the tail thresholds, `.quad` defaults; a setter the kernels never call
+        # may change them at runtime): modelled as constants after the `.rodata` image
+        self.data_base = (len(self.rodata) + 7) // 8 * 8
+        self.rodata = self.rodata.ljust(self.data_base, b'\0') + self.section(obj, '.data')
+        self.parse()
+
+    @staticmethod
+    def section(obj, name):
+        out = subprocess.run(['objdump', '-s', '-j', name, obj], capture_output=True, text=True).stdout
+        data = bytearray()
+        for ln in out.splitlines():
             m = re.match(r'^ ([0-9a-f]+) ((?:[0-9a-f]{2,8} ?)+)', ln)
             if m:
-                hexs = m.group(2).replace(' ', '')
-                self.rodata += bytes.fromhex(hexs)
-        self.parse()
+                data += bytes.fromhex(m.group(2).replace(' ', ''))
+        return data
 
     def parse(self):
         # pass 1: collect (addr, text, reloc) per instruction
@@ -81,14 +89,40 @@ class X86:
         self.instrs = []
         for addr, text, reloc, end in raw:
             self.instrs.append(self.translate(addr, text, reloc, end))
+        self.check_flags()
+
+    # flag-setting instructions the model implements, and those it does not (data ALU: flags unchanged)
+    FLAG_OK = ('.cmpi', '.cmpr', '.cmpm', '.cmprm', '.test', '.dec', '.decm', '.sub', '.xorz', '.bt', '.btc')
+    FLAG_BAD = ('.alu', '.andn', '.add', '.andi', '.shl', '.addm', '.xorm')
+
+    def check_flags(self):
+        """every conditional jump must be reached, in straight-line code, from a modelled flag setter"""
+        targets = set()
+        for ins in self.instrs:
+            m = re.match(r'^\.(?:jcc \.\w+|jmp|call) (\d+)$', ins)
+            if m:
+                targets.add(int(m.group(1)))
+        for i, ins in enumerate(self.instrs):
+            if not ins.startswith('.jcc'):
+                continue
+            j = i - 1
+            while j >= 0:
+                op = self.instrs[j].split()[0]
+                if op in self.FLAG_OK:
+                    break
+                if op in self.FLAG_BAD or op in ('.jmp', '.jcc', '.call', '.ret', '.tailcall', '.repmovsb') or j in targets:
+                    raise ValueError('flags of instruction %d (%s) used by jcc %d are not modelled' % (j, self.instrs[j], i))
+                j -= 1
+            else:
+                raise ValueError('jcc %d without a flag setter' % i)
 
     def rodata_target(self, reloc, end):
         off, typ, val = reloc
-        m = re.match(r'^\.rodata([+-]0x[0-9a-f]+)?$', val)
+        m = re.match(r'^(\.rodata|\.data)([+-]0x[0-9a-f]+)?$', val)
         if not m:
             raise ValueError('reloc ' + val)
-        a = int(m.group(1), 16) if m.group(1) else 0
-        return a + (end - off)
+        a = int(m.group(2), 16) if m.group(2) else 0
+        return a + (end - off) + (self.data_base if m.group(1) == '.data' else 0)
 
     def memop(self, s, reloc, end):
         s = s.strip()
@@ -127,6 +161,8 @@ class X86:
         parts = text.split(None, 1)
         op = parts[0]
         args = [a for a in self.split_args(parts[1])] if len(parts) > 1 else []
+        if op == 'xchg' and args[0] != args[1]:
+            return '.xchg %d %d' % (gpr(args[0]), gpr(args[1]))
         if op in ('nop', 'data16', 'cs', 'nopw', 'nopl', 'xchg'):
             return '.nop'
         if op in ('vmovdqu', 'vmovdqa', 'vmovdqa64', 'vmovdqu64'):
@@ -155,39 +191,90 @@ class X86:
             _, d, _ = self.vreg(args[0])
             _, a, _ = self.vreg(args[1])
             return '.vperm2i128 %d %d %s %d' % (d, a, self.src(args[2], reloc, end), imm(args[3]))
+        if op == 'vinserti128':
+            _, d, _ = self.vreg(args[0])
+            _, a, _ = self.vreg(args[1])
+            return '.vinserti128 %d %d %s %d' % (d, a, self.src(args[2], reloc, end), imm(args[3]))
+        if op == 'vextracti128':
+            _, a, _ = self.vreg(args[1])
+            return '.vextracti128 %s %d %d' % (self.memop(args[0], reloc, end), a, imm(args[2]))
+        if op in ('vpsllvq', 'vpsrlvq'):
+            lanes, d, _ = self.vreg(args[0])
+            _, a, _ = self.vreg(args[1])
+            return '.%s %d %d %d %s' % (op, lanes, d, a, self.src(args[2], reloc, end))
+        if op in ('vpblendd', 'vpalignr'):
+            lanes, d, _ = self.vreg(args[0])
+            _, a, _ = self.vreg(args[1])
+            return '.%s %d %d %d %s %d' % (op, lanes, d, a, self.src(args[2], reloc, end), imm(args[3]))
+        if op == 'vpshufd':
+            lanes, d, _ = self.vreg(args[0])
+            _, a, _ = self.vreg(args[1])
+            return '.vpshufd %d %d %d %d' % (lanes, d, a, imm(args[2]))
         if op == 'kmovw':
             return '.kmovw %d %s' % (int(args[0][1:]), self.memop(args[1], reloc, end))
         if op == 'vzeroupper':
             return '.vzeroupper'
-        if op == 'mov':
-            if args[0].startswith('QWORD PTR'):
+        def gsrc(a):
+            if a.startswith('QWORD PTR'):
+                return '(.mem %s)' % self.memop(a, reloc, end)
+            if re.match(r'^-?0x[0-9a-f]+$', a):
+                return '(.imm (%d))' % simm64(a)
+            return '(.reg %d)' % gpr(a)
+        isimm = lambda a: re.match(r'^-?0x[0-9a-f]+$', a) is not None
+        ismem = lambda a: a.startswith('QWORD PTR')
+        if op in ('mov', 'movabs'):
+            if ismem(args[0]):
+                if isimm(args[1]):
+                    return '.storeqi %s (%d)' % (self.memop(args[0], reloc, end), simm64(args[1]))
                 return '.storeq %s %d' % (self.memop(args[0], reloc, end), gpr(args[1]))
-            if args[1].startswith('QWORD PTR'):
+            if ismem(args[1]):
                 return '.loadq %d %s' % (gpr(args[0]), self.memop(args[1], reloc, end))
-            if re.match(r'^0x[0-9a-f]+$', args[1]):
+            if isimm(args[1]):
                 return '.movi %d (%d)' % (gpr(args[0]), simm64(args[1]))
             return '.mov %d %d' % (gpr(args[0]), gpr(args[1]))
         if op == 'lea':
             return '.lea %d %s' % (gpr(args[0]), self.memop(args[1], reloc, end))
-        if op in ('add', 'sub'):
+        if op == 'add' and ismem(args[0]):
+            return '.addm %s (%d)' % (self.memop(args[0], reloc, end), simm64(args[1]))
+        if op in ('add', 'sub') and isimm(args[1]):
             return '.%s %d (%d)' % (op, gpr(args[0]), simm64(args[1]))
-        if op == 'and':
+        if op == 'and' and args[0] == 'rsp':
             return '.andi %d (%d)' % (gpr(args[0]), simm64(args[1]))
         if op == 'shl':
             return '.shl %d %d' % (gpr(args[0]), imm(args[1]))
         if op == 'dec':
+            if ismem(args[0]):
+                return '.decm %s' % self.memop(args[0], reloc, end)
             return '.dec %d' % gpr(args[0])
-        if op == 'xor':
-            assert args[0] == args[1]
+        if op == 'xor' and args[0] == args[1]:
             return '.xorz %d' % gpr(args[0])
+        if op == 'xor' and ismem(args[0]):
+            return '.xorm %s %d' % (self.memop(args[0], reloc, end), gpr(args[1]))
+        if op in ('xor', 'and', 'or', 'add'):
+            return '.alu .%s %d %s' % (op, gpr(args[0]), gsrc(args[1]))
+        if op == 'andn':
+            return '.andn %d %d %s' % (gpr(args[0]), gpr(args[1]), gsrc(args[2]))
+        if op == 'rorx':
+            return '.rorx %d %s %d' % (gpr(args[0]), gsrc(args[1]), imm(args[2]))
         if op == 'cmp':
-            if re.match(r'^0x', args[1]):
+            if ismem(args[0]):
+                return '.cmpm %s %d' % (self.memop(args[0], reloc, end), gpr(args[1]))
+            if ismem(args[1]):
+                return '.cmprm %d %s' % (gpr(args[0]), self.memop(args[1], reloc, end))
+            if isimm(args[1]):
                 return '.cmpi %d (%d)' % (gpr(args[0]), simm64(args[1]))
             return '.cmpr %d %d' % (gpr(args[0]), gpr(args[1]))
         if op == 'test':
             return '.test %d %d' % (gpr(args[0]), gpr(args[1]))
-        if op in ('je', 'jne', 'jb', 'ja'):
-            return '.jcc .%s %d' % (op[1:], self.target(args[0]))
+        if op == 'bt':
+            return '.bt %d %d' % (gpr(args[0]), gpr(args[1]))
+        if op == 'btc':
+            return '.btc %d %d' % (gpr(args[0]), imm(args[1]))
+        if op in ('je', 'jne', 'jb', 'ja', 'jae', 'jbe', 'jz', 'jnz', 'jc', 'jnc'):
+            c = {'je': 'e', 'jz': 'e', 'jne': 'ne', 'jnz': 'ne', 'jb': 'b', 'jc': 'b', 'ja': 'a', 'jae': 'ae', 'jnc': 'ae', 'jbe': 'be'}[op]
+            if reloc and 'PLT32' in reloc[1]:
+                return '.jcct .%s "%s"' % (c, reloc[2].split('-')[0])
+            return '.jcc .%s %d' % (c, self.target(args[0]))
         if op == 'jmp':
             if reloc and 'PLT32' in reloc[1]:
                 return '.tailcall "%s"' % reloc[2].split('-')[0]
@@ -224,8 +311,9 @@ class X86:
         out.write('import Keccaktree.Asm.X86\n')
         out.write('/-! GENERATED by lean/asm2lean.py from %s (objdump -d -r); do not edit. -/\n' % self.obj.split('/')[-1])
         out.write('namespace %s\nopen Keccaktree.Asm.X86\n\n' % ns)
+        out.write('set_option maxRecDepth 100000 in\n')
         out.write('/-- `%s` and its local batch routine, one entry per instruction. -/\n' % self.func)
-        out.write('set_option maxRecDepth 100000 in\ndef prog : Array Instr := #[\n')
+        out.write('def prog : Array Instr := #[\n')
         for i, ins in enumerate(self.instrs):
             out.write('  %s%s  -- %d\n' % (ins, ',' if i + 1 < len(self.instrs) else '', i))
         out.write(']\n\n')
@@ -320,6 +408,10 @@ class Arm:
         if op == 'shl': return '.shl %d %d %d' % (V(args[0]), V(args[1]), I(args[2]))
         if op == 'sri': return '.sri %d %d %d' % (V(args[0]), V(args[1]), I(args[2]))
         if op in ('zip1', 'zip2'): return '.%s %d %d %d' % (op, V(args[0]), V(args[1]), V(args[2]))
+        if op == 'add' and args[0].startswith('v'): return '.addv %d %d %d' % (V(args[0]), V(args[1]), V(args[2]))
+        if op == 'tbl':
+            m = re.match(r'^v(\d+)\.16b, \{v(\d+)\.16b\}, v(\d+)\.16b$', ', '.join(args))
+            return '.tbl %d %d %d' % (int(m.group(1)), int(m.group(2)), int(m.group(3)))
         if op == 'mov' and args[0].startswith('v'): return '.movv %d %d' % (V(args[0]), V(args[1]))
         if op == 'movi': assert I(args[1]) == 0; return '.movi0 %d' % V(args[0])
         if op in ('eor', 'bic'):

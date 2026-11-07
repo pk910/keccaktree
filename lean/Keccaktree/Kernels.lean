@@ -1,4 +1,12 @@
 import Keccaktree.Kernels.Avx2X4.Test
+import Keccaktree.Kernels.NeonX3.Test
+import Keccaktree.Kernels.X86X1.Test
+import Keccaktree.Kernels.Avx512X9.Test
+import Keccaktree.Kernels.Avx2X10.Test
+import Keccaktree.Kernels.Avx2X9.Test
+import Keccaktree.Kernels.Avx2X6.Test
+import Keccaktree.Kernels.Avx2X5.Test
+import Keccaktree.Kernels.Avx2X2.Test
 import Keccaktree.Kernels.Avx2X8.Test
 import Keccaktree.Kernels.Avx512vlX4.Test
 import Keccaktree.Kernels.Avx512X8.Test

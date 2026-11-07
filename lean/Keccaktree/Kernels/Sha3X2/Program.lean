@@ -5,7 +5,7 @@ open Keccaktree.Asm.Arm
 
 set_option maxRecDepth 100000 in
 def prog : Array Instr := #[
-  .stp (.d 8) (.d 9) 31 (-96) 1,  -- 0
+  .stp (.d 8) (.d 9) 31 (-112) 1,  -- 0
   .stp (.d 10) (.d 11) 31 (16) 0,  -- 1
   .stp (.d 12) (.d 13) 31 (32) 0,  -- 2
   .stp (.d 14) (.d 15) 31 (48) 0,  -- 3

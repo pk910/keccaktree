@@ -52,6 +52,15 @@ theorem setLanes_map' (s : State α) (n : Nat) (lo hi : α) (lo' hi' : β) (hlo 
 
 theorem rotr_map (x : α) (n : Nat) : f (rotr x n) = rotr (f x) n := by simp [rotr, hf.rol]
 
+theorem tblWord_map (lo hi : α) (cw : BitVec 64) : tblWord (f lo) (f hi) cw = f (tblWord lo hi cw) := by
+  simp only [tblWord]
+  rw [X86.foldl_hom f _ _ ?_ _ _, hf.const]
+  intro acc i
+  dsimp only
+  split
+  · rfl
+  · simp only [hf.or, hf.shl]; split <;> simp [hf.and, hf.shr, hf.const]
+
 theorem gx_map_some (s : State α) (n : Nat) (a : Addr) (h : gx s n = some a) : gx (mapState f s) n = some a := by
   simp only [gx, getGD_map hf] at h ⊢
   rcases hc : LaneOps.asConst (s.getGD n) with _ | w
@@ -108,6 +117,16 @@ theorem exec_map (rodata : Array (BitVec 64)) (i : Instr) (st : State α) (hne :
     | xar d a b n => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, vop2]; arm_vec
     | shl d a n => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, vop1]; arm_vec
     | sri d a n => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; arm_vec
+    | addv d a b => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, vop2]; arm_vec
+    | tbl d a b =>
+      simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte, lane_map hf] at hne ⊢
+      rcases h0 : LaneOps.asConst (lane st b 0) with _ | c0
+      · simp only [h0, fail_err'] at hne; exact absurd hne (by decide)
+      · rcases h1 : LaneOps.asConst (lane st b 1) with _ | c1
+        · simp only [h0, h1, fail_err'] at hne; exact absurd hne (by decide)
+        · simp only [hf.asConst _ _ h0, hf.asConst _ _ h1]
+          rw [← next_map]
+          exact congrArg next (setLanes_map' hf _ _ _ _ _ _ (tblWord_map hf _ _ _) (tblWord_map hf _ _ _))
     | zip1 d a b => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; arm_vec
     | zip2 d a b => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; arm_vec
     | movv d a => simp only [exec, hh, halted_map, Bool.false_eq_true, ↓reduceIte]; arm_vec

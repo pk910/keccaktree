@@ -1,5 +1,13 @@
 import Keccaktree.Asm.Tools
 import Keccaktree.Kernels.Avx2X4.Program
+import Keccaktree.Kernels.NeonX3.Program
+import Keccaktree.Kernels.X86X1.Program
+import Keccaktree.Kernels.Avx512X9.Program
+import Keccaktree.Kernels.Avx2X10.Program
+import Keccaktree.Kernels.Avx2X9.Program
+import Keccaktree.Kernels.Avx2X6.Program
+import Keccaktree.Kernels.Avx2X5.Program
+import Keccaktree.Kernels.Avx2X2.Program
 import Keccaktree.Kernels.Avx2X8.Program
 import Keccaktree.Kernels.Avx512vlX4.Program
 import Keccaktree.Kernels.Avx512X8.Program
@@ -27,7 +35,15 @@ structure Kernel where
   entry : Nat
 
 def kernels : List (String × Kernel) :=
-  [("avx2_x4", ⟨x86Tool, Keccaktree.Kernels.Avx2X4.prog, Keccaktree.Kernels.Avx2X4.rodata, Keccaktree.Kernels.Avx2X4.entry⟩),
+  [("avx2_x2", ⟨x86Tool, Keccaktree.Kernels.Avx2X2.prog, Keccaktree.Kernels.Avx2X2.rodata, Keccaktree.Kernels.Avx2X2.entry⟩),
+   ("avx2_x5", ⟨x86Tool, Keccaktree.Kernels.Avx2X5.prog, Keccaktree.Kernels.Avx2X5.rodata, Keccaktree.Kernels.Avx2X5.entry⟩),
+   ("avx2_x6", ⟨x86Tool, Keccaktree.Kernels.Avx2X6.prog, Keccaktree.Kernels.Avx2X6.rodata, Keccaktree.Kernels.Avx2X6.entry⟩),
+   ("avx2_x9", ⟨x86Tool, Keccaktree.Kernels.Avx2X9.prog, Keccaktree.Kernels.Avx2X9.rodata, Keccaktree.Kernels.Avx2X9.entry⟩),
+   ("avx2_x10", ⟨x86Tool, Keccaktree.Kernels.Avx2X10.prog, Keccaktree.Kernels.Avx2X10.rodata, Keccaktree.Kernels.Avx2X10.entry⟩),
+   ("avx512_x9", ⟨x86Tool, Keccaktree.Kernels.Avx512X9.prog, Keccaktree.Kernels.Avx512X9.rodata, Keccaktree.Kernels.Avx512X9.entry⟩),
+   ("x86_x1", ⟨x86Tool, Keccaktree.Kernels.X86X1.prog, Keccaktree.Kernels.X86X1.rodata, Keccaktree.Kernels.X86X1.entry⟩),
+   ("neon_x3", ⟨armTool, Keccaktree.Kernels.NeonX3.prog, Keccaktree.Kernels.NeonX3.rodata, Keccaktree.Kernels.NeonX3.entry⟩),
+   ("avx2_x4", ⟨x86Tool, Keccaktree.Kernels.Avx2X4.prog, Keccaktree.Kernels.Avx2X4.rodata, Keccaktree.Kernels.Avx2X4.entry⟩),
    ("avx2_x8", ⟨x86Tool, Keccaktree.Kernels.Avx2X8.prog, Keccaktree.Kernels.Avx2X8.rodata, Keccaktree.Kernels.Avx2X8.entry⟩),
    ("avx512vl_x4", ⟨x86Tool, Keccaktree.Kernels.Avx512vlX4.prog, Keccaktree.Kernels.Avx512vlX4.rodata, Keccaktree.Kernels.Avx512vlX4.entry⟩),
    ("avx512_x8", ⟨x86Tool, Keccaktree.Kernels.Avx512X8.prog, Keccaktree.Kernels.Avx512X8.rodata, Keccaktree.Kernels.Avx512X8.entry⟩),

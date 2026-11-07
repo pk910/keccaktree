@@ -38,6 +38,8 @@ inductive Instr where
   | xar (d a b : Nat) (n : Nat)             -- d = rotr(a ^ b, n)
   | shl (d a : Nat) (n : Nat)
   | sri (d a : Nat) (n : Nat)               -- d = (a >>> n) | (d & ~(ones >>> n))
+  | addv (d a b : Nat)                      -- add v.2d
+  | tbl (d a b : Nat)                       -- tbl vd.16b, {va.16b}, vb.16b (constant indices)
   | zip1 (d a b : Nat)                      -- d = [a0, b0]
   | zip2 (d a b : Nat)                      -- d = [a1, b1]
   | movv (d a : Nat)
@@ -149,6 +151,16 @@ def loadReg (s : State α) (r : LReg) (ws : List α) : State α :=
 
 def next (s : State α) : State α := { s with pc := s.pc + 1 }
 
+/-- One word of `tbl` with one source register (16 bytes `lo`, `hi`) and the
+index bytes `cw`: byte `i` is source byte `cw[i]`, or zero for an index ≥ 16. -/
+def tblWord (lo hi : α) (cw : BitVec 64) : α :=
+  (List.range 8).foldl (fun acc i =>
+    let m := ((cw >>> (8 * i)) &&& 0xff#64).toNat
+    if m ≥ 16 then acc
+    else
+      let src := if m < 8 then and (shr lo (8 * m)) (const 0xff#64) else and (shr hi (8 * (m - 8))) (const 0xff#64)
+      or acc (shl src (8 * i))) (const 0)
+
 def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   if s.halted then s else
   match i with
@@ -163,6 +175,11 @@ def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
     let keep := const (if n < 64 then (0xffffffffffffffff#64 <<< (64 - n)) else 0xffffffffffffffff#64)
     let sh : α → α := fun x => if n < 64 then shr x n else const 0
     next (setLanes s d (or (sh (lane s a 0)) (and (lane s d 0) keep)) (or (sh (lane s a 1)) (and (lane s d 1) keep)))
+  | .addv d a b => next (vop2 s d a b add)
+  | .tbl d a b =>
+    match asConst (lane s b 0), asConst (lane s b 1) with
+    | some c0, some c1 => next (setLanes s d (tblWord (lane s a 0) (lane s a 1) c0) (tblWord (lane s a 0) (lane s a 1) c1))
+    | _, _ => s.fail
   | .zip1 d a b => next (setLanes s d (lane s a 0) (lane s b 0))
   | .zip2 d a b => next (setLanes s d (lane s a 1) (lane s b 1))
   | .movv d a => next (setLanes s d (lane s a 0) (lane s a 1))

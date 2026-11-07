@@ -3,6 +3,7 @@ import Keccaktree.Asm.X86
 namespace Keccaktree.Kernels.Avx2X4
 open Keccaktree.Asm.X86
 
+set_option maxRecDepth 100000 in
 /-- `keccaktree_keccak256_avx2_x4` and its local batch routine, one entry per instruction. -/
 def prog : Array Instr := #[
   .vmov 4 8 (.mem (.base 10 (0))) none,  -- 0
@@ -302,166 +303,166 @@ def prog : Array Instr := #[
   .vpandn 4 12 8 (.reg 9),  -- 294
   .vpxor 4 12 12 (.reg 7),  -- 295
   .vstore 4 (.base 8 (64)) 12,  -- 296
-  .vpandn 4 13 9 (.reg 5),  -- 297
-  .vpxor 4 13 13 (.reg 8),  -- 298
-  .vstore 4 (.base 8 (96)) 13,  -- 299
-  .vpandn 4 14 5 (.reg 6),  -- 300
-  .vpxor 4 14 14 (.reg 9),  -- 301
-  .vstore 4 (.base 8 (128)) 14,  -- 302
-  .vpxor 4 5 3 (.mem (.base 9 (96))),  -- 303
-  .vpsrlq 4 15 5 36,  -- 304
-  .vpsllq 4 5 5 28,  -- 305
-  .vpor 4 5 5 (.reg 15),  -- 306
-  .vpxor 4 6 4 (.mem (.base 9 (288))),  -- 307
-  .vpsrlq 4 15 6 44,  -- 308
-  .vpsllq 4 6 6 20,  -- 309
-  .vpor 4 6 6 (.reg 15),  -- 310
-  .vpxor 4 7 0 (.mem (.base 9 (320))),  -- 311
-  .vpsrlq 4 15 7 61,  -- 312
-  .vpsllq 4 7 7 3,  -- 313
-  .vpor 4 7 7 (.reg 15),  -- 314
-  .vpxor 4 8 1 (.mem (.base 9 (512))),  -- 315
-  .vpsrlq 4 15 8 19,  -- 316
-  .vpsllq 4 8 8 45,  -- 317
-  .vpor 4 8 8 (.reg 15),  -- 318
-  .vpxor 4 9 2 (.mem (.base 9 (704))),  -- 319
-  .vpsrlq 4 15 9 3,  -- 320
-  .vpsllq 4 9 9 61,  -- 321
-  .vpor 4 9 9 (.reg 15),  -- 322
-  .vpandn 4 15 6 (.reg 7),  -- 323
-  .vpxor 4 15 15 (.reg 5),  -- 324
+  .vpxor 4 7 3 (.mem (.base 9 (96))),  -- 297
+  .vpsrlq 4 15 7 36,  -- 298
+  .vpsllq 4 7 7 28,  -- 299
+  .vpor 4 7 7 (.reg 15),  -- 300
+  .vpandn 4 13 9 (.reg 5),  -- 301
+  .vpxor 4 13 13 (.reg 8),  -- 302
+  .vstore 4 (.base 8 (96)) 13,  -- 303
+  .vpxor 4 8 4 (.mem (.base 9 (288))),  -- 304
+  .vpsrlq 4 15 8 44,  -- 305
+  .vpsllq 4 8 8 20,  -- 306
+  .vpor 4 8 8 (.reg 15),  -- 307
+  .vpandn 4 14 5 (.reg 6),  -- 308
+  .vpxor 4 14 14 (.reg 9),  -- 309
+  .vstore 4 (.base 8 (128)) 14,  -- 310
+  .vpxor 4 9 0 (.mem (.base 9 (320))),  -- 311
+  .vpsrlq 4 15 9 61,  -- 312
+  .vpsllq 4 9 9 3,  -- 313
+  .vpor 4 9 9 (.reg 15),  -- 314
+  .vpxor 4 5 1 (.mem (.base 9 (512))),  -- 315
+  .vpsrlq 4 15 5 19,  -- 316
+  .vpsllq 4 5 5 45,  -- 317
+  .vpor 4 5 5 (.reg 15),  -- 318
+  .vpxor 4 6 2 (.mem (.base 9 (704))),  -- 319
+  .vpsrlq 4 15 6 3,  -- 320
+  .vpsllq 4 6 6 61,  -- 321
+  .vpor 4 6 6 (.reg 15),  -- 322
+  .vpandn 4 15 8 (.reg 9),  -- 323
+  .vpxor 4 15 15 (.reg 7),  -- 324
   .vstore 4 (.base 8 (160)) 15,  -- 325
   .vpxor 4 10 10 (.reg 15),  -- 326
-  .vpandn 4 15 7 (.reg 8),  -- 327
-  .vpxor 4 15 15 (.reg 6),  -- 328
+  .vpandn 4 15 9 (.reg 5),  -- 327
+  .vpxor 4 15 15 (.reg 8),  -- 328
   .vstore 4 (.base 8 (192)) 15,  -- 329
   .vpxor 4 11 11 (.reg 15),  -- 330
-  .vpandn 4 15 8 (.reg 9),  -- 331
-  .vpxor 4 15 15 (.reg 7),  -- 332
+  .vpandn 4 15 5 (.reg 6),  -- 331
+  .vpxor 4 15 15 (.reg 9),  -- 332
   .vstore 4 (.base 8 (224)) 15,  -- 333
   .vpxor 4 12 12 (.reg 15),  -- 334
-  .vpandn 4 15 9 (.reg 5),  -- 335
-  .vpxor 4 15 15 (.reg 8),  -- 336
-  .vstore 4 (.base 8 (256)) 15,  -- 337
-  .vpxor 4 13 13 (.reg 15),  -- 338
-  .vpandn 4 15 5 (.reg 6),  -- 339
-  .vpxor 4 15 15 (.reg 9),  -- 340
-  .vstore 4 (.base 8 (288)) 15,  -- 341
-  .vpxor 4 14 14 (.reg 15),  -- 342
-  .vpxor 4 5 1 (.mem (.base 9 (32))),  -- 343
-  .vpsrlq 4 15 5 63,  -- 344
-  .vpaddq 4 5 5 (.reg 5),  -- 345
+  .vpxor 4 9 1 (.mem (.base 9 (32))),  -- 335
+  .vpsrlq 4 15 9 63,  -- 336
+  .vpaddq 4 9 9 (.reg 9),  -- 337
+  .vpor 4 9 9 (.reg 15),  -- 338
+  .vpandn 4 15 6 (.reg 7),  -- 339
+  .vpxor 4 15 15 (.reg 5),  -- 340
+  .vstore 4 (.base 8 (256)) 15,  -- 341
+  .vpxor 4 13 13 (.reg 15),  -- 342
+  .vpxor 4 5 2 (.mem (.base 9 (224))),  -- 343
+  .vpsrlq 4 15 5 58,  -- 344
+  .vpsllq 4 5 5 6,  -- 345
   .vpor 4 5 5 (.reg 15),  -- 346
-  .vpxor 4 6 2 (.mem (.base 9 (224))),  -- 347
-  .vpsrlq 4 15 6 58,  -- 348
-  .vpsllq 4 6 6 6,  -- 349
-  .vpor 4 6 6 (.reg 15),  -- 350
-  .vpxor 4 7 3 (.mem (.base 9 (416))),  -- 351
-  .vpsrlq 4 15 7 39,  -- 352
-  .vpsllq 4 7 7 25,  -- 353
-  .vpor 4 7 7 (.reg 15),  -- 354
-  .vpxor 4 8 4 (.mem (.base 9 (608))),  -- 355
-  .vpshufb 4 8 8 (.mem (.rip 832)),  -- 356
-  .vpxor 4 9 0 (.mem (.base 9 (640))),  -- 357
-  .vpsrlq 4 15 9 46,  -- 358
-  .vpsllq 4 9 9 18,  -- 359
-  .vpor 4 9 9 (.reg 15),  -- 360
-  .vpandn 4 15 6 (.reg 7),  -- 361
-  .vpxor 4 15 15 (.reg 5),  -- 362
+  .vpandn 4 15 7 (.reg 8),  -- 347
+  .vpxor 4 15 15 (.reg 6),  -- 348
+  .vstore 4 (.base 8 (288)) 15,  -- 349
+  .vpxor 4 14 14 (.reg 15),  -- 350
+  .vpxor 4 6 3 (.mem (.base 9 (416))),  -- 351
+  .vpsrlq 4 15 6 39,  -- 352
+  .vpsllq 4 6 6 25,  -- 353
+  .vpor 4 6 6 (.reg 15),  -- 354
+  .vpxor 4 7 4 (.mem (.base 9 (608))),  -- 355
+  .vpshufb 4 7 7 (.mem (.rip 832)),  -- 356
+  .vpxor 4 8 0 (.mem (.base 9 (640))),  -- 357
+  .vpsrlq 4 15 8 46,  -- 358
+  .vpsllq 4 8 8 18,  -- 359
+  .vpor 4 8 8 (.reg 15),  -- 360
+  .vpandn 4 15 5 (.reg 6),  -- 361
+  .vpxor 4 15 15 (.reg 9),  -- 362
   .vstore 4 (.base 8 (320)) 15,  -- 363
   .vpxor 4 10 10 (.reg 15),  -- 364
-  .vpandn 4 15 7 (.reg 8),  -- 365
-  .vpxor 4 15 15 (.reg 6),  -- 366
+  .vpandn 4 15 6 (.reg 7),  -- 365
+  .vpxor 4 15 15 (.reg 5),  -- 366
   .vstore 4 (.base 8 (352)) 15,  -- 367
   .vpxor 4 11 11 (.reg 15),  -- 368
-  .vpandn 4 15 8 (.reg 9),  -- 369
-  .vpxor 4 15 15 (.reg 7),  -- 370
+  .vpandn 4 15 7 (.reg 8),  -- 369
+  .vpxor 4 15 15 (.reg 6),  -- 370
   .vstore 4 (.base 8 (384)) 15,  -- 371
   .vpxor 4 12 12 (.reg 15),  -- 372
-  .vpandn 4 15 9 (.reg 5),  -- 373
-  .vpxor 4 15 15 (.reg 8),  -- 374
-  .vstore 4 (.base 8 (416)) 15,  -- 375
-  .vpxor 4 13 13 (.reg 15),  -- 376
-  .vpandn 4 15 5 (.reg 6),  -- 377
-  .vpxor 4 15 15 (.reg 9),  -- 378
-  .vstore 4 (.base 8 (448)) 15,  -- 379
-  .vpxor 4 14 14 (.reg 15),  -- 380
-  .vpxor 4 5 4 (.mem (.base 9 (128))),  -- 381
-  .vpsrlq 4 15 5 37,  -- 382
-  .vpsllq 4 5 5 27,  -- 383
-  .vpor 4 5 5 (.reg 15),  -- 384
-  .vpxor 4 6 0 (.mem (.base 9 (160))),  -- 385
-  .vpsrlq 4 15 6 28,  -- 386
-  .vpsllq 4 6 6 36,  -- 387
-  .vpor 4 6 6 (.reg 15),  -- 388
-  .vpxor 4 7 1 (.mem (.base 9 (352))),  -- 389
-  .vpsrlq 4 15 7 54,  -- 390
-  .vpsllq 4 7 7 10,  -- 391
-  .vpor 4 7 7 (.reg 15),  -- 392
-  .vpxor 4 8 2 (.mem (.base 9 (544))),  -- 393
-  .vpsrlq 4 15 8 49,  -- 394
-  .vpsllq 4 8 8 15,  -- 395
-  .vpor 4 8 8 (.reg 15),  -- 396
-  .vpxor 4 9 3 (.mem (.base 9 (736))),  -- 397
-  .vpshufb 4 9 9 (.mem (.rip 864)),  -- 398
-  .vpandn 4 15 6 (.reg 7),  -- 399
-  .vpxor 4 15 15 (.reg 5),  -- 400
+  .vpxor 4 6 4 (.mem (.base 9 (128))),  -- 373
+  .vpsrlq 4 15 6 37,  -- 374
+  .vpsllq 4 6 6 27,  -- 375
+  .vpor 4 6 6 (.reg 15),  -- 376
+  .vpandn 4 15 8 (.reg 9),  -- 377
+  .vpxor 4 15 15 (.reg 7),  -- 378
+  .vstore 4 (.base 8 (416)) 15,  -- 379
+  .vpxor 4 13 13 (.reg 15),  -- 380
+  .vpxor 4 7 0 (.mem (.base 9 (160))),  -- 381
+  .vpsrlq 4 15 7 28,  -- 382
+  .vpsllq 4 7 7 36,  -- 383
+  .vpor 4 7 7 (.reg 15),  -- 384
+  .vpandn 4 15 9 (.reg 5),  -- 385
+  .vpxor 4 15 15 (.reg 8),  -- 386
+  .vstore 4 (.base 8 (448)) 15,  -- 387
+  .vpxor 4 14 14 (.reg 15),  -- 388
+  .vpxor 4 8 1 (.mem (.base 9 (352))),  -- 389
+  .vpsrlq 4 15 8 54,  -- 390
+  .vpsllq 4 8 8 10,  -- 391
+  .vpor 4 8 8 (.reg 15),  -- 392
+  .vpxor 4 9 2 (.mem (.base 9 (544))),  -- 393
+  .vpsrlq 4 15 9 49,  -- 394
+  .vpsllq 4 9 9 15,  -- 395
+  .vpor 4 9 9 (.reg 15),  -- 396
+  .vpxor 4 5 3 (.mem (.base 9 (736))),  -- 397
+  .vpshufb 4 5 5 (.mem (.rip 864)),  -- 398
+  .vpandn 4 15 7 (.reg 8),  -- 399
+  .vpxor 4 15 15 (.reg 6),  -- 400
   .vstore 4 (.base 8 (480)) 15,  -- 401
   .vpxor 4 10 10 (.reg 15),  -- 402
-  .vpandn 4 15 7 (.reg 8),  -- 403
-  .vpxor 4 15 15 (.reg 6),  -- 404
+  .vpandn 4 15 8 (.reg 9),  -- 403
+  .vpxor 4 15 15 (.reg 7),  -- 404
   .vstore 4 (.base 8 (512)) 15,  -- 405
   .vpxor 4 11 11 (.reg 15),  -- 406
-  .vpandn 4 15 8 (.reg 9),  -- 407
-  .vpxor 4 15 15 (.reg 7),  -- 408
+  .vpandn 4 15 9 (.reg 5),  -- 407
+  .vpxor 4 15 15 (.reg 8),  -- 408
   .vstore 4 (.base 8 (544)) 15,  -- 409
   .vpxor 4 12 12 (.reg 15),  -- 410
-  .vpandn 4 15 9 (.reg 5),  -- 411
-  .vpxor 4 15 15 (.reg 8),  -- 412
-  .vstore 4 (.base 8 (576)) 15,  -- 413
-  .vpxor 4 13 13 (.reg 15),  -- 414
+  .vpxor 4 8 2 (.mem (.base 9 (64))),  -- 411
+  .vpsrlq 4 15 8 2,  -- 412
+  .vpsllq 4 8 8 62,  -- 413
+  .vpor 4 8 8 (.reg 15),  -- 414
   .vpandn 4 15 5 (.reg 6),  -- 415
   .vpxor 4 15 15 (.reg 9),  -- 416
-  .vstore 4 (.base 8 (608)) 15,  -- 417
-  .vpxor 4 14 14 (.reg 15),  -- 418
-  .vpxor 4 5 2 (.mem (.base 9 (64))),  -- 419
-  .vpsrlq 4 15 5 2,  -- 420
-  .vpsllq 4 5 5 62,  -- 421
-  .vpor 4 5 5 (.reg 15),  -- 422
-  .vpxor 4 6 3 (.mem (.base 9 (256))),  -- 423
-  .vpsrlq 4 15 6 9,  -- 424
-  .vpsllq 4 6 6 55,  -- 425
-  .vpor 4 6 6 (.reg 15),  -- 426
-  .vpxor 4 7 4 (.mem (.base 9 (448))),  -- 427
-  .vpsrlq 4 15 7 25,  -- 428
-  .vpsllq 4 7 7 39,  -- 429
-  .vpor 4 7 7 (.reg 15),  -- 430
-  .vpxor 4 8 0 (.mem (.base 9 (480))),  -- 431
-  .vpsrlq 4 15 8 23,  -- 432
-  .vpsllq 4 8 8 41,  -- 433
-  .vpor 4 8 8 (.reg 15),  -- 434
-  .vpxor 4 9 1 (.mem (.base 9 (672))),  -- 435
-  .vpsrlq 4 15 9 62,  -- 436
-  .vpsllq 4 9 9 2,  -- 437
-  .vpor 4 9 9 (.reg 15),  -- 438
-  .vpandn 4 15 6 (.reg 7),  -- 439
-  .vpxor 4 15 15 (.reg 5),  -- 440
+  .vstore 4 (.base 8 (576)) 15,  -- 417
+  .vpxor 4 13 13 (.reg 15),  -- 418
+  .vpxor 4 9 3 (.mem (.base 9 (256))),  -- 419
+  .vpsrlq 4 15 9 9,  -- 420
+  .vpsllq 4 9 9 55,  -- 421
+  .vpor 4 9 9 (.reg 15),  -- 422
+  .vpandn 4 15 6 (.reg 7),  -- 423
+  .vpxor 4 15 15 (.reg 5),  -- 424
+  .vstore 4 (.base 8 (608)) 15,  -- 425
+  .vpxor 4 14 14 (.reg 15),  -- 426
+  .vpxor 4 5 4 (.mem (.base 9 (448))),  -- 427
+  .vpsrlq 4 15 5 25,  -- 428
+  .vpsllq 4 5 5 39,  -- 429
+  .vpor 4 5 5 (.reg 15),  -- 430
+  .vpxor 4 6 0 (.mem (.base 9 (480))),  -- 431
+  .vpsrlq 4 15 6 23,  -- 432
+  .vpsllq 4 6 6 41,  -- 433
+  .vpor 4 6 6 (.reg 15),  -- 434
+  .vpxor 4 7 1 (.mem (.base 9 (672))),  -- 435
+  .vpsrlq 4 15 7 62,  -- 436
+  .vpsllq 4 7 7 2,  -- 437
+  .vpor 4 7 7 (.reg 15),  -- 438
+  .vpandn 4 15 9 (.reg 5),  -- 439
+  .vpxor 4 15 15 (.reg 8),  -- 440
   .vstore 4 (.base 8 (640)) 15,  -- 441
   .vpxor 4 10 10 (.reg 15),  -- 442
-  .vpandn 4 15 7 (.reg 8),  -- 443
-  .vpxor 4 15 15 (.reg 6),  -- 444
+  .vpandn 4 15 5 (.reg 6),  -- 443
+  .vpxor 4 15 15 (.reg 9),  -- 444
   .vstore 4 (.base 8 (672)) 15,  -- 445
   .vpxor 4 11 11 (.reg 15),  -- 446
-  .vpandn 4 15 8 (.reg 9),  -- 447
-  .vpxor 4 15 15 (.reg 7),  -- 448
+  .vpandn 4 15 6 (.reg 7),  -- 447
+  .vpxor 4 15 15 (.reg 5),  -- 448
   .vstore 4 (.base 8 (704)) 15,  -- 449
   .vpxor 4 12 12 (.reg 15),  -- 450
-  .vpandn 4 15 9 (.reg 5),  -- 451
-  .vpxor 4 15 15 (.reg 8),  -- 452
+  .vpandn 4 15 7 (.reg 8),  -- 451
+  .vpxor 4 15 15 (.reg 6),  -- 452
   .vstore 4 (.base 8 (736)) 15,  -- 453
   .vpxor 4 13 13 (.reg 15),  -- 454
-  .vpandn 4 15 5 (.reg 6),  -- 455
-  .vpxor 4 15 15 (.reg 9),  -- 456
+  .vpandn 4 15 8 (.reg 9),  -- 455
+  .vpxor 4 15 15 (.reg 7),  -- 456
   .vstore 4 (.base 8 (768)) 15,  -- 457
   .vpxor 4 14 14 (.reg 15),  -- 458
   .vpaddq 4 0 11 (.reg 11),  -- 459
@@ -511,166 +512,166 @@ def prog : Array Instr := #[
   .vpandn 4 12 8 (.reg 9),  -- 503
   .vpxor 4 12 12 (.reg 7),  -- 504
   .vstore 4 (.base 9 (64)) 12,  -- 505
-  .vpandn 4 13 9 (.reg 5),  -- 506
-  .vpxor 4 13 13 (.reg 8),  -- 507
-  .vstore 4 (.base 9 (96)) 13,  -- 508
-  .vpandn 4 14 5 (.reg 6),  -- 509
-  .vpxor 4 14 14 (.reg 9),  -- 510
-  .vstore 4 (.base 9 (128)) 14,  -- 511
-  .vpxor 4 5 3 (.mem (.base 8 (96))),  -- 512
-  .vpsrlq 4 15 5 36,  -- 513
-  .vpsllq 4 5 5 28,  -- 514
-  .vpor 4 5 5 (.reg 15),  -- 515
-  .vpxor 4 6 4 (.mem (.base 8 (288))),  -- 516
-  .vpsrlq 4 15 6 44,  -- 517
-  .vpsllq 4 6 6 20,  -- 518
-  .vpor 4 6 6 (.reg 15),  -- 519
-  .vpxor 4 7 0 (.mem (.base 8 (320))),  -- 520
-  .vpsrlq 4 15 7 61,  -- 521
-  .vpsllq 4 7 7 3,  -- 522
-  .vpor 4 7 7 (.reg 15),  -- 523
-  .vpxor 4 8 1 (.mem (.base 8 (512))),  -- 524
-  .vpsrlq 4 15 8 19,  -- 525
-  .vpsllq 4 8 8 45,  -- 526
-  .vpor 4 8 8 (.reg 15),  -- 527
-  .vpxor 4 9 2 (.mem (.base 8 (704))),  -- 528
-  .vpsrlq 4 15 9 3,  -- 529
-  .vpsllq 4 9 9 61,  -- 530
-  .vpor 4 9 9 (.reg 15),  -- 531
-  .vpandn 4 15 6 (.reg 7),  -- 532
-  .vpxor 4 15 15 (.reg 5),  -- 533
+  .vpxor 4 7 3 (.mem (.base 8 (96))),  -- 506
+  .vpsrlq 4 15 7 36,  -- 507
+  .vpsllq 4 7 7 28,  -- 508
+  .vpor 4 7 7 (.reg 15),  -- 509
+  .vpandn 4 13 9 (.reg 5),  -- 510
+  .vpxor 4 13 13 (.reg 8),  -- 511
+  .vstore 4 (.base 9 (96)) 13,  -- 512
+  .vpxor 4 8 4 (.mem (.base 8 (288))),  -- 513
+  .vpsrlq 4 15 8 44,  -- 514
+  .vpsllq 4 8 8 20,  -- 515
+  .vpor 4 8 8 (.reg 15),  -- 516
+  .vpandn 4 14 5 (.reg 6),  -- 517
+  .vpxor 4 14 14 (.reg 9),  -- 518
+  .vstore 4 (.base 9 (128)) 14,  -- 519
+  .vpxor 4 9 0 (.mem (.base 8 (320))),  -- 520
+  .vpsrlq 4 15 9 61,  -- 521
+  .vpsllq 4 9 9 3,  -- 522
+  .vpor 4 9 9 (.reg 15),  -- 523
+  .vpxor 4 5 1 (.mem (.base 8 (512))),  -- 524
+  .vpsrlq 4 15 5 19,  -- 525
+  .vpsllq 4 5 5 45,  -- 526
+  .vpor 4 5 5 (.reg 15),  -- 527
+  .vpxor 4 6 2 (.mem (.base 8 (704))),  -- 528
+  .vpsrlq 4 15 6 3,  -- 529
+  .vpsllq 4 6 6 61,  -- 530
+  .vpor 4 6 6 (.reg 15),  -- 531
+  .vpandn 4 15 8 (.reg 9),  -- 532
+  .vpxor 4 15 15 (.reg 7),  -- 533
   .vstore 4 (.base 9 (160)) 15,  -- 534
   .vpxor 4 10 10 (.reg 15),  -- 535
-  .vpandn 4 15 7 (.reg 8),  -- 536
-  .vpxor 4 15 15 (.reg 6),  -- 537
+  .vpandn 4 15 9 (.reg 5),  -- 536
+  .vpxor 4 15 15 (.reg 8),  -- 537
   .vstore 4 (.base 9 (192)) 15,  -- 538
   .vpxor 4 11 11 (.reg 15),  -- 539
-  .vpandn 4 15 8 (.reg 9),  -- 540
-  .vpxor 4 15 15 (.reg 7),  -- 541
+  .vpandn 4 15 5 (.reg 6),  -- 540
+  .vpxor 4 15 15 (.reg 9),  -- 541
   .vstore 4 (.base 9 (224)) 15,  -- 542
   .vpxor 4 12 12 (.reg 15),  -- 543
-  .vpandn 4 15 9 (.reg 5),  -- 544
-  .vpxor 4 15 15 (.reg 8),  -- 545
-  .vstore 4 (.base 9 (256)) 15,  -- 546
-  .vpxor 4 13 13 (.reg 15),  -- 547
-  .vpandn 4 15 5 (.reg 6),  -- 548
-  .vpxor 4 15 15 (.reg 9),  -- 549
-  .vstore 4 (.base 9 (288)) 15,  -- 550
-  .vpxor 4 14 14 (.reg 15),  -- 551
-  .vpxor 4 5 1 (.mem (.base 8 (32))),  -- 552
-  .vpsrlq 4 15 5 63,  -- 553
-  .vpaddq 4 5 5 (.reg 5),  -- 554
+  .vpxor 4 9 1 (.mem (.base 8 (32))),  -- 544
+  .vpsrlq 4 15 9 63,  -- 545
+  .vpaddq 4 9 9 (.reg 9),  -- 546
+  .vpor 4 9 9 (.reg 15),  -- 547
+  .vpandn 4 15 6 (.reg 7),  -- 548
+  .vpxor 4 15 15 (.reg 5),  -- 549
+  .vstore 4 (.base 9 (256)) 15,  -- 550
+  .vpxor 4 13 13 (.reg 15),  -- 551
+  .vpxor 4 5 2 (.mem (.base 8 (224))),  -- 552
+  .vpsrlq 4 15 5 58,  -- 553
+  .vpsllq 4 5 5 6,  -- 554
   .vpor 4 5 5 (.reg 15),  -- 555
-  .vpxor 4 6 2 (.mem (.base 8 (224))),  -- 556
-  .vpsrlq 4 15 6 58,  -- 557
-  .vpsllq 4 6 6 6,  -- 558
-  .vpor 4 6 6 (.reg 15),  -- 559
-  .vpxor 4 7 3 (.mem (.base 8 (416))),  -- 560
-  .vpsrlq 4 15 7 39,  -- 561
-  .vpsllq 4 7 7 25,  -- 562
-  .vpor 4 7 7 (.reg 15),  -- 563
-  .vpxor 4 8 4 (.mem (.base 8 (608))),  -- 564
-  .vpshufb 4 8 8 (.mem (.rip 832)),  -- 565
-  .vpxor 4 9 0 (.mem (.base 8 (640))),  -- 566
-  .vpsrlq 4 15 9 46,  -- 567
-  .vpsllq 4 9 9 18,  -- 568
-  .vpor 4 9 9 (.reg 15),  -- 569
-  .vpandn 4 15 6 (.reg 7),  -- 570
-  .vpxor 4 15 15 (.reg 5),  -- 571
+  .vpandn 4 15 7 (.reg 8),  -- 556
+  .vpxor 4 15 15 (.reg 6),  -- 557
+  .vstore 4 (.base 9 (288)) 15,  -- 558
+  .vpxor 4 14 14 (.reg 15),  -- 559
+  .vpxor 4 6 3 (.mem (.base 8 (416))),  -- 560
+  .vpsrlq 4 15 6 39,  -- 561
+  .vpsllq 4 6 6 25,  -- 562
+  .vpor 4 6 6 (.reg 15),  -- 563
+  .vpxor 4 7 4 (.mem (.base 8 (608))),  -- 564
+  .vpshufb 4 7 7 (.mem (.rip 832)),  -- 565
+  .vpxor 4 8 0 (.mem (.base 8 (640))),  -- 566
+  .vpsrlq 4 15 8 46,  -- 567
+  .vpsllq 4 8 8 18,  -- 568
+  .vpor 4 8 8 (.reg 15),  -- 569
+  .vpandn 4 15 5 (.reg 6),  -- 570
+  .vpxor 4 15 15 (.reg 9),  -- 571
   .vstore 4 (.base 9 (320)) 15,  -- 572
   .vpxor 4 10 10 (.reg 15),  -- 573
-  .vpandn 4 15 7 (.reg 8),  -- 574
-  .vpxor 4 15 15 (.reg 6),  -- 575
+  .vpandn 4 15 6 (.reg 7),  -- 574
+  .vpxor 4 15 15 (.reg 5),  -- 575
   .vstore 4 (.base 9 (352)) 15,  -- 576
   .vpxor 4 11 11 (.reg 15),  -- 577
-  .vpandn 4 15 8 (.reg 9),  -- 578
-  .vpxor 4 15 15 (.reg 7),  -- 579
+  .vpandn 4 15 7 (.reg 8),  -- 578
+  .vpxor 4 15 15 (.reg 6),  -- 579
   .vstore 4 (.base 9 (384)) 15,  -- 580
   .vpxor 4 12 12 (.reg 15),  -- 581
-  .vpandn 4 15 9 (.reg 5),  -- 582
-  .vpxor 4 15 15 (.reg 8),  -- 583
-  .vstore 4 (.base 9 (416)) 15,  -- 584
-  .vpxor 4 13 13 (.reg 15),  -- 585
-  .vpandn 4 15 5 (.reg 6),  -- 586
-  .vpxor 4 15 15 (.reg 9),  -- 587
-  .vstore 4 (.base 9 (448)) 15,  -- 588
-  .vpxor 4 14 14 (.reg 15),  -- 589
-  .vpxor 4 5 4 (.mem (.base 8 (128))),  -- 590
-  .vpsrlq 4 15 5 37,  -- 591
-  .vpsllq 4 5 5 27,  -- 592
-  .vpor 4 5 5 (.reg 15),  -- 593
-  .vpxor 4 6 0 (.mem (.base 8 (160))),  -- 594
-  .vpsrlq 4 15 6 28,  -- 595
-  .vpsllq 4 6 6 36,  -- 596
-  .vpor 4 6 6 (.reg 15),  -- 597
-  .vpxor 4 7 1 (.mem (.base 8 (352))),  -- 598
-  .vpsrlq 4 15 7 54,  -- 599
-  .vpsllq 4 7 7 10,  -- 600
-  .vpor 4 7 7 (.reg 15),  -- 601
-  .vpxor 4 8 2 (.mem (.base 8 (544))),  -- 602
-  .vpsrlq 4 15 8 49,  -- 603
-  .vpsllq 4 8 8 15,  -- 604
-  .vpor 4 8 8 (.reg 15),  -- 605
-  .vpxor 4 9 3 (.mem (.base 8 (736))),  -- 606
-  .vpshufb 4 9 9 (.mem (.rip 864)),  -- 607
-  .vpandn 4 15 6 (.reg 7),  -- 608
-  .vpxor 4 15 15 (.reg 5),  -- 609
+  .vpxor 4 6 4 (.mem (.base 8 (128))),  -- 582
+  .vpsrlq 4 15 6 37,  -- 583
+  .vpsllq 4 6 6 27,  -- 584
+  .vpor 4 6 6 (.reg 15),  -- 585
+  .vpandn 4 15 8 (.reg 9),  -- 586
+  .vpxor 4 15 15 (.reg 7),  -- 587
+  .vstore 4 (.base 9 (416)) 15,  -- 588
+  .vpxor 4 13 13 (.reg 15),  -- 589
+  .vpxor 4 7 0 (.mem (.base 8 (160))),  -- 590
+  .vpsrlq 4 15 7 28,  -- 591
+  .vpsllq 4 7 7 36,  -- 592
+  .vpor 4 7 7 (.reg 15),  -- 593
+  .vpandn 4 15 9 (.reg 5),  -- 594
+  .vpxor 4 15 15 (.reg 8),  -- 595
+  .vstore 4 (.base 9 (448)) 15,  -- 596
+  .vpxor 4 14 14 (.reg 15),  -- 597
+  .vpxor 4 8 1 (.mem (.base 8 (352))),  -- 598
+  .vpsrlq 4 15 8 54,  -- 599
+  .vpsllq 4 8 8 10,  -- 600
+  .vpor 4 8 8 (.reg 15),  -- 601
+  .vpxor 4 9 2 (.mem (.base 8 (544))),  -- 602
+  .vpsrlq 4 15 9 49,  -- 603
+  .vpsllq 4 9 9 15,  -- 604
+  .vpor 4 9 9 (.reg 15),  -- 605
+  .vpxor 4 5 3 (.mem (.base 8 (736))),  -- 606
+  .vpshufb 4 5 5 (.mem (.rip 864)),  -- 607
+  .vpandn 4 15 7 (.reg 8),  -- 608
+  .vpxor 4 15 15 (.reg 6),  -- 609
   .vstore 4 (.base 9 (480)) 15,  -- 610
   .vpxor 4 10 10 (.reg 15),  -- 611
-  .vpandn 4 15 7 (.reg 8),  -- 612
-  .vpxor 4 15 15 (.reg 6),  -- 613
+  .vpandn 4 15 8 (.reg 9),  -- 612
+  .vpxor 4 15 15 (.reg 7),  -- 613
   .vstore 4 (.base 9 (512)) 15,  -- 614
   .vpxor 4 11 11 (.reg 15),  -- 615
-  .vpandn 4 15 8 (.reg 9),  -- 616
-  .vpxor 4 15 15 (.reg 7),  -- 617
+  .vpandn 4 15 9 (.reg 5),  -- 616
+  .vpxor 4 15 15 (.reg 8),  -- 617
   .vstore 4 (.base 9 (544)) 15,  -- 618
   .vpxor 4 12 12 (.reg 15),  -- 619
-  .vpandn 4 15 9 (.reg 5),  -- 620
-  .vpxor 4 15 15 (.reg 8),  -- 621
-  .vstore 4 (.base 9 (576)) 15,  -- 622
-  .vpxor 4 13 13 (.reg 15),  -- 623
+  .vpxor 4 8 2 (.mem (.base 8 (64))),  -- 620
+  .vpsrlq 4 15 8 2,  -- 621
+  .vpsllq 4 8 8 62,  -- 622
+  .vpor 4 8 8 (.reg 15),  -- 623
   .vpandn 4 15 5 (.reg 6),  -- 624
   .vpxor 4 15 15 (.reg 9),  -- 625
-  .vstore 4 (.base 9 (608)) 15,  -- 626
-  .vpxor 4 14 14 (.reg 15),  -- 627
-  .vpxor 4 5 2 (.mem (.base 8 (64))),  -- 628
-  .vpsrlq 4 15 5 2,  -- 629
-  .vpsllq 4 5 5 62,  -- 630
-  .vpor 4 5 5 (.reg 15),  -- 631
-  .vpxor 4 6 3 (.mem (.base 8 (256))),  -- 632
-  .vpsrlq 4 15 6 9,  -- 633
-  .vpsllq 4 6 6 55,  -- 634
-  .vpor 4 6 6 (.reg 15),  -- 635
-  .vpxor 4 7 4 (.mem (.base 8 (448))),  -- 636
-  .vpsrlq 4 15 7 25,  -- 637
-  .vpsllq 4 7 7 39,  -- 638
-  .vpor 4 7 7 (.reg 15),  -- 639
-  .vpxor 4 8 0 (.mem (.base 8 (480))),  -- 640
-  .vpsrlq 4 15 8 23,  -- 641
-  .vpsllq 4 8 8 41,  -- 642
-  .vpor 4 8 8 (.reg 15),  -- 643
-  .vpxor 4 9 1 (.mem (.base 8 (672))),  -- 644
-  .vpsrlq 4 15 9 62,  -- 645
-  .vpsllq 4 9 9 2,  -- 646
-  .vpor 4 9 9 (.reg 15),  -- 647
-  .vpandn 4 15 6 (.reg 7),  -- 648
-  .vpxor 4 15 15 (.reg 5),  -- 649
+  .vstore 4 (.base 9 (576)) 15,  -- 626
+  .vpxor 4 13 13 (.reg 15),  -- 627
+  .vpxor 4 9 3 (.mem (.base 8 (256))),  -- 628
+  .vpsrlq 4 15 9 9,  -- 629
+  .vpsllq 4 9 9 55,  -- 630
+  .vpor 4 9 9 (.reg 15),  -- 631
+  .vpandn 4 15 6 (.reg 7),  -- 632
+  .vpxor 4 15 15 (.reg 5),  -- 633
+  .vstore 4 (.base 9 (608)) 15,  -- 634
+  .vpxor 4 14 14 (.reg 15),  -- 635
+  .vpxor 4 5 4 (.mem (.base 8 (448))),  -- 636
+  .vpsrlq 4 15 5 25,  -- 637
+  .vpsllq 4 5 5 39,  -- 638
+  .vpor 4 5 5 (.reg 15),  -- 639
+  .vpxor 4 6 0 (.mem (.base 8 (480))),  -- 640
+  .vpsrlq 4 15 6 23,  -- 641
+  .vpsllq 4 6 6 41,  -- 642
+  .vpor 4 6 6 (.reg 15),  -- 643
+  .vpxor 4 7 1 (.mem (.base 8 (672))),  -- 644
+  .vpsrlq 4 15 7 62,  -- 645
+  .vpsllq 4 7 7 2,  -- 646
+  .vpor 4 7 7 (.reg 15),  -- 647
+  .vpandn 4 15 9 (.reg 5),  -- 648
+  .vpxor 4 15 15 (.reg 8),  -- 649
   .vstore 4 (.base 9 (640)) 15,  -- 650
   .vpxor 4 10 10 (.reg 15),  -- 651
-  .vpandn 4 15 7 (.reg 8),  -- 652
-  .vpxor 4 15 15 (.reg 6),  -- 653
+  .vpandn 4 15 5 (.reg 6),  -- 652
+  .vpxor 4 15 15 (.reg 9),  -- 653
   .vstore 4 (.base 9 (672)) 15,  -- 654
   .vpxor 4 11 11 (.reg 15),  -- 655
-  .vpandn 4 15 8 (.reg 9),  -- 656
-  .vpxor 4 15 15 (.reg 7),  -- 657
+  .vpandn 4 15 6 (.reg 7),  -- 656
+  .vpxor 4 15 15 (.reg 5),  -- 657
   .vstore 4 (.base 9 (704)) 15,  -- 658
   .vpxor 4 12 12 (.reg 15),  -- 659
-  .vpandn 4 15 9 (.reg 5),  -- 660
-  .vpxor 4 15 15 (.reg 8),  -- 661
+  .vpandn 4 15 7 (.reg 8),  -- 660
+  .vpxor 4 15 15 (.reg 6),  -- 661
   .vstore 4 (.base 9 (736)) 15,  -- 662
   .vpxor 4 13 13 (.reg 15),  -- 663
-  .vpandn 4 15 5 (.reg 6),  -- 664
-  .vpxor 4 15 15 (.reg 9),  -- 665
+  .vpandn 4 15 8 (.reg 9),  -- 664
+  .vpxor 4 15 15 (.reg 7),  -- 665
   .vstore 4 (.base 9 (768)) 15,  -- 666
   .vpxor 4 14 14 (.reg 15),  -- 667
   .add 6 (64),  -- 668
@@ -735,51 +736,81 @@ def prog : Array Instr := #[
   .vstore 4 (.base 11 (64)) 12,  -- 727
   .vstore 4 (.base 11 (96)) 13,  -- 728
   .ret,  -- 729
-  .push 5,  -- 730
-  .mov 5 4,  -- 731
-  .sub 4 (2160),  -- 732
-  .andi 4 (-64),  -- 733
-  .mov 9 4,  -- 734
-  .mov 10 6,  -- 735
-  .mov 11 7,  -- 736
-  .cmpi 2 (4),  -- 737
-  .jcc .b 744,  -- 738
-  .call 0,  -- 739
-  .add 10 (256),  -- 740
-  .add 11 (128),  -- 741
-  .sub 2 (4),  -- 742
-  .jmp 737,  -- 743
-  .test 2 2,  -- 744
-  .jcc .e 764,  -- 745
-  .cmpi 2 (1),  -- 746
-  .jcc .a 750,  -- 747
-  .movi 0 (1),  -- 748
-  .jmp 765,  -- 749
-  .mov 0 2,  -- 750
-  .mov 6 10,  -- 751
-  .lea 7 (.base 4 (1600)),  -- 752
-  .mov 1 0,  -- 753
-  .shl 1 6,  -- 754
-  .repmovsb,  -- 755
-  .mov 7 11,  -- 756
-  .lea 10 (.base 4 (1600)),  -- 757
-  .lea 11 (.base 4 (1856)),  -- 758
-  .call 0,  -- 759
-  .lea 6 (.base 4 (1856)),  -- 760
-  .mov 1 0,  -- 761
-  .shl 1 5,  -- 762
-  .repmovsb,  -- 763
-  .xorz 0,  -- 764
-  .vzeroupper,  -- 765
-  .mov 4 5,  -- 766
-  .pop 5,  -- 767
-  .test 0 0,  -- 768
-  .jcc .e 774,  -- 769
-  .mov 2 2,  -- 770
-  .mov 7 11,  -- 771
-  .mov 6 10,  -- 772
-  .tailcall "keccaktree_keccak256_generic",  -- 773
-  .ret  -- 774
+  .nop,  -- 730
+  .nop,  -- 731
+  .nop,  -- 732
+  .nop,  -- 733
+  .nop,  -- 734
+  .nop,  -- 735
+  .cmpi 2 (1),  -- 736
+  .jcct .be "keccaktree_keccak256_x86_x1",  -- 737
+  .push 5,  -- 738
+  .mov 5 4,  -- 739
+  .sub 4 (2160),  -- 740
+  .andi 4 (-64),  -- 741
+  .mov 9 4,  -- 742
+  .mov 10 6,  -- 743
+  .mov 11 7,  -- 744
+  .cmpi 2 (4),  -- 745
+  .jcc .b 759,  -- 746
+  .call 0,  -- 747
+  .add 10 (256),  -- 748
+  .add 11 (128),  -- 749
+  .sub 2 (4),  -- 750
+  .cmpi 2 (4),  -- 751
+  .jcc .ae 747,  -- 752
+  .cmpi 2 (1),  -- 753
+  .jcc .a 759,  -- 754
+  .test 2 2,  -- 755
+  .jcc .e 789,  -- 756
+  .movi 0 (2),  -- 757
+  .jmp 790,  -- 758
+  .test 2 2,  -- 759
+  .jcc .e 789,  -- 760
+  .cmprm 2 (.rip 896),  -- 761
+  .jcc .a 765,  -- 762
+  .movi 0 (1),  -- 763
+  .jmp 790,  -- 764
+  .mov 0 2,  -- 765
+  .mov 6 10,  -- 766
+  .lea 7 (.base 4 (1600)),  -- 767
+  .mov 1 0,  -- 768
+  .vmov 4 0 (.mem (.base 6 (0))) none,  -- 769
+  .vmov 4 1 (.mem (.base 6 (32))) none,  -- 770
+  .vstore 4 (.base 7 (0)) 0,  -- 771
+  .vstore 4 (.base 7 (32)) 1,  -- 772
+  .add 6 (64),  -- 773
+  .add 7 (64),  -- 774
+  .dec 1,  -- 775
+  .jcc .ne 769,  -- 776
+  .mov 7 11,  -- 777
+  .lea 10 (.base 4 (1600)),  -- 778
+  .lea 11 (.base 4 (1856)),  -- 779
+  .call 0,  -- 780
+  .lea 6 (.base 4 (1856)),  -- 781
+  .mov 1 0,  -- 782
+  .vmov 4 0 (.mem (.base 6 (0))) none,  -- 783
+  .vstore 4 (.base 7 (0)) 0,  -- 784
+  .add 6 (32),  -- 785
+  .add 7 (32),  -- 786
+  .dec 1,  -- 787
+  .jcc .ne 783,  -- 788
+  .xorz 0,  -- 789
+  .vzeroupper,  -- 790
+  .mov 4 5,  -- 791
+  .pop 5,  -- 792
+  .test 0 0,  -- 793
+  .jcc .e 801,  -- 794
+  .mov 2 2,  -- 795
+  .mov 7 11,  -- 796
+  .mov 6 10,  -- 797
+  .cmpi 0 (2),  -- 798
+  .jcct .e "keccaktree_keccak256_x86_x1",  -- 799
+  .tailcall "keccaktree_keccak256_avx2_x2",  -- 800
+  .ret,  -- 801
+  .nop,  -- 802
+  .storeq (.rip 896) 7,  -- 803
+  .ret  -- 804
 ]
 
 /-- `.rodata`, as 64-bit words. -/
@@ -811,10 +842,11 @@ def rodata : Array (BitVec 64) := #[
   0x0000000000000001#64, 0x0000000000000001#64, 0x0000000000000001#64, 0x0000000000000001#64,
   0x8000000000000000#64, 0x8000000000000000#64, 0x8000000000000000#64, 0x8000000000000000#64,
   0x0605040302010007#64, 0x0e0d0c0b0a09080f#64, 0x0605040302010007#64, 0x0e0d0c0b0a09080f#64,
-  0x0007060504030201#64, 0x080f0e0d0c0b0a09#64, 0x0007060504030201#64, 0x080f0e0d0c0b0a09#64
+  0x0007060504030201#64, 0x080f0e0d0c0b0a09#64, 0x0007060504030201#64, 0x080f0e0d0c0b0a09#64,
+  0x0000000000000001#64
 ]
 
 /-- Instruction index of the function entry. -/
-def entry : Nat := 730
+def entry : Nat := 736
 
 end Keccaktree.Kernels.Avx2X4

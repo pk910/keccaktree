@@ -3,6 +3,7 @@ import Keccaktree.Asm.X86
 namespace Keccaktree.Kernels.Avx2X8
 open Keccaktree.Asm.X86
 
+set_option maxRecDepth 100000 in
 /-- `keccaktree_keccak256_avx2_x8` and its local batch routine, one entry per instruction. -/
 def prog : Array Instr := #[
   .lea 6 (.rip 0),  -- 0
@@ -1521,51 +1522,84 @@ def prog : Array Instr := #[
   .nop,  -- 1513
   .nop,  -- 1514
   .nop,  -- 1515
-  .push 5,  -- 1516
-  .mov 5 4,  -- 1517
-  .sub 4 (4464),  -- 1518
-  .andi 4 (-64),  -- 1519
-  .mov 9 4,  -- 1520
-  .mov 10 6,  -- 1521
-  .mov 11 7,  -- 1522
-  .cmpi 2 (8),  -- 1523
-  .jcc .b 1530,  -- 1524
-  .call 0,  -- 1525
-  .add 10 (512),  -- 1526
-  .add 11 (256),  -- 1527
-  .sub 2 (8),  -- 1528
-  .jmp 1523,  -- 1529
-  .test 2 2,  -- 1530
-  .jcc .e 1550,  -- 1531
-  .cmpi 2 (7),  -- 1532
-  .jcc .a 1536,  -- 1533
-  .movi 0 (1),  -- 1534
-  .jmp 1551,  -- 1535
-  .mov 0 2,  -- 1536
-  .mov 6 10,  -- 1537
-  .lea 7 (.base 4 (3520)),  -- 1538
-  .mov 1 0,  -- 1539
-  .shl 1 6,  -- 1540
-  .repmovsb,  -- 1541
-  .mov 7 11,  -- 1542
-  .lea 10 (.base 4 (3520)),  -- 1543
-  .lea 11 (.base 4 (4032)),  -- 1544
-  .call 0,  -- 1545
-  .lea 6 (.base 4 (4032)),  -- 1546
-  .mov 1 0,  -- 1547
-  .shl 1 5,  -- 1548
-  .repmovsb,  -- 1549
-  .xorz 0,  -- 1550
-  .vzeroupper,  -- 1551
-  .mov 4 5,  -- 1552
-  .pop 5,  -- 1553
-  .test 0 0,  -- 1554
-  .jcc .e 1560,  -- 1555
-  .mov 2 2,  -- 1556
-  .mov 7 11,  -- 1557
-  .mov 6 10,  -- 1558
-  .tailcall "keccaktree_keccak256_avx2_x4",  -- 1559
-  .ret  -- 1560
+  .cmpi 2 (1),  -- 1516
+  .jcct .be "keccaktree_keccak256_x86_x1",  -- 1517
+  .cmpi 2 (63),  -- 1518
+  .jcc .a 1523,  -- 1519
+  .movi 0 (96),  -- 1520
+  .bt 0 2,  -- 1521
+  .jcct .b "keccaktree_keccak256_avx2_x5",  -- 1522
+  .push 5,  -- 1523
+  .mov 5 4,  -- 1524
+  .sub 4 (4464),  -- 1525
+  .andi 4 (-64),  -- 1526
+  .mov 9 4,  -- 1527
+  .mov 10 6,  -- 1528
+  .mov 11 7,  -- 1529
+  .cmpi 2 (8),  -- 1530
+  .jcc .b 1544,  -- 1531
+  .call 0,  -- 1532
+  .add 10 (512),  -- 1533
+  .add 11 (256),  -- 1534
+  .sub 2 (8),  -- 1535
+  .cmpi 2 (8),  -- 1536
+  .jcc .ae 1532,  -- 1537
+  .cmpi 2 (1),  -- 1538
+  .jcc .a 1544,  -- 1539
+  .test 2 2,  -- 1540
+  .jcc .e 1579,  -- 1541
+  .movi 0 (2),  -- 1542
+  .jmp 1580,  -- 1543
+  .test 2 2,  -- 1544
+  .jcc .e 1579,  -- 1545
+  .movi 0 (32),  -- 1546
+  .bt 0 2,  -- 1547
+  .jcc .ae 1551,  -- 1548
+  .movi 0 (3),  -- 1549
+  .jmp 1580,  -- 1550
+  .cmpi 2 (7),  -- 1551
+  .jcc .a 1555,  -- 1552
+  .movi 0 (1),  -- 1553
+  .jmp 1580,  -- 1554
+  .mov 0 2,  -- 1555
+  .mov 6 10,  -- 1556
+  .lea 7 (.base 4 (3520)),  -- 1557
+  .mov 1 0,  -- 1558
+  .vmov 4 0 (.mem (.base 6 (0))) none,  -- 1559
+  .vmov 4 1 (.mem (.base 6 (32))) none,  -- 1560
+  .vstore 4 (.base 7 (0)) 0,  -- 1561
+  .vstore 4 (.base 7 (32)) 1,  -- 1562
+  .add 6 (64),  -- 1563
+  .add 7 (64),  -- 1564
+  .dec 1,  -- 1565
+  .jcc .ne 1559,  -- 1566
+  .mov 7 11,  -- 1567
+  .lea 10 (.base 4 (3520)),  -- 1568
+  .lea 11 (.base 4 (4032)),  -- 1569
+  .call 0,  -- 1570
+  .lea 6 (.base 4 (4032)),  -- 1571
+  .mov 1 0,  -- 1572
+  .vmov 4 0 (.mem (.base 6 (0))) none,  -- 1573
+  .vstore 4 (.base 7 (0)) 0,  -- 1574
+  .add 6 (32),  -- 1575
+  .add 7 (32),  -- 1576
+  .dec 1,  -- 1577
+  .jcc .ne 1573,  -- 1578
+  .xorz 0,  -- 1579
+  .vzeroupper,  -- 1580
+  .mov 4 5,  -- 1581
+  .pop 5,  -- 1582
+  .test 0 0,  -- 1583
+  .jcc .e 1593,  -- 1584
+  .mov 2 2,  -- 1585
+  .mov 7 11,  -- 1586
+  .mov 6 10,  -- 1587
+  .cmpi 0 (2),  -- 1588
+  .jcct .e "keccaktree_keccak256_x86_x1",  -- 1589
+  .cmpi 0 (3),  -- 1590
+  .jcct .e "keccaktree_keccak256_avx2_x5",  -- 1591
+  .tailcall "keccaktree_keccak256_avx2_x4",  -- 1592
+  .ret  -- 1593
 ]
 
 /-- `.rodata`, as 64-bit words. -/

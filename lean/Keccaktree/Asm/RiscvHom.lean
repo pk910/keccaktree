@@ -8,7 +8,8 @@ The RISC-V semantics commute with lane homomorphisms (`exec_map`), and a
 failed state stays failed (`err_exec`): `Riscv.isa vlmax`.
 -/
 namespace Keccaktree.Asm.Riscv
-open Keccaktree.Asm Keccaktree.Asm.X86
+open Keccaktree.Asm
+open Keccaktree.Asm.X86 hiding gx setX withX next wordGpr
 open Keccaktree.Asm.Arm (gx setX withX addr withAddr gx_map_some setX_map addr_map_some getGD_map setGD_map setGD_map')
 open LaneOps
 

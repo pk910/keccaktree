@@ -3,6 +3,7 @@ import Keccaktree.Asm.X86
 namespace Keccaktree.Kernels.Avx512vlX4
 open Keccaktree.Asm.X86
 
+set_option maxRecDepth 100000 in
 /-- `keccaktree_keccak256_avx512vl_x4` and its local batch routine, one entry per instruction. -/
 def prog : Array Instr := #[
   .kmovw 1 (.rip 272),  -- 0
@@ -30,2714 +31,926 @@ def prog : Array Instr := #[
   .vshufi64x2 4 6 24 (.reg 26) 3,  -- 22
   .vshufi64x2 4 5 25 (.reg 27) 0,  -- 23
   .vshufi64x2 4 7 25 (.reg 27) 3,  -- 24
-  .vpxor 4 22 0 (.reg 5),  -- 25
-  .vpxor 4 23 1 (.reg 6),  -- 26
-  .vpxor 4 23 23 (.bcst (.rip 200)),  -- 27
-  .vpxor 4 24 2 (.reg 7),  -- 28
-  .vpxor 4 25 3 (.bcst (.rip 192)),  -- 29
-  .vprolq 4 27 23 1,  -- 30
-  .vpxor 4 27 27 (.reg 4),  -- 31
-  .vprolq 4 28 24 1,  -- 32
-  .vpxor 4 28 28 (.reg 22),  -- 33
-  .vprolq 4 29 25 1,  -- 34
-  .vpxor 4 29 29 (.reg 23),  -- 35
-  .vprolq 4 30 4 1,  -- 36
-  .vpxor 4 30 30 (.reg 24),  -- 37
-  .vprolq 4 31 22 1,  -- 38
-  .vpxor 4 31 31 (.reg 25),  -- 39
-  .vpxor 4 0 0 (.reg 27),  -- 40
-  .vpxor 4 6 6 (.reg 28),  -- 41
-  .vprolq 4 6 6 44,  -- 42
-  .vprolq 4 8 29 43,  -- 43
-  .vprolq 4 9 30 21,  -- 44
-  .vprolq 4 10 31 14,  -- 45
-  .vmov 4 11 (.reg 0) none,  -- 46
-  .vpternlogq 4 11 6 (.reg 8) 210,  -- 47
-  .vpxor 4 11 11 (.bcst (.rip 0)),  -- 48
-  .vstore 4 (.base 9 (160)) 11,  -- 49
-  .vmov 4 11 (.reg 6) none,  -- 50
-  .vpternlogq 4 11 8 (.reg 9) 210,  -- 51
-  .vstore 4 (.base 9 (192)) 11,  -- 52
-  .vpternlogq 4 8 9 (.reg 10) 210,  -- 53
-  .vstore 4 (.base 9 (224)) 8,  -- 54
-  .vpternlogq 4 9 10 (.reg 0) 210,  -- 55
-  .vstore 4 (.base 9 (256)) 9,  -- 56
-  .vpternlogq 4 10 0 (.reg 6) 210,  -- 57
-  .vstore 4 (.base 9 (288)) 10,  -- 58
-  .vpxor 4 3 3 (.reg 30),  -- 59
-  .vprolq 4 3 3 28,  -- 60
-  .vprolq 4 0 31 20,  -- 61
-  .vprolq 4 6 27 3,  -- 62
-  .vpxor 4 8 28 (.bcst (.rip 200)),  -- 63
-  .vprolq 4 8 8 45,  -- 64
-  .vprolq 4 9 29 61,  -- 65
-  .vmov 4 10 (.reg 3) none,  -- 66
-  .vpternlogq 4 10 0 (.reg 6) 210,  -- 67
-  .vmov 4 11 (.reg 0) none,  -- 68
-  .vpternlogq 4 11 6 (.reg 8) 210,  -- 69
-  .vpternlogq 4 6 8 (.reg 9) 210,  -- 70
-  .vpternlogq 4 8 9 (.reg 3) 210,  -- 71
-  .vpternlogq 4 9 3 (.reg 0) 210,  -- 72
-  .vpxor 4 1 1 (.reg 28),  -- 73
-  .vprolq 4 1 1 1,  -- 74
-  .vpxor 4 7 7 (.reg 29),  -- 75
-  .vprolq 4 7 7 6,  -- 76
-  .vprolq 4 12 30 25,  -- 77
-  .vprolq 4 13 31 8,  -- 78
-  .vprolq 4 14 27 18,  -- 79
-  .vmov 4 3 (.reg 1) none,  -- 80
-  .vpternlogq 4 3 7 (.reg 12) 210,  -- 81
-  .vmov 4 0 (.reg 7) none,  -- 82
-  .vpternlogq 4 0 12 (.reg 13) 210,  -- 83
-  .vpternlogq 4 12 13 (.reg 14) 210,  -- 84
-  .vpternlogq 4 13 14 (.reg 1) 210,  -- 85
-  .vpternlogq 4 14 1 (.reg 7) 210,  -- 86
-  .vpxor 4 4 4 (.reg 31),  -- 87
-  .vprolq 4 4 4 27,  -- 88
-  .vpxor 4 5 5 (.reg 27),  -- 89
-  .vprolq 4 5 5 36,  -- 90
-  .vprolq 4 15 28 10,  -- 91
-  .vprolq 4 16 29 15,  -- 92
-  .vprolq 4 17 30 56,  -- 93
-  .vmov 4 1 (.reg 4) none,  -- 94
-  .vpternlogq 4 1 5 (.reg 15) 210,  -- 95
-  .vmov 4 7 (.reg 5) none,  -- 96
-  .vpternlogq 4 7 15 (.reg 16) 210,  -- 97
-  .vpternlogq 4 15 16 (.reg 17) 210,  -- 98
-  .vpternlogq 4 16 17 (.reg 4) 210,  -- 99
-  .vpternlogq 4 17 4 (.reg 5) 210,  -- 100
-  .vpxor 4 2 2 (.reg 29),  -- 101
-  .vprolq 4 2 2 62,  -- 102
-  .vpxor 4 18 30 (.bcst (.rip 192)),  -- 103
-  .vprolq 4 18 18 55,  -- 104
-  .vprolq 4 19 31 39,  -- 105
-  .vprolq 4 20 27 41,  -- 106
-  .vprolq 4 21 28 2,  -- 107
-  .vmov 4 4 (.reg 2) none,  -- 108
-  .vpternlogq 4 4 18 (.reg 19) 210,  -- 109
-  .vmov 4 5 (.reg 18) none,  -- 110
-  .vpternlogq 4 5 19 (.reg 20) 210,  -- 111
-  .vpternlogq 4 19 20 (.reg 21) 210,  -- 112
-  .vpternlogq 4 20 21 (.reg 2) 210,  -- 113
-  .vpternlogq 4 21 2 (.reg 18) 210,  -- 114
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 115
-  .vpternlogq 4 22 10 (.reg 3) 150,  -- 116
-  .vpternlogq 4 22 1 (.reg 4) 150,  -- 117
-  .vprolq 4 27 22 1,  -- 118
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 119
-  .vpternlogq 4 23 11 (.reg 0) 150,  -- 120
-  .vpternlogq 4 23 7 (.reg 5) 150,  -- 121
-  .vprolq 4 28 23 1,  -- 122
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 123
-  .vpternlogq 4 24 6 (.reg 12) 150,  -- 124
-  .vpternlogq 4 24 15 (.reg 19) 150,  -- 125
-  .vprolq 4 29 24 1,  -- 126
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 127
-  .vpternlogq 4 25 8 (.reg 13) 150,  -- 128
-  .vpternlogq 4 25 16 (.reg 20) 150,  -- 129
-  .vprolq 4 30 25 1,  -- 130
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 131
-  .vpternlogq 4 26 9 (.reg 14) 150,  -- 132
-  .vpternlogq 4 26 17 (.reg 21) 150,  -- 133
-  .vprolq 4 31 26 1,  -- 134
-  .vmov 4 2 (.mem (.base 9 (160))) none,  -- 135
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 136
-  .vpternlogq 4 11 22 (.reg 29) 150,  -- 137
-  .vprolq 4 11 11 44,  -- 138
-  .vpternlogq 4 12 23 (.reg 30) 150,  -- 139
-  .vprolq 4 12 12 43,  -- 140
-  .vpternlogq 4 16 24 (.reg 31) 150,  -- 141
-  .vprolq 4 16 16 21,  -- 142
-  .vpternlogq 4 21 25 (.reg 27) 150,  -- 143
-  .vprolq 4 21 21 14,  -- 144
-  .vmov 4 18 (.reg 2) none,  -- 145
-  .vpternlogq 4 18 11 (.reg 12) 210,  -- 146
-  .vpxor 4 18 18 (.bcst (.rip 8)),  -- 147
-  .vstore 4 (.base 9 (0)) 18,  -- 148
-  .vmov 4 18 (.reg 11) none,  -- 149
-  .vpternlogq 4 18 12 (.reg 16) 210,  -- 150
-  .vstore 4 (.base 9 (32)) 18,  -- 151
-  .vpternlogq 4 12 16 (.reg 21) 210,  -- 152
-  .vstore 4 (.base 9 (64)) 12,  -- 153
-  .vpternlogq 4 16 21 (.reg 2) 210,  -- 154
-  .vstore 4 (.base 9 (96)) 16,  -- 155
-  .vpternlogq 4 21 2 (.reg 11) 210,  -- 156
-  .vstore 4 (.base 9 (128)) 21,  -- 157
-  .vmov 4 11 (.mem (.base 9 (256))) none,  -- 158
-  .vpternlogq 4 11 24 (.reg 31) 150,  -- 159
-  .vprolq 4 11 11 28,  -- 160
-  .vpternlogq 4 9 25 (.reg 27) 150,  -- 161
-  .vprolq 4 9 9 20,  -- 162
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 163
-  .vprolq 4 3 3 3,  -- 164
-  .vpternlogq 4 7 22 (.reg 29) 150,  -- 165
-  .vprolq 4 7 7 45,  -- 166
-  .vpternlogq 4 19 23 (.reg 30) 150,  -- 167
-  .vprolq 4 19 19 61,  -- 168
-  .vmov 4 2 (.reg 11) none,  -- 169
-  .vpternlogq 4 2 9 (.reg 3) 210,  -- 170
-  .vmov 4 18 (.reg 9) none,  -- 171
-  .vpternlogq 4 18 3 (.reg 7) 210,  -- 172
-  .vpternlogq 4 3 7 (.reg 19) 210,  -- 173
-  .vpternlogq 4 7 19 (.reg 11) 210,  -- 174
-  .vpternlogq 4 19 11 (.reg 9) 210,  -- 175
-  .vmov 4 12 (.mem (.base 9 (192))) none,  -- 176
-  .vpternlogq 4 12 22 (.reg 29) 150,  -- 177
-  .vprolq 4 12 12 1,  -- 178
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 179
-  .vprolq 4 6 6 6,  -- 180
-  .vpternlogq 4 13 24 (.reg 31) 150,  -- 181
-  .vprolq 4 13 13 25,  -- 182
-  .vpternlogq 4 17 25 (.reg 27) 150,  -- 183
-  .vpshufb 4 17 17 (.mem (.rip 208)),  -- 184
-  .vpternlogq 4 4 26 (.reg 28) 150,  -- 185
-  .vprolq 4 4 4 18,  -- 186
-  .vmov 4 16 (.reg 12) none,  -- 187
-  .vpternlogq 4 16 6 (.reg 13) 210,  -- 188
-  .vmov 4 21 (.reg 6) none,  -- 189
-  .vpternlogq 4 21 13 (.reg 17) 210,  -- 190
-  .vpternlogq 4 13 17 (.reg 4) 210,  -- 191
-  .vpternlogq 4 17 4 (.reg 12) 210,  -- 192
-  .vpternlogq 4 4 12 (.reg 6) 210,  -- 193
-  .vmov 4 11 (.mem (.base 9 (288))) none,  -- 194
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 195
-  .vprolq 4 11 11 27,  -- 196
-  .vpternlogq 4 10 26 (.reg 28) 150,  -- 197
-  .vprolq 4 10 10 36,  -- 198
-  .vpternlogq 4 0 22 (.reg 29) 150,  -- 199
-  .vprolq 4 0 0 10,  -- 200
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 201
-  .vprolq 4 15 15 15,  -- 202
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 203
-  .vpshufb 4 20 20 (.mem (.rip 240)),  -- 204
-  .vmov 4 9 (.reg 11) none,  -- 205
-  .vpternlogq 4 9 10 (.reg 0) 210,  -- 206
-  .vmov 4 12 (.reg 10) none,  -- 207
-  .vpternlogq 4 12 0 (.reg 15) 210,  -- 208
-  .vpternlogq 4 0 15 (.reg 20) 210,  -- 209
-  .vpternlogq 4 15 20 (.reg 11) 210,  -- 210
-  .vpternlogq 4 20 11 (.reg 10) 210,  -- 211
-  .vmov 4 6 (.mem (.base 9 (224))) none,  -- 212
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 213
-  .vprolq 4 6 6 62,  -- 214
-  .vpternlogq 4 8 24 (.reg 31) 150,  -- 215
-  .vprolq 4 8 8 55,  -- 216
-  .vpternlogq 4 14 25 (.reg 27) 150,  -- 217
-  .vprolq 4 14 14 39,  -- 218
-  .vpternlogq 4 1 26 (.reg 28) 150,  -- 219
-  .vprolq 4 1 1 41,  -- 220
-  .vpternlogq 4 5 22 (.reg 29) 150,  -- 221
-  .vprolq 4 5 5 2,  -- 222
-  .vmov 4 11 (.reg 6) none,  -- 223
-  .vpternlogq 4 11 8 (.reg 14) 210,  -- 224
-  .vmov 4 10 (.reg 8) none,  -- 225
-  .vpternlogq 4 10 14 (.reg 1) 210,  -- 226
-  .vpternlogq 4 14 1 (.reg 5) 210,  -- 227
-  .vpternlogq 4 1 5 (.reg 6) 210,  -- 228
-  .vpternlogq 4 5 6 (.reg 8) 210,  -- 229
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 230
-  .vpternlogq 4 22 2 (.reg 16) 150,  -- 231
-  .vpternlogq 4 22 9 (.reg 11) 150,  -- 232
-  .vprolq 4 27 22 1,  -- 233
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 234
-  .vpternlogq 4 23 18 (.reg 21) 150,  -- 235
-  .vpternlogq 4 23 12 (.reg 10) 150,  -- 236
-  .vprolq 4 28 23 1,  -- 237
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 238
-  .vpternlogq 4 24 3 (.reg 13) 150,  -- 239
-  .vpternlogq 4 24 0 (.reg 14) 150,  -- 240
-  .vprolq 4 29 24 1,  -- 241
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 242
-  .vpternlogq 4 25 7 (.reg 17) 150,  -- 243
-  .vpternlogq 4 25 15 (.reg 1) 150,  -- 244
-  .vprolq 4 30 25 1,  -- 245
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 246
-  .vpternlogq 4 26 19 (.reg 4) 150,  -- 247
-  .vpternlogq 4 26 20 (.reg 5) 150,  -- 248
-  .vprolq 4 31 26 1,  -- 249
-  .vmov 4 6 (.mem (.base 9 (0))) none,  -- 250
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 251
-  .vpternlogq 4 18 22 (.reg 29) 150,  -- 252
-  .vprolq 4 18 18 44,  -- 253
-  .vpternlogq 4 13 23 (.reg 30) 150,  -- 254
-  .vprolq 4 13 13 43,  -- 255
-  .vpternlogq 4 15 24 (.reg 31) 150,  -- 256
-  .vprolq 4 15 15 21,  -- 257
-  .vpternlogq 4 5 25 (.reg 27) 150,  -- 258
-  .vprolq 4 5 5 14,  -- 259
-  .vmov 4 8 (.reg 6) none,  -- 260
-  .vpternlogq 4 8 18 (.reg 13) 210,  -- 261
-  .vpxor 4 8 8 (.bcst (.rip 16)),  -- 262
-  .vstore 4 (.base 9 (160)) 8,  -- 263
-  .vmov 4 8 (.reg 18) none,  -- 264
-  .vpternlogq 4 8 13 (.reg 15) 210,  -- 265
-  .vstore 4 (.base 9 (192)) 8,  -- 266
-  .vpternlogq 4 13 15 (.reg 5) 210,  -- 267
-  .vstore 4 (.base 9 (224)) 13,  -- 268
-  .vpternlogq 4 15 5 (.reg 6) 210,  -- 269
-  .vstore 4 (.base 9 (256)) 15,  -- 270
-  .vpternlogq 4 5 6 (.reg 18) 210,  -- 271
-  .vstore 4 (.base 9 (288)) 5,  -- 272
-  .vmov 4 18 (.mem (.base 9 (96))) none,  -- 273
-  .vpternlogq 4 18 24 (.reg 31) 150,  -- 274
-  .vprolq 4 18 18 28,  -- 275
-  .vpternlogq 4 19 25 (.reg 27) 150,  -- 276
-  .vprolq 4 19 19 20,  -- 277
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 278
-  .vprolq 4 16 16 3,  -- 279
-  .vpternlogq 4 12 22 (.reg 29) 150,  -- 280
-  .vprolq 4 12 12 45,  -- 281
-  .vpternlogq 4 14 23 (.reg 30) 150,  -- 282
-  .vprolq 4 14 14 61,  -- 283
-  .vmov 4 6 (.reg 18) none,  -- 284
-  .vpternlogq 4 6 19 (.reg 16) 210,  -- 285
-  .vmov 4 8 (.reg 19) none,  -- 286
-  .vpternlogq 4 8 16 (.reg 12) 210,  -- 287
-  .vpternlogq 4 16 12 (.reg 14) 210,  -- 288
-  .vpternlogq 4 12 14 (.reg 18) 210,  -- 289
-  .vpternlogq 4 14 18 (.reg 19) 210,  -- 290
-  .vmov 4 13 (.mem (.base 9 (32))) none,  -- 291
-  .vpternlogq 4 13 22 (.reg 29) 150,  -- 292
-  .vprolq 4 13 13 1,  -- 293
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 294
-  .vprolq 4 3 3 6,  -- 295
-  .vpternlogq 4 17 24 (.reg 31) 150,  -- 296
-  .vprolq 4 17 17 25,  -- 297
-  .vpternlogq 4 20 25 (.reg 27) 150,  -- 298
-  .vpshufb 4 20 20 (.mem (.rip 208)),  -- 299
-  .vpternlogq 4 11 26 (.reg 28) 150,  -- 300
-  .vprolq 4 11 11 18,  -- 301
-  .vmov 4 15 (.reg 13) none,  -- 302
-  .vpternlogq 4 15 3 (.reg 17) 210,  -- 303
-  .vmov 4 5 (.reg 3) none,  -- 304
-  .vpternlogq 4 5 17 (.reg 20) 210,  -- 305
-  .vpternlogq 4 17 20 (.reg 11) 210,  -- 306
-  .vpternlogq 4 20 11 (.reg 13) 210,  -- 307
-  .vpternlogq 4 11 13 (.reg 3) 210,  -- 308
-  .vmov 4 18 (.mem (.base 9 (128))) none,  -- 309
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 310
-  .vprolq 4 18 18 27,  -- 311
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 312
-  .vprolq 4 2 2 36,  -- 313
-  .vpternlogq 4 21 22 (.reg 29) 150,  -- 314
-  .vprolq 4 21 21 10,  -- 315
-  .vpternlogq 4 0 23 (.reg 30) 150,  -- 316
-  .vprolq 4 0 0 15,  -- 317
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 318
-  .vpshufb 4 1 1 (.mem (.rip 240)),  -- 319
-  .vmov 4 19 (.reg 18) none,  -- 320
-  .vpternlogq 4 19 2 (.reg 21) 210,  -- 321
-  .vmov 4 13 (.reg 2) none,  -- 322
-  .vpternlogq 4 13 21 (.reg 0) 210,  -- 323
-  .vpternlogq 4 21 0 (.reg 1) 210,  -- 324
-  .vpternlogq 4 0 1 (.reg 18) 210,  -- 325
-  .vpternlogq 4 1 18 (.reg 2) 210,  -- 326
-  .vmov 4 3 (.mem (.base 9 (64))) none,  -- 327
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 328
-  .vprolq 4 3 3 62,  -- 329
-  .vpternlogq 4 7 24 (.reg 31) 150,  -- 330
-  .vprolq 4 7 7 55,  -- 331
-  .vpternlogq 4 4 25 (.reg 27) 150,  -- 332
-  .vprolq 4 4 4 39,  -- 333
-  .vpternlogq 4 9 26 (.reg 28) 150,  -- 334
-  .vprolq 4 9 9 41,  -- 335
-  .vpternlogq 4 10 22 (.reg 29) 150,  -- 336
-  .vprolq 4 10 10 2,  -- 337
-  .vmov 4 18 (.reg 3) none,  -- 338
-  .vpternlogq 4 18 7 (.reg 4) 210,  -- 339
-  .vmov 4 2 (.reg 7) none,  -- 340
-  .vpternlogq 4 2 4 (.reg 9) 210,  -- 341
-  .vpternlogq 4 4 9 (.reg 10) 210,  -- 342
-  .vpternlogq 4 9 10 (.reg 3) 210,  -- 343
-  .vpternlogq 4 10 3 (.reg 7) 210,  -- 344
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 345
-  .vpternlogq 4 22 6 (.reg 15) 150,  -- 346
-  .vpternlogq 4 22 19 (.reg 18) 150,  -- 347
-  .vprolq 4 27 22 1,  -- 348
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 349
-  .vpternlogq 4 23 8 (.reg 5) 150,  -- 350
-  .vpternlogq 4 23 13 (.reg 2) 150,  -- 351
-  .vprolq 4 28 23 1,  -- 352
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 353
-  .vpternlogq 4 24 16 (.reg 17) 150,  -- 354
-  .vpternlogq 4 24 21 (.reg 4) 150,  -- 355
-  .vprolq 4 29 24 1,  -- 356
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 357
-  .vpternlogq 4 25 12 (.reg 20) 150,  -- 358
-  .vpternlogq 4 25 0 (.reg 9) 150,  -- 359
-  .vprolq 4 30 25 1,  -- 360
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 361
-  .vpternlogq 4 26 14 (.reg 11) 150,  -- 362
-  .vpternlogq 4 26 1 (.reg 10) 150,  -- 363
-  .vprolq 4 31 26 1,  -- 364
-  .vmov 4 3 (.mem (.base 9 (160))) none,  -- 365
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 366
-  .vpternlogq 4 8 22 (.reg 29) 150,  -- 367
-  .vprolq 4 8 8 44,  -- 368
-  .vpternlogq 4 17 23 (.reg 30) 150,  -- 369
-  .vprolq 4 17 17 43,  -- 370
-  .vpternlogq 4 0 24 (.reg 31) 150,  -- 371
-  .vprolq 4 0 0 21,  -- 372
-  .vpternlogq 4 10 25 (.reg 27) 150,  -- 373
-  .vprolq 4 10 10 14,  -- 374
-  .vmov 4 7 (.reg 3) none,  -- 375
-  .vpternlogq 4 7 8 (.reg 17) 210,  -- 376
-  .vpxor 4 7 7 (.bcst (.rip 24)),  -- 377
-  .vstore 4 (.base 9 (0)) 7,  -- 378
-  .vmov 4 7 (.reg 8) none,  -- 379
-  .vpternlogq 4 7 17 (.reg 0) 210,  -- 380
-  .vstore 4 (.base 9 (32)) 7,  -- 381
-  .vpternlogq 4 17 0 (.reg 10) 210,  -- 382
-  .vstore 4 (.base 9 (64)) 17,  -- 383
-  .vpternlogq 4 0 10 (.reg 3) 210,  -- 384
-  .vstore 4 (.base 9 (96)) 0,  -- 385
-  .vpternlogq 4 10 3 (.reg 8) 210,  -- 386
-  .vstore 4 (.base 9 (128)) 10,  -- 387
-  .vmov 4 8 (.mem (.base 9 (256))) none,  -- 388
-  .vpternlogq 4 8 24 (.reg 31) 150,  -- 389
-  .vprolq 4 8 8 28,  -- 390
-  .vpternlogq 4 14 25 (.reg 27) 150,  -- 391
-  .vprolq 4 14 14 20,  -- 392
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 393
-  .vprolq 4 15 15 3,  -- 394
-  .vpternlogq 4 13 22 (.reg 29) 150,  -- 395
-  .vprolq 4 13 13 45,  -- 396
-  .vpternlogq 4 4 23 (.reg 30) 150,  -- 397
-  .vprolq 4 4 4 61,  -- 398
-  .vmov 4 3 (.reg 8) none,  -- 399
-  .vpternlogq 4 3 14 (.reg 15) 210,  -- 400
-  .vmov 4 7 (.reg 14) none,  -- 401
-  .vpternlogq 4 7 15 (.reg 13) 210,  -- 402
-  .vpternlogq 4 15 13 (.reg 4) 210,  -- 403
-  .vpternlogq 4 13 4 (.reg 8) 210,  -- 404
-  .vpternlogq 4 4 8 (.reg 14) 210,  -- 405
-  .vmov 4 17 (.mem (.base 9 (192))) none,  -- 406
-  .vpternlogq 4 17 22 (.reg 29) 150,  -- 407
-  .vprolq 4 17 17 1,  -- 408
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 409
-  .vprolq 4 16 16 6,  -- 410
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 411
-  .vprolq 4 20 20 25,  -- 412
-  .vpternlogq 4 1 25 (.reg 27) 150,  -- 413
-  .vpshufb 4 1 1 (.mem (.rip 208)),  -- 414
-  .vpternlogq 4 18 26 (.reg 28) 150,  -- 415
-  .vprolq 4 18 18 18,  -- 416
-  .vmov 4 0 (.reg 17) none,  -- 417
-  .vpternlogq 4 0 16 (.reg 20) 210,  -- 418
-  .vmov 4 10 (.reg 16) none,  -- 419
-  .vpternlogq 4 10 20 (.reg 1) 210,  -- 420
-  .vpternlogq 4 20 1 (.reg 18) 210,  -- 421
-  .vpternlogq 4 1 18 (.reg 17) 210,  -- 422
-  .vpternlogq 4 18 17 (.reg 16) 210,  -- 423
-  .vmov 4 8 (.mem (.base 9 (288))) none,  -- 424
-  .vpternlogq 4 8 25 (.reg 27) 150,  -- 425
-  .vprolq 4 8 8 27,  -- 426
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 427
-  .vprolq 4 6 6 36,  -- 428
-  .vpternlogq 4 5 22 (.reg 29) 150,  -- 429
-  .vprolq 4 5 5 10,  -- 430
-  .vpternlogq 4 21 23 (.reg 30) 150,  -- 431
-  .vprolq 4 21 21 15,  -- 432
-  .vpternlogq 4 9 24 (.reg 31) 150,  -- 433
-  .vpshufb 4 9 9 (.mem (.rip 240)),  -- 434
-  .vmov 4 14 (.reg 8) none,  -- 435
-  .vpternlogq 4 14 6 (.reg 5) 210,  -- 436
-  .vmov 4 17 (.reg 6) none,  -- 437
-  .vpternlogq 4 17 5 (.reg 21) 210,  -- 438
-  .vpternlogq 4 5 21 (.reg 9) 210,  -- 439
-  .vpternlogq 4 21 9 (.reg 8) 210,  -- 440
-  .vpternlogq 4 9 8 (.reg 6) 210,  -- 441
-  .vmov 4 16 (.mem (.base 9 (224))) none,  -- 442
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 443
-  .vprolq 4 16 16 62,  -- 444
-  .vpternlogq 4 12 24 (.reg 31) 150,  -- 445
-  .vprolq 4 12 12 55,  -- 446
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 447
-  .vprolq 4 11 11 39,  -- 448
-  .vpternlogq 4 19 26 (.reg 28) 150,  -- 449
-  .vprolq 4 19 19 41,  -- 450
-  .vpternlogq 4 2 22 (.reg 29) 150,  -- 451
-  .vprolq 4 2 2 2,  -- 452
-  .vmov 4 8 (.reg 16) none,  -- 453
-  .vpternlogq 4 8 12 (.reg 11) 210,  -- 454
-  .vmov 4 6 (.reg 12) none,  -- 455
-  .vpternlogq 4 6 11 (.reg 19) 210,  -- 456
-  .vpternlogq 4 11 19 (.reg 2) 210,  -- 457
-  .vpternlogq 4 19 2 (.reg 16) 210,  -- 458
-  .vpternlogq 4 2 16 (.reg 12) 210,  -- 459
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 460
-  .vpternlogq 4 22 3 (.reg 0) 150,  -- 461
-  .vpternlogq 4 22 14 (.reg 8) 150,  -- 462
-  .vprolq 4 27 22 1,  -- 463
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 464
-  .vpternlogq 4 23 7 (.reg 10) 150,  -- 465
-  .vpternlogq 4 23 17 (.reg 6) 150,  -- 466
-  .vprolq 4 28 23 1,  -- 467
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 468
-  .vpternlogq 4 24 15 (.reg 20) 150,  -- 469
-  .vpternlogq 4 24 5 (.reg 11) 150,  -- 470
-  .vprolq 4 29 24 1,  -- 471
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 472
-  .vpternlogq 4 25 13 (.reg 1) 150,  -- 473
-  .vpternlogq 4 25 21 (.reg 19) 150,  -- 474
-  .vprolq 4 30 25 1,  -- 475
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 476
-  .vpternlogq 4 26 4 (.reg 18) 150,  -- 477
-  .vpternlogq 4 26 9 (.reg 2) 150,  -- 478
-  .vprolq 4 31 26 1,  -- 479
-  .vmov 4 16 (.mem (.base 9 (0))) none,  -- 480
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 481
-  .vpternlogq 4 7 22 (.reg 29) 150,  -- 482
-  .vprolq 4 7 7 44,  -- 483
-  .vpternlogq 4 20 23 (.reg 30) 150,  -- 484
-  .vprolq 4 20 20 43,  -- 485
-  .vpternlogq 4 21 24 (.reg 31) 150,  -- 486
-  .vprolq 4 21 21 21,  -- 487
-  .vpternlogq 4 2 25 (.reg 27) 150,  -- 488
-  .vprolq 4 2 2 14,  -- 489
-  .vmov 4 12 (.reg 16) none,  -- 490
-  .vpternlogq 4 12 7 (.reg 20) 210,  -- 491
-  .vpxor 4 12 12 (.bcst (.rip 32)),  -- 492
-  .vstore 4 (.base 9 (160)) 12,  -- 493
-  .vmov 4 12 (.reg 7) none,  -- 494
-  .vpternlogq 4 12 20 (.reg 21) 210,  -- 495
-  .vstore 4 (.base 9 (192)) 12,  -- 496
-  .vpternlogq 4 20 21 (.reg 2) 210,  -- 497
-  .vstore 4 (.base 9 (224)) 20,  -- 498
-  .vpternlogq 4 21 2 (.reg 16) 210,  -- 499
-  .vstore 4 (.base 9 (256)) 21,  -- 500
-  .vpternlogq 4 2 16 (.reg 7) 210,  -- 501
-  .vstore 4 (.base 9 (288)) 2,  -- 502
-  .vmov 4 7 (.mem (.base 9 (96))) none,  -- 503
-  .vpternlogq 4 7 24 (.reg 31) 150,  -- 504
-  .vprolq 4 7 7 28,  -- 505
-  .vpternlogq 4 4 25 (.reg 27) 150,  -- 506
-  .vprolq 4 4 4 20,  -- 507
-  .vpternlogq 4 0 26 (.reg 28) 150,  -- 508
-  .vprolq 4 0 0 3,  -- 509
-  .vpternlogq 4 17 22 (.reg 29) 150,  -- 510
-  .vprolq 4 17 17 45,  -- 511
-  .vpternlogq 4 11 23 (.reg 30) 150,  -- 512
-  .vprolq 4 11 11 61,  -- 513
-  .vmov 4 16 (.reg 7) none,  -- 514
-  .vpternlogq 4 16 4 (.reg 0) 210,  -- 515
-  .vmov 4 12 (.reg 4) none,  -- 516
-  .vpternlogq 4 12 0 (.reg 17) 210,  -- 517
-  .vpternlogq 4 0 17 (.reg 11) 210,  -- 518
-  .vpternlogq 4 17 11 (.reg 7) 210,  -- 519
-  .vpternlogq 4 11 7 (.reg 4) 210,  -- 520
-  .vmov 4 20 (.mem (.base 9 (32))) none,  -- 521
-  .vpternlogq 4 20 22 (.reg 29) 150,  -- 522
-  .vprolq 4 20 20 1,  -- 523
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 524
-  .vprolq 4 15 15 6,  -- 525
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 526
-  .vprolq 4 1 1 25,  -- 527
-  .vpternlogq 4 9 25 (.reg 27) 150,  -- 528
-  .vpshufb 4 9 9 (.mem (.rip 208)),  -- 529
-  .vpternlogq 4 8 26 (.reg 28) 150,  -- 530
-  .vprolq 4 8 8 18,  -- 531
-  .vmov 4 21 (.reg 20) none,  -- 532
-  .vpternlogq 4 21 15 (.reg 1) 210,  -- 533
-  .vmov 4 2 (.reg 15) none,  -- 534
-  .vpternlogq 4 2 1 (.reg 9) 210,  -- 535
-  .vpternlogq 4 1 9 (.reg 8) 210,  -- 536
-  .vpternlogq 4 9 8 (.reg 20) 210,  -- 537
-  .vpternlogq 4 8 20 (.reg 15) 210,  -- 538
-  .vmov 4 7 (.mem (.base 9 (128))) none,  -- 539
-  .vpternlogq 4 7 25 (.reg 27) 150,  -- 540
-  .vprolq 4 7 7 27,  -- 541
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 542
-  .vprolq 4 3 3 36,  -- 543
-  .vpternlogq 4 10 22 (.reg 29) 150,  -- 544
-  .vprolq 4 10 10 10,  -- 545
-  .vpternlogq 4 5 23 (.reg 30) 150,  -- 546
-  .vprolq 4 5 5 15,  -- 547
-  .vpternlogq 4 19 24 (.reg 31) 150,  -- 548
-  .vpshufb 4 19 19 (.mem (.rip 240)),  -- 549
-  .vmov 4 4 (.reg 7) none,  -- 550
-  .vpternlogq 4 4 3 (.reg 10) 210,  -- 551
-  .vmov 4 20 (.reg 3) none,  -- 552
-  .vpternlogq 4 20 10 (.reg 5) 210,  -- 553
-  .vpternlogq 4 10 5 (.reg 19) 210,  -- 554
-  .vpternlogq 4 5 19 (.reg 7) 210,  -- 555
-  .vpternlogq 4 19 7 (.reg 3) 210,  -- 556
-  .vmov 4 15 (.mem (.base 9 (64))) none,  -- 557
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 558
-  .vprolq 4 15 15 62,  -- 559
-  .vpternlogq 4 13 24 (.reg 31) 150,  -- 560
-  .vprolq 4 13 13 55,  -- 561
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 562
-  .vprolq 4 18 18 39,  -- 563
-  .vpternlogq 4 14 26 (.reg 28) 150,  -- 564
-  .vprolq 4 14 14 41,  -- 565
-  .vpternlogq 4 6 22 (.reg 29) 150,  -- 566
-  .vprolq 4 6 6 2,  -- 567
-  .vmov 4 7 (.reg 15) none,  -- 568
-  .vpternlogq 4 7 13 (.reg 18) 210,  -- 569
-  .vmov 4 3 (.reg 13) none,  -- 570
-  .vpternlogq 4 3 18 (.reg 14) 210,  -- 571
-  .vpternlogq 4 18 14 (.reg 6) 210,  -- 572
-  .vpternlogq 4 14 6 (.reg 15) 210,  -- 573
-  .vpternlogq 4 6 15 (.reg 13) 210,  -- 574
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 575
-  .vpternlogq 4 22 16 (.reg 21) 150,  -- 576
-  .vpternlogq 4 22 4 (.reg 7) 150,  -- 577
-  .vprolq 4 27 22 1,  -- 578
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 579
-  .vpternlogq 4 23 12 (.reg 2) 150,  -- 580
-  .vpternlogq 4 23 20 (.reg 3) 150,  -- 581
-  .vprolq 4 28 23 1,  -- 582
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 583
-  .vpternlogq 4 24 0 (.reg 1) 150,  -- 584
-  .vpternlogq 4 24 10 (.reg 18) 150,  -- 585
-  .vprolq 4 29 24 1,  -- 586
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 587
-  .vpternlogq 4 25 17 (.reg 9) 150,  -- 588
-  .vpternlogq 4 25 5 (.reg 14) 150,  -- 589
-  .vprolq 4 30 25 1,  -- 590
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 591
-  .vpternlogq 4 26 11 (.reg 8) 150,  -- 592
-  .vpternlogq 4 26 19 (.reg 6) 150,  -- 593
-  .vprolq 4 31 26 1,  -- 594
-  .vmov 4 15 (.mem (.base 9 (160))) none,  -- 595
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 596
-  .vpternlogq 4 12 22 (.reg 29) 150,  -- 597
-  .vprolq 4 12 12 44,  -- 598
-  .vpternlogq 4 1 23 (.reg 30) 150,  -- 599
-  .vprolq 4 1 1 43,  -- 600
-  .vpternlogq 4 5 24 (.reg 31) 150,  -- 601
-  .vprolq 4 5 5 21,  -- 602
-  .vpternlogq 4 6 25 (.reg 27) 150,  -- 603
-  .vprolq 4 6 6 14,  -- 604
-  .vmov 4 13 (.reg 15) none,  -- 605
-  .vpternlogq 4 13 12 (.reg 1) 210,  -- 606
-  .vpxor 4 13 13 (.bcst (.rip 40)),  -- 607
-  .vstore 4 (.base 9 (0)) 13,  -- 608
-  .vmov 4 13 (.reg 12) none,  -- 609
-  .vpternlogq 4 13 1 (.reg 5) 210,  -- 610
-  .vstore 4 (.base 9 (32)) 13,  -- 611
-  .vpternlogq 4 1 5 (.reg 6) 210,  -- 612
-  .vstore 4 (.base 9 (64)) 1,  -- 613
-  .vpternlogq 4 5 6 (.reg 15) 210,  -- 614
-  .vstore 4 (.base 9 (96)) 5,  -- 615
-  .vpternlogq 4 6 15 (.reg 12) 210,  -- 616
-  .vstore 4 (.base 9 (128)) 6,  -- 617
-  .vmov 4 12 (.mem (.base 9 (256))) none,  -- 618
-  .vpternlogq 4 12 24 (.reg 31) 150,  -- 619
-  .vprolq 4 12 12 28,  -- 620
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 621
-  .vprolq 4 11 11 20,  -- 622
-  .vpternlogq 4 21 26 (.reg 28) 150,  -- 623
-  .vprolq 4 21 21 3,  -- 624
-  .vpternlogq 4 20 22 (.reg 29) 150,  -- 625
-  .vprolq 4 20 20 45,  -- 626
-  .vpternlogq 4 18 23 (.reg 30) 150,  -- 627
-  .vprolq 4 18 18 61,  -- 628
-  .vmov 4 15 (.reg 12) none,  -- 629
-  .vpternlogq 4 15 11 (.reg 21) 210,  -- 630
-  .vmov 4 13 (.reg 11) none,  -- 631
-  .vpternlogq 4 13 21 (.reg 20) 210,  -- 632
-  .vpternlogq 4 21 20 (.reg 18) 210,  -- 633
-  .vpternlogq 4 20 18 (.reg 12) 210,  -- 634
-  .vpternlogq 4 18 12 (.reg 11) 210,  -- 635
-  .vmov 4 1 (.mem (.base 9 (192))) none,  -- 636
-  .vpternlogq 4 1 22 (.reg 29) 150,  -- 637
-  .vprolq 4 1 1 1,  -- 638
-  .vpternlogq 4 0 23 (.reg 30) 150,  -- 639
-  .vprolq 4 0 0 6,  -- 640
-  .vpternlogq 4 9 24 (.reg 31) 150,  -- 641
-  .vprolq 4 9 9 25,  -- 642
-  .vpternlogq 4 19 25 (.reg 27) 150,  -- 643
-  .vpshufb 4 19 19 (.mem (.rip 208)),  -- 644
-  .vpternlogq 4 7 26 (.reg 28) 150,  -- 645
-  .vprolq 4 7 7 18,  -- 646
-  .vmov 4 5 (.reg 1) none,  -- 647
-  .vpternlogq 4 5 0 (.reg 9) 210,  -- 648
-  .vmov 4 6 (.reg 0) none,  -- 649
-  .vpternlogq 4 6 9 (.reg 19) 210,  -- 650
-  .vpternlogq 4 9 19 (.reg 7) 210,  -- 651
-  .vpternlogq 4 19 7 (.reg 1) 210,  -- 652
-  .vpternlogq 4 7 1 (.reg 0) 210,  -- 653
-  .vmov 4 12 (.mem (.base 9 (288))) none,  -- 654
-  .vpternlogq 4 12 25 (.reg 27) 150,  -- 655
-  .vprolq 4 12 12 27,  -- 656
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 657
-  .vprolq 4 16 16 36,  -- 658
-  .vpternlogq 4 2 22 (.reg 29) 150,  -- 659
-  .vprolq 4 2 2 10,  -- 660
-  .vpternlogq 4 10 23 (.reg 30) 150,  -- 661
-  .vprolq 4 10 10 15,  -- 662
-  .vpternlogq 4 14 24 (.reg 31) 150,  -- 663
-  .vpshufb 4 14 14 (.mem (.rip 240)),  -- 664
-  .vmov 4 11 (.reg 12) none,  -- 665
-  .vpternlogq 4 11 16 (.reg 2) 210,  -- 666
-  .vmov 4 1 (.reg 16) none,  -- 667
-  .vpternlogq 4 1 2 (.reg 10) 210,  -- 668
-  .vpternlogq 4 2 10 (.reg 14) 210,  -- 669
-  .vpternlogq 4 10 14 (.reg 12) 210,  -- 670
-  .vpternlogq 4 14 12 (.reg 16) 210,  -- 671
-  .vmov 4 0 (.mem (.base 9 (224))) none,  -- 672
-  .vpternlogq 4 0 23 (.reg 30) 150,  -- 673
-  .vprolq 4 0 0 62,  -- 674
-  .vpternlogq 4 17 24 (.reg 31) 150,  -- 675
-  .vprolq 4 17 17 55,  -- 676
-  .vpternlogq 4 8 25 (.reg 27) 150,  -- 677
-  .vprolq 4 8 8 39,  -- 678
-  .vpternlogq 4 4 26 (.reg 28) 150,  -- 679
-  .vprolq 4 4 4 41,  -- 680
-  .vpternlogq 4 3 22 (.reg 29) 150,  -- 681
-  .vprolq 4 3 3 2,  -- 682
-  .vmov 4 12 (.reg 0) none,  -- 683
-  .vpternlogq 4 12 17 (.reg 8) 210,  -- 684
-  .vmov 4 16 (.reg 17) none,  -- 685
-  .vpternlogq 4 16 8 (.reg 4) 210,  -- 686
-  .vpternlogq 4 8 4 (.reg 3) 210,  -- 687
-  .vpternlogq 4 4 3 (.reg 0) 210,  -- 688
-  .vpternlogq 4 3 0 (.reg 17) 210,  -- 689
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 690
-  .vpternlogq 4 22 15 (.reg 5) 150,  -- 691
-  .vpternlogq 4 22 11 (.reg 12) 150,  -- 692
-  .vprolq 4 27 22 1,  -- 693
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 694
-  .vpternlogq 4 23 13 (.reg 6) 150,  -- 695
-  .vpternlogq 4 23 1 (.reg 16) 150,  -- 696
-  .vprolq 4 28 23 1,  -- 697
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 698
-  .vpternlogq 4 24 21 (.reg 9) 150,  -- 699
-  .vpternlogq 4 24 2 (.reg 8) 150,  -- 700
-  .vprolq 4 29 24 1,  -- 701
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 702
-  .vpternlogq 4 25 20 (.reg 19) 150,  -- 703
-  .vpternlogq 4 25 10 (.reg 4) 150,  -- 704
-  .vprolq 4 30 25 1,  -- 705
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 706
-  .vpternlogq 4 26 18 (.reg 7) 150,  -- 707
-  .vpternlogq 4 26 14 (.reg 3) 150,  -- 708
-  .vprolq 4 31 26 1,  -- 709
-  .vmov 4 0 (.mem (.base 9 (0))) none,  -- 710
-  .vpternlogq 4 0 26 (.reg 28) 150,  -- 711
-  .vpternlogq 4 13 22 (.reg 29) 150,  -- 712
-  .vprolq 4 13 13 44,  -- 713
-  .vpternlogq 4 9 23 (.reg 30) 150,  -- 714
-  .vprolq 4 9 9 43,  -- 715
-  .vpternlogq 4 10 24 (.reg 31) 150,  -- 716
-  .vprolq 4 10 10 21,  -- 717
-  .vpternlogq 4 3 25 (.reg 27) 150,  -- 718
-  .vprolq 4 3 3 14,  -- 719
-  .vmov 4 17 (.reg 0) none,  -- 720
-  .vpternlogq 4 17 13 (.reg 9) 210,  -- 721
-  .vpxor 4 17 17 (.bcst (.rip 48)),  -- 722
-  .vstore 4 (.base 9 (160)) 17,  -- 723
-  .vmov 4 17 (.reg 13) none,  -- 724
-  .vpternlogq 4 17 9 (.reg 10) 210,  -- 725
-  .vstore 4 (.base 9 (192)) 17,  -- 726
-  .vpternlogq 4 9 10 (.reg 3) 210,  -- 727
-  .vstore 4 (.base 9 (224)) 9,  -- 728
-  .vpternlogq 4 10 3 (.reg 0) 210,  -- 729
-  .vstore 4 (.base 9 (256)) 10,  -- 730
-  .vpternlogq 4 3 0 (.reg 13) 210,  -- 731
-  .vstore 4 (.base 9 (288)) 3,  -- 732
-  .vmov 4 13 (.mem (.base 9 (96))) none,  -- 733
-  .vpternlogq 4 13 24 (.reg 31) 150,  -- 734
-  .vprolq 4 13 13 28,  -- 735
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 736
-  .vprolq 4 18 18 20,  -- 737
-  .vpternlogq 4 5 26 (.reg 28) 150,  -- 738
-  .vprolq 4 5 5 3,  -- 739
-  .vpternlogq 4 1 22 (.reg 29) 150,  -- 740
-  .vprolq 4 1 1 45,  -- 741
-  .vpternlogq 4 8 23 (.reg 30) 150,  -- 742
-  .vprolq 4 8 8 61,  -- 743
-  .vmov 4 0 (.reg 13) none,  -- 744
-  .vpternlogq 4 0 18 (.reg 5) 210,  -- 745
-  .vmov 4 17 (.reg 18) none,  -- 746
-  .vpternlogq 4 17 5 (.reg 1) 210,  -- 747
-  .vpternlogq 4 5 1 (.reg 8) 210,  -- 748
-  .vpternlogq 4 1 8 (.reg 13) 210,  -- 749
-  .vpternlogq 4 8 13 (.reg 18) 210,  -- 750
-  .vmov 4 9 (.mem (.base 9 (32))) none,  -- 751
-  .vpternlogq 4 9 22 (.reg 29) 150,  -- 752
-  .vprolq 4 9 9 1,  -- 753
-  .vpternlogq 4 21 23 (.reg 30) 150,  -- 754
-  .vprolq 4 21 21 6,  -- 755
-  .vpternlogq 4 19 24 (.reg 31) 150,  -- 756
-  .vprolq 4 19 19 25,  -- 757
-  .vpternlogq 4 14 25 (.reg 27) 150,  -- 758
-  .vpshufb 4 14 14 (.mem (.rip 208)),  -- 759
-  .vpternlogq 4 12 26 (.reg 28) 150,  -- 760
-  .vprolq 4 12 12 18,  -- 761
-  .vmov 4 10 (.reg 9) none,  -- 762
-  .vpternlogq 4 10 21 (.reg 19) 210,  -- 763
-  .vmov 4 3 (.reg 21) none,  -- 764
-  .vpternlogq 4 3 19 (.reg 14) 210,  -- 765
-  .vpternlogq 4 19 14 (.reg 12) 210,  -- 766
-  .vpternlogq 4 14 12 (.reg 9) 210,  -- 767
-  .vpternlogq 4 12 9 (.reg 21) 210,  -- 768
-  .vmov 4 13 (.mem (.base 9 (128))) none,  -- 769
-  .vpternlogq 4 13 25 (.reg 27) 150,  -- 770
-  .vprolq 4 13 13 27,  -- 771
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 772
-  .vprolq 4 15 15 36,  -- 773
-  .vpternlogq 4 6 22 (.reg 29) 150,  -- 774
-  .vprolq 4 6 6 10,  -- 775
-  .vpternlogq 4 2 23 (.reg 30) 150,  -- 776
-  .vprolq 4 2 2 15,  -- 777
-  .vpternlogq 4 4 24 (.reg 31) 150,  -- 778
-  .vpshufb 4 4 4 (.mem (.rip 240)),  -- 779
-  .vmov 4 18 (.reg 13) none,  -- 780
-  .vpternlogq 4 18 15 (.reg 6) 210,  -- 781
-  .vmov 4 9 (.reg 15) none,  -- 782
-  .vpternlogq 4 9 6 (.reg 2) 210,  -- 783
-  .vpternlogq 4 6 2 (.reg 4) 210,  -- 784
-  .vpternlogq 4 2 4 (.reg 13) 210,  -- 785
-  .vpternlogq 4 4 13 (.reg 15) 210,  -- 786
-  .vmov 4 21 (.mem (.base 9 (64))) none,  -- 787
-  .vpternlogq 4 21 23 (.reg 30) 150,  -- 788
-  .vprolq 4 21 21 62,  -- 789
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 790
-  .vprolq 4 20 20 55,  -- 791
-  .vpternlogq 4 7 25 (.reg 27) 150,  -- 792
-  .vprolq 4 7 7 39,  -- 793
-  .vpternlogq 4 11 26 (.reg 28) 150,  -- 794
-  .vprolq 4 11 11 41,  -- 795
-  .vpternlogq 4 16 22 (.reg 29) 150,  -- 796
-  .vprolq 4 16 16 2,  -- 797
-  .vmov 4 13 (.reg 21) none,  -- 798
-  .vpternlogq 4 13 20 (.reg 7) 210,  -- 799
-  .vmov 4 15 (.reg 20) none,  -- 800
-  .vpternlogq 4 15 7 (.reg 11) 210,  -- 801
-  .vpternlogq 4 7 11 (.reg 16) 210,  -- 802
-  .vpternlogq 4 11 16 (.reg 21) 210,  -- 803
-  .vpternlogq 4 16 21 (.reg 20) 210,  -- 804
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 805
-  .vpternlogq 4 22 0 (.reg 10) 150,  -- 806
-  .vpternlogq 4 22 18 (.reg 13) 150,  -- 807
-  .vprolq 4 27 22 1,  -- 808
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 809
-  .vpternlogq 4 23 17 (.reg 3) 150,  -- 810
-  .vpternlogq 4 23 9 (.reg 15) 150,  -- 811
-  .vprolq 4 28 23 1,  -- 812
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 813
-  .vpternlogq 4 24 5 (.reg 19) 150,  -- 814
-  .vpternlogq 4 24 6 (.reg 7) 150,  -- 815
-  .vprolq 4 29 24 1,  -- 816
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 817
-  .vpternlogq 4 25 1 (.reg 14) 150,  -- 818
-  .vpternlogq 4 25 2 (.reg 11) 150,  -- 819
-  .vprolq 4 30 25 1,  -- 820
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 821
-  .vpternlogq 4 26 8 (.reg 12) 150,  -- 822
-  .vpternlogq 4 26 4 (.reg 16) 150,  -- 823
-  .vprolq 4 31 26 1,  -- 824
-  .vmov 4 21 (.mem (.base 9 (160))) none,  -- 825
-  .vpternlogq 4 21 26 (.reg 28) 150,  -- 826
-  .vpternlogq 4 17 22 (.reg 29) 150,  -- 827
-  .vprolq 4 17 17 44,  -- 828
-  .vpternlogq 4 19 23 (.reg 30) 150,  -- 829
-  .vprolq 4 19 19 43,  -- 830
-  .vpternlogq 4 2 24 (.reg 31) 150,  -- 831
-  .vprolq 4 2 2 21,  -- 832
-  .vpternlogq 4 16 25 (.reg 27) 150,  -- 833
-  .vprolq 4 16 16 14,  -- 834
-  .vmov 4 20 (.reg 21) none,  -- 835
-  .vpternlogq 4 20 17 (.reg 19) 210,  -- 836
-  .vpxor 4 20 20 (.bcst (.rip 56)),  -- 837
-  .vstore 4 (.base 9 (0)) 20,  -- 838
-  .vmov 4 20 (.reg 17) none,  -- 839
-  .vpternlogq 4 20 19 (.reg 2) 210,  -- 840
-  .vstore 4 (.base 9 (32)) 20,  -- 841
-  .vpternlogq 4 19 2 (.reg 16) 210,  -- 842
-  .vstore 4 (.base 9 (64)) 19,  -- 843
-  .vpternlogq 4 2 16 (.reg 21) 210,  -- 844
-  .vstore 4 (.base 9 (96)) 2,  -- 845
-  .vpternlogq 4 16 21 (.reg 17) 210,  -- 846
-  .vstore 4 (.base 9 (128)) 16,  -- 847
-  .vmov 4 17 (.mem (.base 9 (256))) none,  -- 848
-  .vpternlogq 4 17 24 (.reg 31) 150,  -- 849
-  .vprolq 4 17 17 28,  -- 850
-  .vpternlogq 4 8 25 (.reg 27) 150,  -- 851
-  .vprolq 4 8 8 20,  -- 852
-  .vpternlogq 4 10 26 (.reg 28) 150,  -- 853
-  .vprolq 4 10 10 3,  -- 854
-  .vpternlogq 4 9 22 (.reg 29) 150,  -- 855
-  .vprolq 4 9 9 45,  -- 856
-  .vpternlogq 4 7 23 (.reg 30) 150,  -- 857
-  .vprolq 4 7 7 61,  -- 858
-  .vmov 4 21 (.reg 17) none,  -- 859
-  .vpternlogq 4 21 8 (.reg 10) 210,  -- 860
-  .vmov 4 20 (.reg 8) none,  -- 861
-  .vpternlogq 4 20 10 (.reg 9) 210,  -- 862
-  .vpternlogq 4 10 9 (.reg 7) 210,  -- 863
-  .vpternlogq 4 9 7 (.reg 17) 210,  -- 864
-  .vpternlogq 4 7 17 (.reg 8) 210,  -- 865
-  .vmov 4 19 (.mem (.base 9 (192))) none,  -- 866
-  .vpternlogq 4 19 22 (.reg 29) 150,  -- 867
-  .vprolq 4 19 19 1,  -- 868
-  .vpternlogq 4 5 23 (.reg 30) 150,  -- 869
-  .vprolq 4 5 5 6,  -- 870
-  .vpternlogq 4 14 24 (.reg 31) 150,  -- 871
-  .vprolq 4 14 14 25,  -- 872
-  .vpternlogq 4 4 25 (.reg 27) 150,  -- 873
-  .vpshufb 4 4 4 (.mem (.rip 208)),  -- 874
-  .vpternlogq 4 13 26 (.reg 28) 150,  -- 875
-  .vprolq 4 13 13 18,  -- 876
-  .vmov 4 2 (.reg 19) none,  -- 877
-  .vpternlogq 4 2 5 (.reg 14) 210,  -- 878
-  .vmov 4 16 (.reg 5) none,  -- 879
-  .vpternlogq 4 16 14 (.reg 4) 210,  -- 880
-  .vpternlogq 4 14 4 (.reg 13) 210,  -- 881
-  .vpternlogq 4 4 13 (.reg 19) 210,  -- 882
-  .vpternlogq 4 13 19 (.reg 5) 210,  -- 883
-  .vmov 4 17 (.mem (.base 9 (288))) none,  -- 884
-  .vpternlogq 4 17 25 (.reg 27) 150,  -- 885
-  .vprolq 4 17 17 27,  -- 886
-  .vpternlogq 4 0 26 (.reg 28) 150,  -- 887
-  .vprolq 4 0 0 36,  -- 888
-  .vpternlogq 4 3 22 (.reg 29) 150,  -- 889
-  .vprolq 4 3 3 10,  -- 890
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 891
-  .vprolq 4 6 6 15,  -- 892
-  .vpternlogq 4 11 24 (.reg 31) 150,  -- 893
-  .vpshufb 4 11 11 (.mem (.rip 240)),  -- 894
-  .vmov 4 8 (.reg 17) none,  -- 895
-  .vpternlogq 4 8 0 (.reg 3) 210,  -- 896
-  .vmov 4 19 (.reg 0) none,  -- 897
-  .vpternlogq 4 19 3 (.reg 6) 210,  -- 898
-  .vpternlogq 4 3 6 (.reg 11) 210,  -- 899
-  .vpternlogq 4 6 11 (.reg 17) 210,  -- 900
-  .vpternlogq 4 11 17 (.reg 0) 210,  -- 901
-  .vmov 4 5 (.mem (.base 9 (224))) none,  -- 902
-  .vpternlogq 4 5 23 (.reg 30) 150,  -- 903
-  .vprolq 4 5 5 62,  -- 904
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 905
-  .vprolq 4 1 1 55,  -- 906
-  .vpternlogq 4 12 25 (.reg 27) 150,  -- 907
-  .vprolq 4 12 12 39,  -- 908
-  .vpternlogq 4 18 26 (.reg 28) 150,  -- 909
-  .vprolq 4 18 18 41,  -- 910
-  .vpternlogq 4 15 22 (.reg 29) 150,  -- 911
-  .vprolq 4 15 15 2,  -- 912
-  .vmov 4 17 (.reg 5) none,  -- 913
-  .vpternlogq 4 17 1 (.reg 12) 210,  -- 914
-  .vmov 4 0 (.reg 1) none,  -- 915
-  .vpternlogq 4 0 12 (.reg 18) 210,  -- 916
-  .vpternlogq 4 12 18 (.reg 15) 210,  -- 917
-  .vpternlogq 4 18 15 (.reg 5) 210,  -- 918
-  .vpternlogq 4 15 5 (.reg 1) 210,  -- 919
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 920
-  .vpternlogq 4 22 21 (.reg 2) 150,  -- 921
-  .vpternlogq 4 22 8 (.reg 17) 150,  -- 922
-  .vprolq 4 27 22 1,  -- 923
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 924
-  .vpternlogq 4 23 20 (.reg 16) 150,  -- 925
-  .vpternlogq 4 23 19 (.reg 0) 150,  -- 926
-  .vprolq 4 28 23 1,  -- 927
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 928
-  .vpternlogq 4 24 10 (.reg 14) 150,  -- 929
-  .vpternlogq 4 24 3 (.reg 12) 150,  -- 930
-  .vprolq 4 29 24 1,  -- 931
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 932
-  .vpternlogq 4 25 9 (.reg 4) 150,  -- 933
-  .vpternlogq 4 25 6 (.reg 18) 150,  -- 934
-  .vprolq 4 30 25 1,  -- 935
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 936
-  .vpternlogq 4 26 7 (.reg 13) 150,  -- 937
-  .vpternlogq 4 26 11 (.reg 15) 150,  -- 938
-  .vprolq 4 31 26 1,  -- 939
-  .vmov 4 5 (.mem (.base 9 (0))) none,  -- 940
-  .vpternlogq 4 5 26 (.reg 28) 150,  -- 941
-  .vpternlogq 4 20 22 (.reg 29) 150,  -- 942
-  .vprolq 4 20 20 44,  -- 943
-  .vpternlogq 4 14 23 (.reg 30) 150,  -- 944
-  .vprolq 4 14 14 43,  -- 945
-  .vpternlogq 4 6 24 (.reg 31) 150,  -- 946
-  .vprolq 4 6 6 21,  -- 947
-  .vpternlogq 4 15 25 (.reg 27) 150,  -- 948
-  .vprolq 4 15 15 14,  -- 949
-  .vmov 4 1 (.reg 5) none,  -- 950
-  .vpternlogq 4 1 20 (.reg 14) 210,  -- 951
-  .vpxor 4 1 1 (.bcst (.rip 64)),  -- 952
-  .vstore 4 (.base 9 (160)) 1,  -- 953
-  .vmov 4 1 (.reg 20) none,  -- 954
-  .vpternlogq 4 1 14 (.reg 6) 210,  -- 955
-  .vstore 4 (.base 9 (192)) 1,  -- 956
-  .vpternlogq 4 14 6 (.reg 15) 210,  -- 957
-  .vstore 4 (.base 9 (224)) 14,  -- 958
-  .vpternlogq 4 6 15 (.reg 5) 210,  -- 959
-  .vstore 4 (.base 9 (256)) 6,  -- 960
-  .vpternlogq 4 15 5 (.reg 20) 210,  -- 961
-  .vstore 4 (.base 9 (288)) 15,  -- 962
-  .vmov 4 20 (.mem (.base 9 (96))) none,  -- 963
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 964
-  .vprolq 4 20 20 28,  -- 965
-  .vpternlogq 4 7 25 (.reg 27) 150,  -- 966
-  .vprolq 4 7 7 20,  -- 967
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 968
-  .vprolq 4 2 2 3,  -- 969
-  .vpternlogq 4 19 22 (.reg 29) 150,  -- 970
-  .vprolq 4 19 19 45,  -- 971
-  .vpternlogq 4 12 23 (.reg 30) 150,  -- 972
-  .vprolq 4 12 12 61,  -- 973
-  .vmov 4 5 (.reg 20) none,  -- 974
-  .vpternlogq 4 5 7 (.reg 2) 210,  -- 975
-  .vmov 4 1 (.reg 7) none,  -- 976
-  .vpternlogq 4 1 2 (.reg 19) 210,  -- 977
-  .vpternlogq 4 2 19 (.reg 12) 210,  -- 978
-  .vpternlogq 4 19 12 (.reg 20) 210,  -- 979
-  .vpternlogq 4 12 20 (.reg 7) 210,  -- 980
-  .vmov 4 14 (.mem (.base 9 (32))) none,  -- 981
-  .vpternlogq 4 14 22 (.reg 29) 150,  -- 982
-  .vprolq 4 14 14 1,  -- 983
-  .vpternlogq 4 10 23 (.reg 30) 150,  -- 984
-  .vprolq 4 10 10 6,  -- 985
-  .vpternlogq 4 4 24 (.reg 31) 150,  -- 986
-  .vprolq 4 4 4 25,  -- 987
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 988
-  .vpshufb 4 11 11 (.mem (.rip 208)),  -- 989
-  .vpternlogq 4 17 26 (.reg 28) 150,  -- 990
-  .vprolq 4 17 17 18,  -- 991
-  .vmov 4 6 (.reg 14) none,  -- 992
-  .vpternlogq 4 6 10 (.reg 4) 210,  -- 993
-  .vmov 4 15 (.reg 10) none,  -- 994
-  .vpternlogq 4 15 4 (.reg 11) 210,  -- 995
-  .vpternlogq 4 4 11 (.reg 17) 210,  -- 996
-  .vpternlogq 4 11 17 (.reg 14) 210,  -- 997
-  .vpternlogq 4 17 14 (.reg 10) 210,  -- 998
-  .vmov 4 20 (.mem (.base 9 (128))) none,  -- 999
-  .vpternlogq 4 20 25 (.reg 27) 150,  -- 1000
-  .vprolq 4 20 20 27,  -- 1001
-  .vpternlogq 4 21 26 (.reg 28) 150,  -- 1002
-  .vprolq 4 21 21 36,  -- 1003
-  .vpternlogq 4 16 22 (.reg 29) 150,  -- 1004
-  .vprolq 4 16 16 10,  -- 1005
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 1006
-  .vprolq 4 3 3 15,  -- 1007
-  .vpternlogq 4 18 24 (.reg 31) 150,  -- 1008
-  .vpshufb 4 18 18 (.mem (.rip 240)),  -- 1009
-  .vmov 4 7 (.reg 20) none,  -- 1010
-  .vpternlogq 4 7 21 (.reg 16) 210,  -- 1011
-  .vmov 4 14 (.reg 21) none,  -- 1012
-  .vpternlogq 4 14 16 (.reg 3) 210,  -- 1013
-  .vpternlogq 4 16 3 (.reg 18) 210,  -- 1014
-  .vpternlogq 4 3 18 (.reg 20) 210,  -- 1015
-  .vpternlogq 4 18 20 (.reg 21) 210,  -- 1016
-  .vmov 4 10 (.mem (.base 9 (64))) none,  -- 1017
-  .vpternlogq 4 10 23 (.reg 30) 150,  -- 1018
-  .vprolq 4 10 10 62,  -- 1019
-  .vpternlogq 4 9 24 (.reg 31) 150,  -- 1020
-  .vprolq 4 9 9 55,  -- 1021
-  .vpternlogq 4 13 25 (.reg 27) 150,  -- 1022
-  .vprolq 4 13 13 39,  -- 1023
-  .vpternlogq 4 8 26 (.reg 28) 150,  -- 1024
-  .vprolq 4 8 8 41,  -- 1025
-  .vpternlogq 4 0 22 (.reg 29) 150,  -- 1026
-  .vprolq 4 0 0 2,  -- 1027
-  .vmov 4 20 (.reg 10) none,  -- 1028
-  .vpternlogq 4 20 9 (.reg 13) 210,  -- 1029
-  .vmov 4 21 (.reg 9) none,  -- 1030
-  .vpternlogq 4 21 13 (.reg 8) 210,  -- 1031
-  .vpternlogq 4 13 8 (.reg 0) 210,  -- 1032
-  .vpternlogq 4 8 0 (.reg 10) 210,  -- 1033
-  .vpternlogq 4 0 10 (.reg 9) 210,  -- 1034
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 1035
-  .vpternlogq 4 22 5 (.reg 6) 150,  -- 1036
-  .vpternlogq 4 22 7 (.reg 20) 150,  -- 1037
-  .vprolq 4 27 22 1,  -- 1038
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 1039
-  .vpternlogq 4 23 1 (.reg 15) 150,  -- 1040
-  .vpternlogq 4 23 14 (.reg 21) 150,  -- 1041
-  .vprolq 4 28 23 1,  -- 1042
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 1043
-  .vpternlogq 4 24 2 (.reg 4) 150,  -- 1044
-  .vpternlogq 4 24 16 (.reg 13) 150,  -- 1045
-  .vprolq 4 29 24 1,  -- 1046
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 1047
-  .vpternlogq 4 25 19 (.reg 11) 150,  -- 1048
-  .vpternlogq 4 25 3 (.reg 8) 150,  -- 1049
-  .vprolq 4 30 25 1,  -- 1050
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 1051
-  .vpternlogq 4 26 12 (.reg 17) 150,  -- 1052
-  .vpternlogq 4 26 18 (.reg 0) 150,  -- 1053
-  .vprolq 4 31 26 1,  -- 1054
-  .vmov 4 10 (.mem (.base 9 (160))) none,  -- 1055
-  .vpternlogq 4 10 26 (.reg 28) 150,  -- 1056
-  .vpternlogq 4 1 22 (.reg 29) 150,  -- 1057
-  .vprolq 4 1 1 44,  -- 1058
-  .vpternlogq 4 4 23 (.reg 30) 150,  -- 1059
-  .vprolq 4 4 4 43,  -- 1060
-  .vpternlogq 4 3 24 (.reg 31) 150,  -- 1061
-  .vprolq 4 3 3 21,  -- 1062
-  .vpternlogq 4 0 25 (.reg 27) 150,  -- 1063
-  .vprolq 4 0 0 14,  -- 1064
-  .vmov 4 9 (.reg 10) none,  -- 1065
-  .vpternlogq 4 9 1 (.reg 4) 210,  -- 1066
-  .vpxor 4 9 9 (.bcst (.rip 72)),  -- 1067
-  .vstore 4 (.base 9 (0)) 9,  -- 1068
-  .vmov 4 9 (.reg 1) none,  -- 1069
-  .vpternlogq 4 9 4 (.reg 3) 210,  -- 1070
-  .vstore 4 (.base 9 (32)) 9,  -- 1071
-  .vpternlogq 4 4 3 (.reg 0) 210,  -- 1072
-  .vstore 4 (.base 9 (64)) 4,  -- 1073
-  .vpternlogq 4 3 0 (.reg 10) 210,  -- 1074
-  .vstore 4 (.base 9 (96)) 3,  -- 1075
-  .vpternlogq 4 0 10 (.reg 1) 210,  -- 1076
-  .vstore 4 (.base 9 (128)) 0,  -- 1077
-  .vmov 4 1 (.mem (.base 9 (256))) none,  -- 1078
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 1079
-  .vprolq 4 1 1 28,  -- 1080
-  .vpternlogq 4 12 25 (.reg 27) 150,  -- 1081
-  .vprolq 4 12 12 20,  -- 1082
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 1083
-  .vprolq 4 6 6 3,  -- 1084
-  .vpternlogq 4 14 22 (.reg 29) 150,  -- 1085
-  .vprolq 4 14 14 45,  -- 1086
-  .vpternlogq 4 13 23 (.reg 30) 150,  -- 1087
-  .vprolq 4 13 13 61,  -- 1088
-  .vmov 4 10 (.reg 1) none,  -- 1089
-  .vpternlogq 4 10 12 (.reg 6) 210,  -- 1090
-  .vmov 4 9 (.reg 12) none,  -- 1091
-  .vpternlogq 4 9 6 (.reg 14) 210,  -- 1092
-  .vpternlogq 4 6 14 (.reg 13) 210,  -- 1093
-  .vpternlogq 4 14 13 (.reg 1) 210,  -- 1094
-  .vpternlogq 4 13 1 (.reg 12) 210,  -- 1095
-  .vmov 4 4 (.mem (.base 9 (192))) none,  -- 1096
-  .vpternlogq 4 4 22 (.reg 29) 150,  -- 1097
-  .vprolq 4 4 4 1,  -- 1098
-  .vpternlogq 4 2 23 (.reg 30) 150,  -- 1099
-  .vprolq 4 2 2 6,  -- 1100
-  .vpternlogq 4 11 24 (.reg 31) 150,  -- 1101
-  .vprolq 4 11 11 25,  -- 1102
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 1103
-  .vpshufb 4 18 18 (.mem (.rip 208)),  -- 1104
-  .vpternlogq 4 20 26 (.reg 28) 150,  -- 1105
-  .vprolq 4 20 20 18,  -- 1106
-  .vmov 4 3 (.reg 4) none,  -- 1107
-  .vpternlogq 4 3 2 (.reg 11) 210,  -- 1108
-  .vmov 4 0 (.reg 2) none,  -- 1109
-  .vpternlogq 4 0 11 (.reg 18) 210,  -- 1110
-  .vpternlogq 4 11 18 (.reg 20) 210,  -- 1111
-  .vpternlogq 4 18 20 (.reg 4) 210,  -- 1112
-  .vpternlogq 4 20 4 (.reg 2) 210,  -- 1113
-  .vmov 4 1 (.mem (.base 9 (288))) none,  -- 1114
-  .vpternlogq 4 1 25 (.reg 27) 150,  -- 1115
-  .vprolq 4 1 1 27,  -- 1116
-  .vpternlogq 4 5 26 (.reg 28) 150,  -- 1117
-  .vprolq 4 5 5 36,  -- 1118
-  .vpternlogq 4 15 22 (.reg 29) 150,  -- 1119
-  .vprolq 4 15 15 10,  -- 1120
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 1121
-  .vprolq 4 16 16 15,  -- 1122
-  .vpternlogq 4 8 24 (.reg 31) 150,  -- 1123
-  .vpshufb 4 8 8 (.mem (.rip 240)),  -- 1124
-  .vmov 4 12 (.reg 1) none,  -- 1125
-  .vpternlogq 4 12 5 (.reg 15) 210,  -- 1126
-  .vmov 4 4 (.reg 5) none,  -- 1127
-  .vpternlogq 4 4 15 (.reg 16) 210,  -- 1128
-  .vpternlogq 4 15 16 (.reg 8) 210,  -- 1129
-  .vpternlogq 4 16 8 (.reg 1) 210,  -- 1130
-  .vpternlogq 4 8 1 (.reg 5) 210,  -- 1131
-  .vmov 4 2 (.mem (.base 9 (224))) none,  -- 1132
-  .vpternlogq 4 2 23 (.reg 30) 150,  -- 1133
-  .vprolq 4 2 2 62,  -- 1134
-  .vpternlogq 4 19 24 (.reg 31) 150,  -- 1135
-  .vprolq 4 19 19 55,  -- 1136
-  .vpternlogq 4 17 25 (.reg 27) 150,  -- 1137
-  .vprolq 4 17 17 39,  -- 1138
-  .vpternlogq 4 7 26 (.reg 28) 150,  -- 1139
-  .vprolq 4 7 7 41,  -- 1140
-  .vpternlogq 4 21 22 (.reg 29) 150,  -- 1141
-  .vprolq 4 21 21 2,  -- 1142
-  .vmov 4 1 (.reg 2) none,  -- 1143
-  .vpternlogq 4 1 19 (.reg 17) 210,  -- 1144
-  .vmov 4 5 (.reg 19) none,  -- 1145
-  .vpternlogq 4 5 17 (.reg 7) 210,  -- 1146
-  .vpternlogq 4 17 7 (.reg 21) 210,  -- 1147
-  .vpternlogq 4 7 21 (.reg 2) 210,  -- 1148
-  .vpternlogq 4 21 2 (.reg 19) 210,  -- 1149
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 1150
-  .vpternlogq 4 22 10 (.reg 3) 150,  -- 1151
-  .vpternlogq 4 22 12 (.reg 1) 150,  -- 1152
-  .vprolq 4 27 22 1,  -- 1153
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 1154
-  .vpternlogq 4 23 9 (.reg 0) 150,  -- 1155
-  .vpternlogq 4 23 4 (.reg 5) 150,  -- 1156
-  .vprolq 4 28 23 1,  -- 1157
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 1158
-  .vpternlogq 4 24 6 (.reg 11) 150,  -- 1159
-  .vpternlogq 4 24 15 (.reg 17) 150,  -- 1160
-  .vprolq 4 29 24 1,  -- 1161
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 1162
-  .vpternlogq 4 25 14 (.reg 18) 150,  -- 1163
-  .vpternlogq 4 25 16 (.reg 7) 150,  -- 1164
-  .vprolq 4 30 25 1,  -- 1165
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 1166
-  .vpternlogq 4 26 13 (.reg 20) 150,  -- 1167
-  .vpternlogq 4 26 8 (.reg 21) 150,  -- 1168
-  .vprolq 4 31 26 1,  -- 1169
-  .vmov 4 2 (.mem (.base 9 (0))) none,  -- 1170
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 1171
-  .vpternlogq 4 9 22 (.reg 29) 150,  -- 1172
-  .vprolq 4 9 9 44,  -- 1173
-  .vpternlogq 4 11 23 (.reg 30) 150,  -- 1174
-  .vprolq 4 11 11 43,  -- 1175
-  .vpternlogq 4 16 24 (.reg 31) 150,  -- 1176
-  .vprolq 4 16 16 21,  -- 1177
-  .vpternlogq 4 21 25 (.reg 27) 150,  -- 1178
-  .vprolq 4 21 21 14,  -- 1179
-  .vmov 4 19 (.reg 2) none,  -- 1180
-  .vpternlogq 4 19 9 (.reg 11) 210,  -- 1181
-  .vpxor 4 19 19 (.bcst (.rip 80)),  -- 1182
-  .vstore 4 (.base 9 (160)) 19,  -- 1183
-  .vmov 4 19 (.reg 9) none,  -- 1184
-  .vpternlogq 4 19 11 (.reg 16) 210,  -- 1185
-  .vstore 4 (.base 9 (192)) 19,  -- 1186
-  .vpternlogq 4 11 16 (.reg 21) 210,  -- 1187
-  .vstore 4 (.base 9 (224)) 11,  -- 1188
-  .vpternlogq 4 16 21 (.reg 2) 210,  -- 1189
-  .vstore 4 (.base 9 (256)) 16,  -- 1190
-  .vpternlogq 4 21 2 (.reg 9) 210,  -- 1191
-  .vstore 4 (.base 9 (288)) 21,  -- 1192
-  .vmov 4 9 (.mem (.base 9 (96))) none,  -- 1193
-  .vpternlogq 4 9 24 (.reg 31) 150,  -- 1194
-  .vprolq 4 9 9 28,  -- 1195
-  .vpternlogq 4 13 25 (.reg 27) 150,  -- 1196
-  .vprolq 4 13 13 20,  -- 1197
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 1198
-  .vprolq 4 3 3 3,  -- 1199
-  .vpternlogq 4 4 22 (.reg 29) 150,  -- 1200
-  .vprolq 4 4 4 45,  -- 1201
-  .vpternlogq 4 17 23 (.reg 30) 150,  -- 1202
-  .vprolq 4 17 17 61,  -- 1203
-  .vmov 4 2 (.reg 9) none,  -- 1204
-  .vpternlogq 4 2 13 (.reg 3) 210,  -- 1205
-  .vmov 4 19 (.reg 13) none,  -- 1206
-  .vpternlogq 4 19 3 (.reg 4) 210,  -- 1207
-  .vpternlogq 4 3 4 (.reg 17) 210,  -- 1208
-  .vpternlogq 4 4 17 (.reg 9) 210,  -- 1209
-  .vpternlogq 4 17 9 (.reg 13) 210,  -- 1210
-  .vmov 4 11 (.mem (.base 9 (32))) none,  -- 1211
-  .vpternlogq 4 11 22 (.reg 29) 150,  -- 1212
-  .vprolq 4 11 11 1,  -- 1213
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 1214
-  .vprolq 4 6 6 6,  -- 1215
-  .vpternlogq 4 18 24 (.reg 31) 150,  -- 1216
-  .vprolq 4 18 18 25,  -- 1217
-  .vpternlogq 4 8 25 (.reg 27) 150,  -- 1218
-  .vpshufb 4 8 8 (.mem (.rip 208)),  -- 1219
-  .vpternlogq 4 1 26 (.reg 28) 150,  -- 1220
-  .vprolq 4 1 1 18,  -- 1221
-  .vmov 4 16 (.reg 11) none,  -- 1222
-  .vpternlogq 4 16 6 (.reg 18) 210,  -- 1223
-  .vmov 4 21 (.reg 6) none,  -- 1224
-  .vpternlogq 4 21 18 (.reg 8) 210,  -- 1225
-  .vpternlogq 4 18 8 (.reg 1) 210,  -- 1226
-  .vpternlogq 4 8 1 (.reg 11) 210,  -- 1227
-  .vpternlogq 4 1 11 (.reg 6) 210,  -- 1228
-  .vmov 4 9 (.mem (.base 9 (128))) none,  -- 1229
-  .vpternlogq 4 9 25 (.reg 27) 150,  -- 1230
-  .vprolq 4 9 9 27,  -- 1231
-  .vpternlogq 4 10 26 (.reg 28) 150,  -- 1232
-  .vprolq 4 10 10 36,  -- 1233
-  .vpternlogq 4 0 22 (.reg 29) 150,  -- 1234
-  .vprolq 4 0 0 10,  -- 1235
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 1236
-  .vprolq 4 15 15 15,  -- 1237
-  .vpternlogq 4 7 24 (.reg 31) 150,  -- 1238
-  .vpshufb 4 7 7 (.mem (.rip 240)),  -- 1239
-  .vmov 4 13 (.reg 9) none,  -- 1240
-  .vpternlogq 4 13 10 (.reg 0) 210,  -- 1241
-  .vmov 4 11 (.reg 10) none,  -- 1242
-  .vpternlogq 4 11 0 (.reg 15) 210,  -- 1243
-  .vpternlogq 4 0 15 (.reg 7) 210,  -- 1244
-  .vpternlogq 4 15 7 (.reg 9) 210,  -- 1245
-  .vpternlogq 4 7 9 (.reg 10) 210,  -- 1246
-  .vmov 4 6 (.mem (.base 9 (64))) none,  -- 1247
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 1248
-  .vprolq 4 6 6 62,  -- 1249
-  .vpternlogq 4 14 24 (.reg 31) 150,  -- 1250
-  .vprolq 4 14 14 55,  -- 1251
-  .vpternlogq 4 20 25 (.reg 27) 150,  -- 1252
-  .vprolq 4 20 20 39,  -- 1253
-  .vpternlogq 4 12 26 (.reg 28) 150,  -- 1254
-  .vprolq 4 12 12 41,  -- 1255
-  .vpternlogq 4 5 22 (.reg 29) 150,  -- 1256
-  .vprolq 4 5 5 2,  -- 1257
-  .vmov 4 9 (.reg 6) none,  -- 1258
-  .vpternlogq 4 9 14 (.reg 20) 210,  -- 1259
-  .vmov 4 10 (.reg 14) none,  -- 1260
-  .vpternlogq 4 10 20 (.reg 12) 210,  -- 1261
-  .vpternlogq 4 20 12 (.reg 5) 210,  -- 1262
-  .vpternlogq 4 12 5 (.reg 6) 210,  -- 1263
-  .vpternlogq 4 5 6 (.reg 14) 210,  -- 1264
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 1265
-  .vpternlogq 4 22 2 (.reg 16) 150,  -- 1266
-  .vpternlogq 4 22 13 (.reg 9) 150,  -- 1267
-  .vprolq 4 27 22 1,  -- 1268
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 1269
-  .vpternlogq 4 23 19 (.reg 21) 150,  -- 1270
-  .vpternlogq 4 23 11 (.reg 10) 150,  -- 1271
-  .vprolq 4 28 23 1,  -- 1272
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 1273
-  .vpternlogq 4 24 3 (.reg 18) 150,  -- 1274
-  .vpternlogq 4 24 0 (.reg 20) 150,  -- 1275
-  .vprolq 4 29 24 1,  -- 1276
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 1277
-  .vpternlogq 4 25 4 (.reg 8) 150,  -- 1278
-  .vpternlogq 4 25 15 (.reg 12) 150,  -- 1279
-  .vprolq 4 30 25 1,  -- 1280
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 1281
-  .vpternlogq 4 26 17 (.reg 1) 150,  -- 1282
-  .vpternlogq 4 26 7 (.reg 5) 150,  -- 1283
-  .vprolq 4 31 26 1,  -- 1284
-  .vmov 4 6 (.mem (.base 9 (160))) none,  -- 1285
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 1286
-  .vpternlogq 4 19 22 (.reg 29) 150,  -- 1287
-  .vprolq 4 19 19 44,  -- 1288
-  .vpternlogq 4 18 23 (.reg 30) 150,  -- 1289
-  .vprolq 4 18 18 43,  -- 1290
-  .vpternlogq 4 15 24 (.reg 31) 150,  -- 1291
-  .vprolq 4 15 15 21,  -- 1292
-  .vpternlogq 4 5 25 (.reg 27) 150,  -- 1293
-  .vprolq 4 5 5 14,  -- 1294
-  .vmov 4 14 (.reg 6) none,  -- 1295
-  .vpternlogq 4 14 19 (.reg 18) 210,  -- 1296
-  .vpxor 4 14 14 (.bcst (.rip 88)),  -- 1297
-  .vstore 4 (.base 9 (0)) 14,  -- 1298
-  .vmov 4 14 (.reg 19) none,  -- 1299
-  .vpternlogq 4 14 18 (.reg 15) 210,  -- 1300
-  .vstore 4 (.base 9 (32)) 14,  -- 1301
-  .vpternlogq 4 18 15 (.reg 5) 210,  -- 1302
-  .vstore 4 (.base 9 (64)) 18,  -- 1303
-  .vpternlogq 4 15 5 (.reg 6) 210,  -- 1304
-  .vstore 4 (.base 9 (96)) 15,  -- 1305
-  .vpternlogq 4 5 6 (.reg 19) 210,  -- 1306
-  .vstore 4 (.base 9 (128)) 5,  -- 1307
-  .vmov 4 19 (.mem (.base 9 (256))) none,  -- 1308
-  .vpternlogq 4 19 24 (.reg 31) 150,  -- 1309
-  .vprolq 4 19 19 28,  -- 1310
-  .vpternlogq 4 17 25 (.reg 27) 150,  -- 1311
-  .vprolq 4 17 17 20,  -- 1312
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 1313
-  .vprolq 4 16 16 3,  -- 1314
-  .vpternlogq 4 11 22 (.reg 29) 150,  -- 1315
-  .vprolq 4 11 11 45,  -- 1316
-  .vpternlogq 4 20 23 (.reg 30) 150,  -- 1317
-  .vprolq 4 20 20 61,  -- 1318
-  .vmov 4 6 (.reg 19) none,  -- 1319
-  .vpternlogq 4 6 17 (.reg 16) 210,  -- 1320
-  .vmov 4 14 (.reg 17) none,  -- 1321
-  .vpternlogq 4 14 16 (.reg 11) 210,  -- 1322
-  .vpternlogq 4 16 11 (.reg 20) 210,  -- 1323
-  .vpternlogq 4 11 20 (.reg 19) 210,  -- 1324
-  .vpternlogq 4 20 19 (.reg 17) 210,  -- 1325
-  .vmov 4 18 (.mem (.base 9 (192))) none,  -- 1326
-  .vpternlogq 4 18 22 (.reg 29) 150,  -- 1327
-  .vprolq 4 18 18 1,  -- 1328
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 1329
-  .vprolq 4 3 3 6,  -- 1330
-  .vpternlogq 4 8 24 (.reg 31) 150,  -- 1331
-  .vprolq 4 8 8 25,  -- 1332
-  .vpternlogq 4 7 25 (.reg 27) 150,  -- 1333
-  .vpshufb 4 7 7 (.mem (.rip 208)),  -- 1334
-  .vpternlogq 4 9 26 (.reg 28) 150,  -- 1335
-  .vprolq 4 9 9 18,  -- 1336
-  .vmov 4 15 (.reg 18) none,  -- 1337
-  .vpternlogq 4 15 3 (.reg 8) 210,  -- 1338
-  .vmov 4 5 (.reg 3) none,  -- 1339
-  .vpternlogq 4 5 8 (.reg 7) 210,  -- 1340
-  .vpternlogq 4 8 7 (.reg 9) 210,  -- 1341
-  .vpternlogq 4 7 9 (.reg 18) 210,  -- 1342
-  .vpternlogq 4 9 18 (.reg 3) 210,  -- 1343
-  .vmov 4 19 (.mem (.base 9 (288))) none,  -- 1344
-  .vpternlogq 4 19 25 (.reg 27) 150,  -- 1345
-  .vprolq 4 19 19 27,  -- 1346
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 1347
-  .vprolq 4 2 2 36,  -- 1348
-  .vpternlogq 4 21 22 (.reg 29) 150,  -- 1349
-  .vprolq 4 21 21 10,  -- 1350
-  .vpternlogq 4 0 23 (.reg 30) 150,  -- 1351
-  .vprolq 4 0 0 15,  -- 1352
-  .vpternlogq 4 12 24 (.reg 31) 150,  -- 1353
-  .vpshufb 4 12 12 (.mem (.rip 240)),  -- 1354
-  .vmov 4 17 (.reg 19) none,  -- 1355
-  .vpternlogq 4 17 2 (.reg 21) 210,  -- 1356
-  .vmov 4 18 (.reg 2) none,  -- 1357
-  .vpternlogq 4 18 21 (.reg 0) 210,  -- 1358
-  .vpternlogq 4 21 0 (.reg 12) 210,  -- 1359
-  .vpternlogq 4 0 12 (.reg 19) 210,  -- 1360
-  .vpternlogq 4 12 19 (.reg 2) 210,  -- 1361
-  .vmov 4 3 (.mem (.base 9 (224))) none,  -- 1362
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 1363
-  .vprolq 4 3 3 62,  -- 1364
-  .vpternlogq 4 4 24 (.reg 31) 150,  -- 1365
-  .vprolq 4 4 4 55,  -- 1366
-  .vpternlogq 4 1 25 (.reg 27) 150,  -- 1367
-  .vprolq 4 1 1 39,  -- 1368
-  .vpternlogq 4 13 26 (.reg 28) 150,  -- 1369
-  .vprolq 4 13 13 41,  -- 1370
-  .vpternlogq 4 10 22 (.reg 29) 150,  -- 1371
-  .vprolq 4 10 10 2,  -- 1372
-  .vmov 4 19 (.reg 3) none,  -- 1373
-  .vpternlogq 4 19 4 (.reg 1) 210,  -- 1374
-  .vmov 4 2 (.reg 4) none,  -- 1375
-  .vpternlogq 4 2 1 (.reg 13) 210,  -- 1376
-  .vpternlogq 4 1 13 (.reg 10) 210,  -- 1377
-  .vpternlogq 4 13 10 (.reg 3) 210,  -- 1378
-  .vpternlogq 4 10 3 (.reg 4) 210,  -- 1379
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 1380
-  .vpternlogq 4 22 6 (.reg 15) 150,  -- 1381
-  .vpternlogq 4 22 17 (.reg 19) 150,  -- 1382
-  .vprolq 4 27 22 1,  -- 1383
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 1384
-  .vpternlogq 4 23 14 (.reg 5) 150,  -- 1385
-  .vpternlogq 4 23 18 (.reg 2) 150,  -- 1386
-  .vprolq 4 28 23 1,  -- 1387
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 1388
-  .vpternlogq 4 24 16 (.reg 8) 150,  -- 1389
-  .vpternlogq 4 24 21 (.reg 1) 150,  -- 1390
-  .vprolq 4 29 24 1,  -- 1391
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 1392
-  .vpternlogq 4 25 11 (.reg 7) 150,  -- 1393
-  .vpternlogq 4 25 0 (.reg 13) 150,  -- 1394
-  .vprolq 4 30 25 1,  -- 1395
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 1396
-  .vpternlogq 4 26 20 (.reg 9) 150,  -- 1397
-  .vpternlogq 4 26 12 (.reg 10) 150,  -- 1398
-  .vprolq 4 31 26 1,  -- 1399
-  .vmov 4 3 (.mem (.base 9 (0))) none,  -- 1400
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 1401
-  .vpternlogq 4 14 22 (.reg 29) 150,  -- 1402
-  .vprolq 4 14 14 44,  -- 1403
-  .vpternlogq 4 8 23 (.reg 30) 150,  -- 1404
-  .vprolq 4 8 8 43,  -- 1405
-  .vpternlogq 4 0 24 (.reg 31) 150,  -- 1406
-  .vprolq 4 0 0 21,  -- 1407
-  .vpternlogq 4 10 25 (.reg 27) 150,  -- 1408
-  .vprolq 4 10 10 14,  -- 1409
-  .vmov 4 4 (.reg 3) none,  -- 1410
-  .vpternlogq 4 4 14 (.reg 8) 210,  -- 1411
-  .vpxor 4 4 4 (.bcst (.rip 96)),  -- 1412
-  .vstore 4 (.base 9 (160)) 4,  -- 1413
-  .vmov 4 4 (.reg 14) none,  -- 1414
-  .vpternlogq 4 4 8 (.reg 0) 210,  -- 1415
-  .vstore 4 (.base 9 (192)) 4,  -- 1416
-  .vpternlogq 4 8 0 (.reg 10) 210,  -- 1417
-  .vstore 4 (.base 9 (224)) 8,  -- 1418
-  .vpternlogq 4 0 10 (.reg 3) 210,  -- 1419
-  .vstore 4 (.base 9 (256)) 0,  -- 1420
-  .vpternlogq 4 10 3 (.reg 14) 210,  -- 1421
-  .vstore 4 (.base 9 (288)) 10,  -- 1422
-  .vmov 4 14 (.mem (.base 9 (96))) none,  -- 1423
-  .vpternlogq 4 14 24 (.reg 31) 150,  -- 1424
-  .vprolq 4 14 14 28,  -- 1425
-  .vpternlogq 4 20 25 (.reg 27) 150,  -- 1426
-  .vprolq 4 20 20 20,  -- 1427
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 1428
-  .vprolq 4 15 15 3,  -- 1429
-  .vpternlogq 4 18 22 (.reg 29) 150,  -- 1430
-  .vprolq 4 18 18 45,  -- 1431
-  .vpternlogq 4 1 23 (.reg 30) 150,  -- 1432
-  .vprolq 4 1 1 61,  -- 1433
-  .vmov 4 3 (.reg 14) none,  -- 1434
-  .vpternlogq 4 3 20 (.reg 15) 210,  -- 1435
-  .vmov 4 4 (.reg 20) none,  -- 1436
-  .vpternlogq 4 4 15 (.reg 18) 210,  -- 1437
-  .vpternlogq 4 15 18 (.reg 1) 210,  -- 1438
-  .vpternlogq 4 18 1 (.reg 14) 210,  -- 1439
-  .vpternlogq 4 1 14 (.reg 20) 210,  -- 1440
-  .vmov 4 8 (.mem (.base 9 (32))) none,  -- 1441
-  .vpternlogq 4 8 22 (.reg 29) 150,  -- 1442
-  .vprolq 4 8 8 1,  -- 1443
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 1444
-  .vprolq 4 16 16 6,  -- 1445
-  .vpternlogq 4 7 24 (.reg 31) 150,  -- 1446
-  .vprolq 4 7 7 25,  -- 1447
-  .vpternlogq 4 12 25 (.reg 27) 150,  -- 1448
-  .vpshufb 4 12 12 (.mem (.rip 208)),  -- 1449
-  .vpternlogq 4 19 26 (.reg 28) 150,  -- 1450
-  .vprolq 4 19 19 18,  -- 1451
-  .vmov 4 0 (.reg 8) none,  -- 1452
-  .vpternlogq 4 0 16 (.reg 7) 210,  -- 1453
-  .vmov 4 10 (.reg 16) none,  -- 1454
-  .vpternlogq 4 10 7 (.reg 12) 210,  -- 1455
-  .vpternlogq 4 7 12 (.reg 19) 210,  -- 1456
-  .vpternlogq 4 12 19 (.reg 8) 210,  -- 1457
-  .vpternlogq 4 19 8 (.reg 16) 210,  -- 1458
-  .vmov 4 14 (.mem (.base 9 (128))) none,  -- 1459
-  .vpternlogq 4 14 25 (.reg 27) 150,  -- 1460
-  .vprolq 4 14 14 27,  -- 1461
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 1462
-  .vprolq 4 6 6 36,  -- 1463
-  .vpternlogq 4 5 22 (.reg 29) 150,  -- 1464
-  .vprolq 4 5 5 10,  -- 1465
-  .vpternlogq 4 21 23 (.reg 30) 150,  -- 1466
-  .vprolq 4 21 21 15,  -- 1467
-  .vpternlogq 4 13 24 (.reg 31) 150,  -- 1468
-  .vpshufb 4 13 13 (.mem (.rip 240)),  -- 1469
-  .vmov 4 20 (.reg 14) none,  -- 1470
-  .vpternlogq 4 20 6 (.reg 5) 210,  -- 1471
-  .vmov 4 8 (.reg 6) none,  -- 1472
-  .vpternlogq 4 8 5 (.reg 21) 210,  -- 1473
-  .vpternlogq 4 5 21 (.reg 13) 210,  -- 1474
-  .vpternlogq 4 21 13 (.reg 14) 210,  -- 1475
-  .vpternlogq 4 13 14 (.reg 6) 210,  -- 1476
-  .vmov 4 16 (.mem (.base 9 (64))) none,  -- 1477
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 1478
-  .vprolq 4 16 16 62,  -- 1479
-  .vpternlogq 4 11 24 (.reg 31) 150,  -- 1480
-  .vprolq 4 11 11 55,  -- 1481
-  .vpternlogq 4 9 25 (.reg 27) 150,  -- 1482
-  .vprolq 4 9 9 39,  -- 1483
-  .vpternlogq 4 17 26 (.reg 28) 150,  -- 1484
-  .vprolq 4 17 17 41,  -- 1485
-  .vpternlogq 4 2 22 (.reg 29) 150,  -- 1486
-  .vprolq 4 2 2 2,  -- 1487
-  .vmov 4 14 (.reg 16) none,  -- 1488
-  .vpternlogq 4 14 11 (.reg 9) 210,  -- 1489
-  .vmov 4 6 (.reg 11) none,  -- 1490
-  .vpternlogq 4 6 9 (.reg 17) 210,  -- 1491
-  .vpternlogq 4 9 17 (.reg 2) 210,  -- 1492
-  .vpternlogq 4 17 2 (.reg 16) 210,  -- 1493
-  .vpternlogq 4 2 16 (.reg 11) 210,  -- 1494
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 1495
-  .vpternlogq 4 22 3 (.reg 0) 150,  -- 1496
-  .vpternlogq 4 22 20 (.reg 14) 150,  -- 1497
-  .vprolq 4 27 22 1,  -- 1498
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 1499
-  .vpternlogq 4 23 4 (.reg 10) 150,  -- 1500
-  .vpternlogq 4 23 8 (.reg 6) 150,  -- 1501
-  .vprolq 4 28 23 1,  -- 1502
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 1503
-  .vpternlogq 4 24 15 (.reg 7) 150,  -- 1504
-  .vpternlogq 4 24 5 (.reg 9) 150,  -- 1505
-  .vprolq 4 29 24 1,  -- 1506
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 1507
-  .vpternlogq 4 25 18 (.reg 12) 150,  -- 1508
-  .vpternlogq 4 25 21 (.reg 17) 150,  -- 1509
-  .vprolq 4 30 25 1,  -- 1510
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 1511
-  .vpternlogq 4 26 1 (.reg 19) 150,  -- 1512
-  .vpternlogq 4 26 13 (.reg 2) 150,  -- 1513
-  .vprolq 4 31 26 1,  -- 1514
-  .vmov 4 16 (.mem (.base 9 (160))) none,  -- 1515
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 1516
-  .vpternlogq 4 4 22 (.reg 29) 150,  -- 1517
-  .vprolq 4 4 4 44,  -- 1518
-  .vpternlogq 4 7 23 (.reg 30) 150,  -- 1519
-  .vprolq 4 7 7 43,  -- 1520
-  .vpternlogq 4 21 24 (.reg 31) 150,  -- 1521
-  .vprolq 4 21 21 21,  -- 1522
-  .vpternlogq 4 2 25 (.reg 27) 150,  -- 1523
-  .vprolq 4 2 2 14,  -- 1524
-  .vmov 4 11 (.reg 16) none,  -- 1525
-  .vpternlogq 4 11 4 (.reg 7) 210,  -- 1526
-  .vpxor 4 11 11 (.bcst (.rip 104)),  -- 1527
-  .vstore 4 (.base 9 (0)) 11,  -- 1528
-  .vmov 4 11 (.reg 4) none,  -- 1529
-  .vpternlogq 4 11 7 (.reg 21) 210,  -- 1530
-  .vstore 4 (.base 9 (32)) 11,  -- 1531
-  .vpternlogq 4 7 21 (.reg 2) 210,  -- 1532
-  .vstore 4 (.base 9 (64)) 7,  -- 1533
-  .vpternlogq 4 21 2 (.reg 16) 210,  -- 1534
-  .vstore 4 (.base 9 (96)) 21,  -- 1535
-  .vpternlogq 4 2 16 (.reg 4) 210,  -- 1536
-  .vstore 4 (.base 9 (128)) 2,  -- 1537
-  .vmov 4 4 (.mem (.base 9 (256))) none,  -- 1538
-  .vpternlogq 4 4 24 (.reg 31) 150,  -- 1539
-  .vprolq 4 4 4 28,  -- 1540
-  .vpternlogq 4 1 25 (.reg 27) 150,  -- 1541
-  .vprolq 4 1 1 20,  -- 1542
-  .vpternlogq 4 0 26 (.reg 28) 150,  -- 1543
-  .vprolq 4 0 0 3,  -- 1544
-  .vpternlogq 4 8 22 (.reg 29) 150,  -- 1545
-  .vprolq 4 8 8 45,  -- 1546
-  .vpternlogq 4 9 23 (.reg 30) 150,  -- 1547
-  .vprolq 4 9 9 61,  -- 1548
-  .vmov 4 16 (.reg 4) none,  -- 1549
-  .vpternlogq 4 16 1 (.reg 0) 210,  -- 1550
-  .vmov 4 11 (.reg 1) none,  -- 1551
-  .vpternlogq 4 11 0 (.reg 8) 210,  -- 1552
-  .vpternlogq 4 0 8 (.reg 9) 210,  -- 1553
-  .vpternlogq 4 8 9 (.reg 4) 210,  -- 1554
-  .vpternlogq 4 9 4 (.reg 1) 210,  -- 1555
-  .vmov 4 7 (.mem (.base 9 (192))) none,  -- 1556
-  .vpternlogq 4 7 22 (.reg 29) 150,  -- 1557
-  .vprolq 4 7 7 1,  -- 1558
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 1559
-  .vprolq 4 15 15 6,  -- 1560
-  .vpternlogq 4 12 24 (.reg 31) 150,  -- 1561
-  .vprolq 4 12 12 25,  -- 1562
-  .vpternlogq 4 13 25 (.reg 27) 150,  -- 1563
-  .vpshufb 4 13 13 (.mem (.rip 208)),  -- 1564
-  .vpternlogq 4 14 26 (.reg 28) 150,  -- 1565
-  .vprolq 4 14 14 18,  -- 1566
-  .vmov 4 21 (.reg 7) none,  -- 1567
-  .vpternlogq 4 21 15 (.reg 12) 210,  -- 1568
-  .vmov 4 2 (.reg 15) none,  -- 1569
-  .vpternlogq 4 2 12 (.reg 13) 210,  -- 1570
-  .vpternlogq 4 12 13 (.reg 14) 210,  -- 1571
-  .vpternlogq 4 13 14 (.reg 7) 210,  -- 1572
-  .vpternlogq 4 14 7 (.reg 15) 210,  -- 1573
-  .vmov 4 4 (.mem (.base 9 (288))) none,  -- 1574
-  .vpternlogq 4 4 25 (.reg 27) 150,  -- 1575
-  .vprolq 4 4 4 27,  -- 1576
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 1577
-  .vprolq 4 3 3 36,  -- 1578
-  .vpternlogq 4 10 22 (.reg 29) 150,  -- 1579
-  .vprolq 4 10 10 10,  -- 1580
-  .vpternlogq 4 5 23 (.reg 30) 150,  -- 1581
-  .vprolq 4 5 5 15,  -- 1582
-  .vpternlogq 4 17 24 (.reg 31) 150,  -- 1583
-  .vpshufb 4 17 17 (.mem (.rip 240)),  -- 1584
-  .vmov 4 1 (.reg 4) none,  -- 1585
-  .vpternlogq 4 1 3 (.reg 10) 210,  -- 1586
-  .vmov 4 7 (.reg 3) none,  -- 1587
-  .vpternlogq 4 7 10 (.reg 5) 210,  -- 1588
-  .vpternlogq 4 10 5 (.reg 17) 210,  -- 1589
-  .vpternlogq 4 5 17 (.reg 4) 210,  -- 1590
-  .vpternlogq 4 17 4 (.reg 3) 210,  -- 1591
-  .vmov 4 15 (.mem (.base 9 (224))) none,  -- 1592
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 1593
-  .vprolq 4 15 15 62,  -- 1594
-  .vpternlogq 4 18 24 (.reg 31) 150,  -- 1595
-  .vprolq 4 18 18 55,  -- 1596
-  .vpternlogq 4 19 25 (.reg 27) 150,  -- 1597
-  .vprolq 4 19 19 39,  -- 1598
-  .vpternlogq 4 20 26 (.reg 28) 150,  -- 1599
-  .vprolq 4 20 20 41,  -- 1600
-  .vpternlogq 4 6 22 (.reg 29) 150,  -- 1601
-  .vprolq 4 6 6 2,  -- 1602
-  .vmov 4 4 (.reg 15) none,  -- 1603
-  .vpternlogq 4 4 18 (.reg 19) 210,  -- 1604
-  .vmov 4 3 (.reg 18) none,  -- 1605
-  .vpternlogq 4 3 19 (.reg 20) 210,  -- 1606
-  .vpternlogq 4 19 20 (.reg 6) 210,  -- 1607
-  .vpternlogq 4 20 6 (.reg 15) 210,  -- 1608
-  .vpternlogq 4 6 15 (.reg 18) 210,  -- 1609
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 1610
-  .vpternlogq 4 22 16 (.reg 21) 150,  -- 1611
-  .vpternlogq 4 22 1 (.reg 4) 150,  -- 1612
-  .vprolq 4 27 22 1,  -- 1613
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 1614
-  .vpternlogq 4 23 11 (.reg 2) 150,  -- 1615
-  .vpternlogq 4 23 7 (.reg 3) 150,  -- 1616
-  .vprolq 4 28 23 1,  -- 1617
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 1618
-  .vpternlogq 4 24 0 (.reg 12) 150,  -- 1619
-  .vpternlogq 4 24 10 (.reg 19) 150,  -- 1620
-  .vprolq 4 29 24 1,  -- 1621
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 1622
-  .vpternlogq 4 25 8 (.reg 13) 150,  -- 1623
-  .vpternlogq 4 25 5 (.reg 20) 150,  -- 1624
-  .vprolq 4 30 25 1,  -- 1625
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 1626
-  .vpternlogq 4 26 9 (.reg 14) 150,  -- 1627
-  .vpternlogq 4 26 17 (.reg 6) 150,  -- 1628
-  .vprolq 4 31 26 1,  -- 1629
-  .vmov 4 15 (.mem (.base 9 (0))) none,  -- 1630
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 1631
-  .vpternlogq 4 11 22 (.reg 29) 150,  -- 1632
-  .vprolq 4 11 11 44,  -- 1633
-  .vpternlogq 4 12 23 (.reg 30) 150,  -- 1634
-  .vprolq 4 12 12 43,  -- 1635
-  .vpternlogq 4 5 24 (.reg 31) 150,  -- 1636
-  .vprolq 4 5 5 21,  -- 1637
-  .vpternlogq 4 6 25 (.reg 27) 150,  -- 1638
-  .vprolq 4 6 6 14,  -- 1639
-  .vmov 4 18 (.reg 15) none,  -- 1640
-  .vpternlogq 4 18 11 (.reg 12) 210,  -- 1641
-  .vpxor 4 18 18 (.bcst (.rip 112)),  -- 1642
-  .vstore 4 (.base 9 (160)) 18,  -- 1643
-  .vmov 4 18 (.reg 11) none,  -- 1644
-  .vpternlogq 4 18 12 (.reg 5) 210,  -- 1645
-  .vstore 4 (.base 9 (192)) 18,  -- 1646
-  .vpternlogq 4 12 5 (.reg 6) 210,  -- 1647
-  .vstore 4 (.base 9 (224)) 12,  -- 1648
-  .vpternlogq 4 5 6 (.reg 15) 210,  -- 1649
-  .vstore 4 (.base 9 (256)) 5,  -- 1650
-  .vpternlogq 4 6 15 (.reg 11) 210,  -- 1651
-  .vstore 4 (.base 9 (288)) 6,  -- 1652
-  .vmov 4 11 (.mem (.base 9 (96))) none,  -- 1653
-  .vpternlogq 4 11 24 (.reg 31) 150,  -- 1654
-  .vprolq 4 11 11 28,  -- 1655
-  .vpternlogq 4 9 25 (.reg 27) 150,  -- 1656
-  .vprolq 4 9 9 20,  -- 1657
-  .vpternlogq 4 21 26 (.reg 28) 150,  -- 1658
-  .vprolq 4 21 21 3,  -- 1659
-  .vpternlogq 4 7 22 (.reg 29) 150,  -- 1660
-  .vprolq 4 7 7 45,  -- 1661
-  .vpternlogq 4 19 23 (.reg 30) 150,  -- 1662
-  .vprolq 4 19 19 61,  -- 1663
-  .vmov 4 15 (.reg 11) none,  -- 1664
-  .vpternlogq 4 15 9 (.reg 21) 210,  -- 1665
-  .vmov 4 18 (.reg 9) none,  -- 1666
-  .vpternlogq 4 18 21 (.reg 7) 210,  -- 1667
-  .vpternlogq 4 21 7 (.reg 19) 210,  -- 1668
-  .vpternlogq 4 7 19 (.reg 11) 210,  -- 1669
-  .vpternlogq 4 19 11 (.reg 9) 210,  -- 1670
-  .vmov 4 12 (.mem (.base 9 (32))) none,  -- 1671
-  .vpternlogq 4 12 22 (.reg 29) 150,  -- 1672
-  .vprolq 4 12 12 1,  -- 1673
-  .vpternlogq 4 0 23 (.reg 30) 150,  -- 1674
-  .vprolq 4 0 0 6,  -- 1675
-  .vpternlogq 4 13 24 (.reg 31) 150,  -- 1676
-  .vprolq 4 13 13 25,  -- 1677
-  .vpternlogq 4 17 25 (.reg 27) 150,  -- 1678
-  .vpshufb 4 17 17 (.mem (.rip 208)),  -- 1679
-  .vpternlogq 4 4 26 (.reg 28) 150,  -- 1680
-  .vprolq 4 4 4 18,  -- 1681
-  .vmov 4 5 (.reg 12) none,  -- 1682
-  .vpternlogq 4 5 0 (.reg 13) 210,  -- 1683
-  .vmov 4 6 (.reg 0) none,  -- 1684
-  .vpternlogq 4 6 13 (.reg 17) 210,  -- 1685
-  .vpternlogq 4 13 17 (.reg 4) 210,  -- 1686
-  .vpternlogq 4 17 4 (.reg 12) 210,  -- 1687
-  .vpternlogq 4 4 12 (.reg 0) 210,  -- 1688
-  .vmov 4 11 (.mem (.base 9 (128))) none,  -- 1689
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 1690
-  .vprolq 4 11 11 27,  -- 1691
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 1692
-  .vprolq 4 16 16 36,  -- 1693
-  .vpternlogq 4 2 22 (.reg 29) 150,  -- 1694
-  .vprolq 4 2 2 10,  -- 1695
-  .vpternlogq 4 10 23 (.reg 30) 150,  -- 1696
-  .vprolq 4 10 10 15,  -- 1697
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 1698
-  .vpshufb 4 20 20 (.mem (.rip 240)),  -- 1699
-  .vmov 4 9 (.reg 11) none,  -- 1700
-  .vpternlogq 4 9 16 (.reg 2) 210,  -- 1701
-  .vmov 4 12 (.reg 16) none,  -- 1702
-  .vpternlogq 4 12 2 (.reg 10) 210,  -- 1703
-  .vpternlogq 4 2 10 (.reg 20) 210,  -- 1704
-  .vpternlogq 4 10 20 (.reg 11) 210,  -- 1705
-  .vpternlogq 4 20 11 (.reg 16) 210,  -- 1706
-  .vmov 4 0 (.mem (.base 9 (64))) none,  -- 1707
-  .vpternlogq 4 0 23 (.reg 30) 150,  -- 1708
-  .vprolq 4 0 0 62,  -- 1709
-  .vpternlogq 4 8 24 (.reg 31) 150,  -- 1710
-  .vprolq 4 8 8 55,  -- 1711
-  .vpternlogq 4 14 25 (.reg 27) 150,  -- 1712
-  .vprolq 4 14 14 39,  -- 1713
-  .vpternlogq 4 1 26 (.reg 28) 150,  -- 1714
-  .vprolq 4 1 1 41,  -- 1715
-  .vpternlogq 4 3 22 (.reg 29) 150,  -- 1716
-  .vprolq 4 3 3 2,  -- 1717
-  .vmov 4 11 (.reg 0) none,  -- 1718
-  .vpternlogq 4 11 8 (.reg 14) 210,  -- 1719
-  .vmov 4 16 (.reg 8) none,  -- 1720
-  .vpternlogq 4 16 14 (.reg 1) 210,  -- 1721
-  .vpternlogq 4 14 1 (.reg 3) 210,  -- 1722
-  .vpternlogq 4 1 3 (.reg 0) 210,  -- 1723
-  .vpternlogq 4 3 0 (.reg 8) 210,  -- 1724
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 1725
-  .vpternlogq 4 22 15 (.reg 5) 150,  -- 1726
-  .vpternlogq 4 22 9 (.reg 11) 150,  -- 1727
-  .vprolq 4 27 22 1,  -- 1728
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 1729
-  .vpternlogq 4 23 18 (.reg 6) 150,  -- 1730
-  .vpternlogq 4 23 12 (.reg 16) 150,  -- 1731
-  .vprolq 4 28 23 1,  -- 1732
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 1733
-  .vpternlogq 4 24 21 (.reg 13) 150,  -- 1734
-  .vpternlogq 4 24 2 (.reg 14) 150,  -- 1735
-  .vprolq 4 29 24 1,  -- 1736
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 1737
-  .vpternlogq 4 25 7 (.reg 17) 150,  -- 1738
-  .vpternlogq 4 25 10 (.reg 1) 150,  -- 1739
-  .vprolq 4 30 25 1,  -- 1740
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 1741
-  .vpternlogq 4 26 19 (.reg 4) 150,  -- 1742
-  .vpternlogq 4 26 20 (.reg 3) 150,  -- 1743
-  .vprolq 4 31 26 1,  -- 1744
-  .vmov 4 0 (.mem (.base 9 (160))) none,  -- 1745
-  .vpternlogq 4 0 26 (.reg 28) 150,  -- 1746
-  .vpternlogq 4 18 22 (.reg 29) 150,  -- 1747
-  .vprolq 4 18 18 44,  -- 1748
-  .vpternlogq 4 13 23 (.reg 30) 150,  -- 1749
-  .vprolq 4 13 13 43,  -- 1750
-  .vpternlogq 4 10 24 (.reg 31) 150,  -- 1751
-  .vprolq 4 10 10 21,  -- 1752
-  .vpternlogq 4 3 25 (.reg 27) 150,  -- 1753
-  .vprolq 4 3 3 14,  -- 1754
-  .vmov 4 8 (.reg 0) none,  -- 1755
-  .vpternlogq 4 8 18 (.reg 13) 210,  -- 1756
-  .vpxor 4 8 8 (.bcst (.rip 120)),  -- 1757
-  .vstore 4 (.base 9 (0)) 8,  -- 1758
-  .vmov 4 8 (.reg 18) none,  -- 1759
-  .vpternlogq 4 8 13 (.reg 10) 210,  -- 1760
-  .vstore 4 (.base 9 (32)) 8,  -- 1761
-  .vpternlogq 4 13 10 (.reg 3) 210,  -- 1762
-  .vstore 4 (.base 9 (64)) 13,  -- 1763
-  .vpternlogq 4 10 3 (.reg 0) 210,  -- 1764
-  .vstore 4 (.base 9 (96)) 10,  -- 1765
-  .vpternlogq 4 3 0 (.reg 18) 210,  -- 1766
-  .vstore 4 (.base 9 (128)) 3,  -- 1767
-  .vmov 4 18 (.mem (.base 9 (256))) none,  -- 1768
-  .vpternlogq 4 18 24 (.reg 31) 150,  -- 1769
-  .vprolq 4 18 18 28,  -- 1770
-  .vpternlogq 4 19 25 (.reg 27) 150,  -- 1771
-  .vprolq 4 19 19 20,  -- 1772
-  .vpternlogq 4 5 26 (.reg 28) 150,  -- 1773
-  .vprolq 4 5 5 3,  -- 1774
-  .vpternlogq 4 12 22 (.reg 29) 150,  -- 1775
-  .vprolq 4 12 12 45,  -- 1776
-  .vpternlogq 4 14 23 (.reg 30) 150,  -- 1777
-  .vprolq 4 14 14 61,  -- 1778
-  .vmov 4 0 (.reg 18) none,  -- 1779
-  .vpternlogq 4 0 19 (.reg 5) 210,  -- 1780
-  .vmov 4 8 (.reg 19) none,  -- 1781
-  .vpternlogq 4 8 5 (.reg 12) 210,  -- 1782
-  .vpternlogq 4 5 12 (.reg 14) 210,  -- 1783
-  .vpternlogq 4 12 14 (.reg 18) 210,  -- 1784
-  .vpternlogq 4 14 18 (.reg 19) 210,  -- 1785
-  .vmov 4 13 (.mem (.base 9 (192))) none,  -- 1786
-  .vpternlogq 4 13 22 (.reg 29) 150,  -- 1787
-  .vprolq 4 13 13 1,  -- 1788
-  .vpternlogq 4 21 23 (.reg 30) 150,  -- 1789
-  .vprolq 4 21 21 6,  -- 1790
-  .vpternlogq 4 17 24 (.reg 31) 150,  -- 1791
-  .vprolq 4 17 17 25,  -- 1792
-  .vpternlogq 4 20 25 (.reg 27) 150,  -- 1793
-  .vpshufb 4 20 20 (.mem (.rip 208)),  -- 1794
-  .vpternlogq 4 11 26 (.reg 28) 150,  -- 1795
-  .vprolq 4 11 11 18,  -- 1796
-  .vmov 4 10 (.reg 13) none,  -- 1797
-  .vpternlogq 4 10 21 (.reg 17) 210,  -- 1798
-  .vmov 4 3 (.reg 21) none,  -- 1799
-  .vpternlogq 4 3 17 (.reg 20) 210,  -- 1800
-  .vpternlogq 4 17 20 (.reg 11) 210,  -- 1801
-  .vpternlogq 4 20 11 (.reg 13) 210,  -- 1802
-  .vpternlogq 4 11 13 (.reg 21) 210,  -- 1803
-  .vmov 4 18 (.mem (.base 9 (288))) none,  -- 1804
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 1805
-  .vprolq 4 18 18 27,  -- 1806
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 1807
-  .vprolq 4 15 15 36,  -- 1808
-  .vpternlogq 4 6 22 (.reg 29) 150,  -- 1809
-  .vprolq 4 6 6 10,  -- 1810
-  .vpternlogq 4 2 23 (.reg 30) 150,  -- 1811
-  .vprolq 4 2 2 15,  -- 1812
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 1813
-  .vpshufb 4 1 1 (.mem (.rip 240)),  -- 1814
-  .vmov 4 19 (.reg 18) none,  -- 1815
-  .vpternlogq 4 19 15 (.reg 6) 210,  -- 1816
-  .vmov 4 13 (.reg 15) none,  -- 1817
-  .vpternlogq 4 13 6 (.reg 2) 210,  -- 1818
-  .vpternlogq 4 6 2 (.reg 1) 210,  -- 1819
-  .vpternlogq 4 2 1 (.reg 18) 210,  -- 1820
-  .vpternlogq 4 1 18 (.reg 15) 210,  -- 1821
-  .vmov 4 21 (.mem (.base 9 (224))) none,  -- 1822
-  .vpternlogq 4 21 23 (.reg 30) 150,  -- 1823
-  .vprolq 4 21 21 62,  -- 1824
-  .vpternlogq 4 7 24 (.reg 31) 150,  -- 1825
-  .vprolq 4 7 7 55,  -- 1826
-  .vpternlogq 4 4 25 (.reg 27) 150,  -- 1827
-  .vprolq 4 4 4 39,  -- 1828
-  .vpternlogq 4 9 26 (.reg 28) 150,  -- 1829
-  .vprolq 4 9 9 41,  -- 1830
-  .vpternlogq 4 16 22 (.reg 29) 150,  -- 1831
-  .vprolq 4 16 16 2,  -- 1832
-  .vmov 4 18 (.reg 21) none,  -- 1833
-  .vpternlogq 4 18 7 (.reg 4) 210,  -- 1834
-  .vmov 4 15 (.reg 7) none,  -- 1835
-  .vpternlogq 4 15 4 (.reg 9) 210,  -- 1836
-  .vpternlogq 4 4 9 (.reg 16) 210,  -- 1837
-  .vpternlogq 4 9 16 (.reg 21) 210,  -- 1838
-  .vpternlogq 4 16 21 (.reg 7) 210,  -- 1839
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 1840
-  .vpternlogq 4 22 0 (.reg 10) 150,  -- 1841
-  .vpternlogq 4 22 19 (.reg 18) 150,  -- 1842
-  .vprolq 4 27 22 1,  -- 1843
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 1844
-  .vpternlogq 4 23 8 (.reg 3) 150,  -- 1845
-  .vpternlogq 4 23 13 (.reg 15) 150,  -- 1846
-  .vprolq 4 28 23 1,  -- 1847
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 1848
-  .vpternlogq 4 24 5 (.reg 17) 150,  -- 1849
-  .vpternlogq 4 24 6 (.reg 4) 150,  -- 1850
-  .vprolq 4 29 24 1,  -- 1851
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 1852
-  .vpternlogq 4 25 12 (.reg 20) 150,  -- 1853
-  .vpternlogq 4 25 2 (.reg 9) 150,  -- 1854
-  .vprolq 4 30 25 1,  -- 1855
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 1856
-  .vpternlogq 4 26 14 (.reg 11) 150,  -- 1857
-  .vpternlogq 4 26 1 (.reg 16) 150,  -- 1858
-  .vprolq 4 31 26 1,  -- 1859
-  .vmov 4 21 (.mem (.base 9 (0))) none,  -- 1860
-  .vpternlogq 4 21 26 (.reg 28) 150,  -- 1861
-  .vpternlogq 4 8 22 (.reg 29) 150,  -- 1862
-  .vprolq 4 8 8 44,  -- 1863
-  .vpternlogq 4 17 23 (.reg 30) 150,  -- 1864
-  .vprolq 4 17 17 43,  -- 1865
-  .vpternlogq 4 2 24 (.reg 31) 150,  -- 1866
-  .vprolq 4 2 2 21,  -- 1867
-  .vpternlogq 4 16 25 (.reg 27) 150,  -- 1868
-  .vprolq 4 16 16 14,  -- 1869
-  .vmov 4 7 (.reg 21) none,  -- 1870
-  .vpternlogq 4 7 8 (.reg 17) 210,  -- 1871
-  .vpxor 4 7 7 (.bcst (.rip 128)),  -- 1872
-  .vstore 4 (.base 9 (160)) 7,  -- 1873
-  .vmov 4 7 (.reg 8) none,  -- 1874
-  .vpternlogq 4 7 17 (.reg 2) 210,  -- 1875
-  .vstore 4 (.base 9 (192)) 7,  -- 1876
-  .vpternlogq 4 17 2 (.reg 16) 210,  -- 1877
-  .vstore 4 (.base 9 (224)) 17,  -- 1878
-  .vpternlogq 4 2 16 (.reg 21) 210,  -- 1879
-  .vstore 4 (.base 9 (256)) 2,  -- 1880
-  .vpternlogq 4 16 21 (.reg 8) 210,  -- 1881
-  .vstore 4 (.base 9 (288)) 16,  -- 1882
-  .vmov 4 8 (.mem (.base 9 (96))) none,  -- 1883
-  .vpternlogq 4 8 24 (.reg 31) 150,  -- 1884
-  .vprolq 4 8 8 28,  -- 1885
-  .vpternlogq 4 14 25 (.reg 27) 150,  -- 1886
-  .vprolq 4 14 14 20,  -- 1887
-  .vpternlogq 4 10 26 (.reg 28) 150,  -- 1888
-  .vprolq 4 10 10 3,  -- 1889
-  .vpternlogq 4 13 22 (.reg 29) 150,  -- 1890
-  .vprolq 4 13 13 45,  -- 1891
-  .vpternlogq 4 4 23 (.reg 30) 150,  -- 1892
-  .vprolq 4 4 4 61,  -- 1893
-  .vmov 4 21 (.reg 8) none,  -- 1894
-  .vpternlogq 4 21 14 (.reg 10) 210,  -- 1895
-  .vmov 4 7 (.reg 14) none,  -- 1896
-  .vpternlogq 4 7 10 (.reg 13) 210,  -- 1897
-  .vpternlogq 4 10 13 (.reg 4) 210,  -- 1898
-  .vpternlogq 4 13 4 (.reg 8) 210,  -- 1899
-  .vpternlogq 4 4 8 (.reg 14) 210,  -- 1900
-  .vmov 4 17 (.mem (.base 9 (32))) none,  -- 1901
-  .vpternlogq 4 17 22 (.reg 29) 150,  -- 1902
-  .vprolq 4 17 17 1,  -- 1903
-  .vpternlogq 4 5 23 (.reg 30) 150,  -- 1904
-  .vprolq 4 5 5 6,  -- 1905
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 1906
-  .vprolq 4 20 20 25,  -- 1907
-  .vpternlogq 4 1 25 (.reg 27) 150,  -- 1908
-  .vpshufb 4 1 1 (.mem (.rip 208)),  -- 1909
-  .vpternlogq 4 18 26 (.reg 28) 150,  -- 1910
-  .vprolq 4 18 18 18,  -- 1911
-  .vmov 4 2 (.reg 17) none,  -- 1912
-  .vpternlogq 4 2 5 (.reg 20) 210,  -- 1913
-  .vmov 4 16 (.reg 5) none,  -- 1914
-  .vpternlogq 4 16 20 (.reg 1) 210,  -- 1915
-  .vpternlogq 4 20 1 (.reg 18) 210,  -- 1916
-  .vpternlogq 4 1 18 (.reg 17) 210,  -- 1917
-  .vpternlogq 4 18 17 (.reg 5) 210,  -- 1918
-  .vmov 4 8 (.mem (.base 9 (128))) none,  -- 1919
-  .vpternlogq 4 8 25 (.reg 27) 150,  -- 1920
-  .vprolq 4 8 8 27,  -- 1921
-  .vpternlogq 4 0 26 (.reg 28) 150,  -- 1922
-  .vprolq 4 0 0 36,  -- 1923
-  .vpternlogq 4 3 22 (.reg 29) 150,  -- 1924
-  .vprolq 4 3 3 10,  -- 1925
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 1926
-  .vprolq 4 6 6 15,  -- 1927
-  .vpternlogq 4 9 24 (.reg 31) 150,  -- 1928
-  .vpshufb 4 9 9 (.mem (.rip 240)),  -- 1929
-  .vmov 4 14 (.reg 8) none,  -- 1930
-  .vpternlogq 4 14 0 (.reg 3) 210,  -- 1931
-  .vmov 4 17 (.reg 0) none,  -- 1932
-  .vpternlogq 4 17 3 (.reg 6) 210,  -- 1933
-  .vpternlogq 4 3 6 (.reg 9) 210,  -- 1934
-  .vpternlogq 4 6 9 (.reg 8) 210,  -- 1935
-  .vpternlogq 4 9 8 (.reg 0) 210,  -- 1936
-  .vmov 4 5 (.mem (.base 9 (64))) none,  -- 1937
-  .vpternlogq 4 5 23 (.reg 30) 150,  -- 1938
-  .vprolq 4 5 5 62,  -- 1939
-  .vpternlogq 4 12 24 (.reg 31) 150,  -- 1940
-  .vprolq 4 12 12 55,  -- 1941
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 1942
-  .vprolq 4 11 11 39,  -- 1943
-  .vpternlogq 4 19 26 (.reg 28) 150,  -- 1944
-  .vprolq 4 19 19 41,  -- 1945
-  .vpternlogq 4 15 22 (.reg 29) 150,  -- 1946
-  .vprolq 4 15 15 2,  -- 1947
-  .vmov 4 8 (.reg 5) none,  -- 1948
-  .vpternlogq 4 8 12 (.reg 11) 210,  -- 1949
-  .vmov 4 0 (.reg 12) none,  -- 1950
-  .vpternlogq 4 0 11 (.reg 19) 210,  -- 1951
-  .vpternlogq 4 11 19 (.reg 15) 210,  -- 1952
-  .vpternlogq 4 19 15 (.reg 5) 210,  -- 1953
-  .vpternlogq 4 15 5 (.reg 12) 210,  -- 1954
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 1955
-  .vpternlogq 4 22 21 (.reg 2) 150,  -- 1956
-  .vpternlogq 4 22 14 (.reg 8) 150,  -- 1957
-  .vprolq 4 27 22 1,  -- 1958
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 1959
-  .vpternlogq 4 23 7 (.reg 16) 150,  -- 1960
-  .vpternlogq 4 23 17 (.reg 0) 150,  -- 1961
-  .vprolq 4 28 23 1,  -- 1962
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 1963
-  .vpternlogq 4 24 10 (.reg 20) 150,  -- 1964
-  .vpternlogq 4 24 3 (.reg 11) 150,  -- 1965
-  .vprolq 4 29 24 1,  -- 1966
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 1967
-  .vpternlogq 4 25 13 (.reg 1) 150,  -- 1968
-  .vpternlogq 4 25 6 (.reg 19) 150,  -- 1969
-  .vprolq 4 30 25 1,  -- 1970
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 1971
-  .vpternlogq 4 26 4 (.reg 18) 150,  -- 1972
-  .vpternlogq 4 26 9 (.reg 15) 150,  -- 1973
-  .vprolq 4 31 26 1,  -- 1974
-  .vmov 4 5 (.mem (.base 9 (160))) none,  -- 1975
-  .vpternlogq 4 5 26 (.reg 28) 150,  -- 1976
-  .vpternlogq 4 7 22 (.reg 29) 150,  -- 1977
-  .vprolq 4 7 7 44,  -- 1978
-  .vpternlogq 4 20 23 (.reg 30) 150,  -- 1979
-  .vprolq 4 20 20 43,  -- 1980
-  .vpternlogq 4 6 24 (.reg 31) 150,  -- 1981
-  .vprolq 4 6 6 21,  -- 1982
-  .vpternlogq 4 15 25 (.reg 27) 150,  -- 1983
-  .vprolq 4 15 15 14,  -- 1984
-  .vmov 4 12 (.reg 5) none,  -- 1985
-  .vpternlogq 4 12 7 (.reg 20) 210,  -- 1986
-  .vpxor 4 12 12 (.bcst (.rip 136)),  -- 1987
-  .vstore 4 (.base 9 (0)) 12,  -- 1988
-  .vmov 4 12 (.reg 7) none,  -- 1989
-  .vpternlogq 4 12 20 (.reg 6) 210,  -- 1990
-  .vstore 4 (.base 9 (32)) 12,  -- 1991
-  .vpternlogq 4 20 6 (.reg 15) 210,  -- 1992
-  .vstore 4 (.base 9 (64)) 20,  -- 1993
-  .vpternlogq 4 6 15 (.reg 5) 210,  -- 1994
-  .vstore 4 (.base 9 (96)) 6,  -- 1995
-  .vpternlogq 4 15 5 (.reg 7) 210,  -- 1996
-  .vstore 4 (.base 9 (128)) 15,  -- 1997
-  .vmov 4 7 (.mem (.base 9 (256))) none,  -- 1998
-  .vpternlogq 4 7 24 (.reg 31) 150,  -- 1999
-  .vprolq 4 7 7 28,  -- 2000
-  .vpternlogq 4 4 25 (.reg 27) 150,  -- 2001
-  .vprolq 4 4 4 20,  -- 2002
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 2003
-  .vprolq 4 2 2 3,  -- 2004
-  .vpternlogq 4 17 22 (.reg 29) 150,  -- 2005
-  .vprolq 4 17 17 45,  -- 2006
-  .vpternlogq 4 11 23 (.reg 30) 150,  -- 2007
-  .vprolq 4 11 11 61,  -- 2008
-  .vmov 4 5 (.reg 7) none,  -- 2009
-  .vpternlogq 4 5 4 (.reg 2) 210,  -- 2010
-  .vmov 4 12 (.reg 4) none,  -- 2011
-  .vpternlogq 4 12 2 (.reg 17) 210,  -- 2012
-  .vpternlogq 4 2 17 (.reg 11) 210,  -- 2013
-  .vpternlogq 4 17 11 (.reg 7) 210,  -- 2014
-  .vpternlogq 4 11 7 (.reg 4) 210,  -- 2015
-  .vmov 4 20 (.mem (.base 9 (192))) none,  -- 2016
-  .vpternlogq 4 20 22 (.reg 29) 150,  -- 2017
-  .vprolq 4 20 20 1,  -- 2018
-  .vpternlogq 4 10 23 (.reg 30) 150,  -- 2019
-  .vprolq 4 10 10 6,  -- 2020
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 2021
-  .vprolq 4 1 1 25,  -- 2022
-  .vpternlogq 4 9 25 (.reg 27) 150,  -- 2023
-  .vpshufb 4 9 9 (.mem (.rip 208)),  -- 2024
-  .vpternlogq 4 8 26 (.reg 28) 150,  -- 2025
-  .vprolq 4 8 8 18,  -- 2026
-  .vmov 4 6 (.reg 20) none,  -- 2027
-  .vpternlogq 4 6 10 (.reg 1) 210,  -- 2028
-  .vmov 4 15 (.reg 10) none,  -- 2029
-  .vpternlogq 4 15 1 (.reg 9) 210,  -- 2030
-  .vpternlogq 4 1 9 (.reg 8) 210,  -- 2031
-  .vpternlogq 4 9 8 (.reg 20) 210,  -- 2032
-  .vpternlogq 4 8 20 (.reg 10) 210,  -- 2033
-  .vmov 4 7 (.mem (.base 9 (288))) none,  -- 2034
-  .vpternlogq 4 7 25 (.reg 27) 150,  -- 2035
-  .vprolq 4 7 7 27,  -- 2036
-  .vpternlogq 4 21 26 (.reg 28) 150,  -- 2037
-  .vprolq 4 21 21 36,  -- 2038
-  .vpternlogq 4 16 22 (.reg 29) 150,  -- 2039
-  .vprolq 4 16 16 10,  -- 2040
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 2041
-  .vprolq 4 3 3 15,  -- 2042
-  .vpternlogq 4 19 24 (.reg 31) 150,  -- 2043
-  .vpshufb 4 19 19 (.mem (.rip 240)),  -- 2044
-  .vmov 4 4 (.reg 7) none,  -- 2045
-  .vpternlogq 4 4 21 (.reg 16) 210,  -- 2046
-  .vmov 4 20 (.reg 21) none,  -- 2047
-  .vpternlogq 4 20 16 (.reg 3) 210,  -- 2048
-  .vpternlogq 4 16 3 (.reg 19) 210,  -- 2049
-  .vpternlogq 4 3 19 (.reg 7) 210,  -- 2050
-  .vpternlogq 4 19 7 (.reg 21) 210,  -- 2051
-  .vmov 4 10 (.mem (.base 9 (224))) none,  -- 2052
-  .vpternlogq 4 10 23 (.reg 30) 150,  -- 2053
-  .vprolq 4 10 10 62,  -- 2054
-  .vpternlogq 4 13 24 (.reg 31) 150,  -- 2055
-  .vprolq 4 13 13 55,  -- 2056
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 2057
-  .vprolq 4 18 18 39,  -- 2058
-  .vpternlogq 4 14 26 (.reg 28) 150,  -- 2059
-  .vprolq 4 14 14 41,  -- 2060
-  .vpternlogq 4 0 22 (.reg 29) 150,  -- 2061
-  .vprolq 4 0 0 2,  -- 2062
-  .vmov 4 7 (.reg 10) none,  -- 2063
-  .vpternlogq 4 7 13 (.reg 18) 210,  -- 2064
-  .vmov 4 21 (.reg 13) none,  -- 2065
-  .vpternlogq 4 21 18 (.reg 14) 210,  -- 2066
-  .vpternlogq 4 18 14 (.reg 0) 210,  -- 2067
-  .vpternlogq 4 14 0 (.reg 10) 210,  -- 2068
-  .vpternlogq 4 0 10 (.reg 13) 210,  -- 2069
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 2070
-  .vpternlogq 4 22 5 (.reg 6) 150,  -- 2071
-  .vpternlogq 4 22 4 (.reg 7) 150,  -- 2072
-  .vprolq 4 27 22 1,  -- 2073
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 2074
-  .vpternlogq 4 23 12 (.reg 15) 150,  -- 2075
-  .vpternlogq 4 23 20 (.reg 21) 150,  -- 2076
-  .vprolq 4 28 23 1,  -- 2077
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 2078
-  .vpternlogq 4 24 2 (.reg 1) 150,  -- 2079
-  .vpternlogq 4 24 16 (.reg 18) 150,  -- 2080
-  .vprolq 4 29 24 1,  -- 2081
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 2082
-  .vpternlogq 4 25 17 (.reg 9) 150,  -- 2083
-  .vpternlogq 4 25 3 (.reg 14) 150,  -- 2084
-  .vprolq 4 30 25 1,  -- 2085
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 2086
-  .vpternlogq 4 26 11 (.reg 8) 150,  -- 2087
-  .vpternlogq 4 26 19 (.reg 0) 150,  -- 2088
-  .vprolq 4 31 26 1,  -- 2089
-  .vmov 4 10 (.mem (.base 9 (0))) none,  -- 2090
-  .vpternlogq 4 10 26 (.reg 28) 150,  -- 2091
-  .vpternlogq 4 12 22 (.reg 29) 150,  -- 2092
-  .vprolq 4 12 12 44,  -- 2093
-  .vpternlogq 4 1 23 (.reg 30) 150,  -- 2094
-  .vprolq 4 1 1 43,  -- 2095
-  .vpternlogq 4 3 24 (.reg 31) 150,  -- 2096
-  .vprolq 4 3 3 21,  -- 2097
-  .vpternlogq 4 0 25 (.reg 27) 150,  -- 2098
-  .vprolq 4 0 0 14,  -- 2099
-  .vmov 4 13 (.reg 10) none,  -- 2100
-  .vpternlogq 4 13 12 (.reg 1) 210,  -- 2101
-  .vpxor 4 13 13 (.bcst (.rip 144)),  -- 2102
-  .vstore 4 (.base 9 (160)) 13,  -- 2103
-  .vmov 4 13 (.reg 12) none,  -- 2104
-  .vpternlogq 4 13 1 (.reg 3) 210,  -- 2105
-  .vstore 4 (.base 9 (192)) 13,  -- 2106
-  .vpternlogq 4 1 3 (.reg 0) 210,  -- 2107
-  .vstore 4 (.base 9 (224)) 1,  -- 2108
-  .vpternlogq 4 3 0 (.reg 10) 210,  -- 2109
-  .vstore 4 (.base 9 (256)) 3,  -- 2110
-  .vpternlogq 4 0 10 (.reg 12) 210,  -- 2111
-  .vstore 4 (.base 9 (288)) 0,  -- 2112
-  .vmov 4 12 (.mem (.base 9 (96))) none,  -- 2113
-  .vpternlogq 4 12 24 (.reg 31) 150,  -- 2114
-  .vprolq 4 12 12 28,  -- 2115
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 2116
-  .vprolq 4 11 11 20,  -- 2117
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 2118
-  .vprolq 4 6 6 3,  -- 2119
-  .vpternlogq 4 20 22 (.reg 29) 150,  -- 2120
-  .vprolq 4 20 20 45,  -- 2121
-  .vpternlogq 4 18 23 (.reg 30) 150,  -- 2122
-  .vprolq 4 18 18 61,  -- 2123
-  .vmov 4 10 (.reg 12) none,  -- 2124
-  .vpternlogq 4 10 11 (.reg 6) 210,  -- 2125
-  .vmov 4 13 (.reg 11) none,  -- 2126
-  .vpternlogq 4 13 6 (.reg 20) 210,  -- 2127
-  .vpternlogq 4 6 20 (.reg 18) 210,  -- 2128
-  .vpternlogq 4 20 18 (.reg 12) 210,  -- 2129
-  .vpternlogq 4 18 12 (.reg 11) 210,  -- 2130
-  .vmov 4 1 (.mem (.base 9 (32))) none,  -- 2131
-  .vpternlogq 4 1 22 (.reg 29) 150,  -- 2132
-  .vprolq 4 1 1 1,  -- 2133
-  .vpternlogq 4 2 23 (.reg 30) 150,  -- 2134
-  .vprolq 4 2 2 6,  -- 2135
-  .vpternlogq 4 9 24 (.reg 31) 150,  -- 2136
-  .vprolq 4 9 9 25,  -- 2137
-  .vpternlogq 4 19 25 (.reg 27) 150,  -- 2138
-  .vpshufb 4 19 19 (.mem (.rip 208)),  -- 2139
-  .vpternlogq 4 7 26 (.reg 28) 150,  -- 2140
-  .vprolq 4 7 7 18,  -- 2141
-  .vmov 4 3 (.reg 1) none,  -- 2142
-  .vpternlogq 4 3 2 (.reg 9) 210,  -- 2143
-  .vmov 4 0 (.reg 2) none,  -- 2144
-  .vpternlogq 4 0 9 (.reg 19) 210,  -- 2145
-  .vpternlogq 4 9 19 (.reg 7) 210,  -- 2146
-  .vpternlogq 4 19 7 (.reg 1) 210,  -- 2147
-  .vpternlogq 4 7 1 (.reg 2) 210,  -- 2148
-  .vmov 4 12 (.mem (.base 9 (128))) none,  -- 2149
-  .vpternlogq 4 12 25 (.reg 27) 150,  -- 2150
-  .vprolq 4 12 12 27,  -- 2151
-  .vpternlogq 4 5 26 (.reg 28) 150,  -- 2152
-  .vprolq 4 5 5 36,  -- 2153
-  .vpternlogq 4 15 22 (.reg 29) 150,  -- 2154
-  .vprolq 4 15 15 10,  -- 2155
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 2156
-  .vprolq 4 16 16 15,  -- 2157
-  .vpternlogq 4 14 24 (.reg 31) 150,  -- 2158
-  .vpshufb 4 14 14 (.mem (.rip 240)),  -- 2159
-  .vmov 4 11 (.reg 12) none,  -- 2160
-  .vpternlogq 4 11 5 (.reg 15) 210,  -- 2161
-  .vmov 4 1 (.reg 5) none,  -- 2162
-  .vpternlogq 4 1 15 (.reg 16) 210,  -- 2163
-  .vpternlogq 4 15 16 (.reg 14) 210,  -- 2164
-  .vpternlogq 4 16 14 (.reg 12) 210,  -- 2165
-  .vpternlogq 4 14 12 (.reg 5) 210,  -- 2166
-  .vmov 4 2 (.mem (.base 9 (64))) none,  -- 2167
-  .vpternlogq 4 2 23 (.reg 30) 150,  -- 2168
-  .vprolq 4 2 2 62,  -- 2169
-  .vpternlogq 4 17 24 (.reg 31) 150,  -- 2170
-  .vprolq 4 17 17 55,  -- 2171
-  .vpternlogq 4 8 25 (.reg 27) 150,  -- 2172
-  .vprolq 4 8 8 39,  -- 2173
-  .vpternlogq 4 4 26 (.reg 28) 150,  -- 2174
-  .vprolq 4 4 4 41,  -- 2175
-  .vpternlogq 4 21 22 (.reg 29) 150,  -- 2176
-  .vprolq 4 21 21 2,  -- 2177
-  .vmov 4 12 (.reg 2) none,  -- 2178
-  .vpternlogq 4 12 17 (.reg 8) 210,  -- 2179
-  .vmov 4 5 (.reg 17) none,  -- 2180
-  .vpternlogq 4 5 8 (.reg 4) 210,  -- 2181
-  .vpternlogq 4 8 4 (.reg 21) 210,  -- 2182
-  .vpternlogq 4 4 21 (.reg 2) 210,  -- 2183
-  .vpternlogq 4 21 2 (.reg 17) 210,  -- 2184
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 2185
-  .vpternlogq 4 22 10 (.reg 3) 150,  -- 2186
-  .vpternlogq 4 22 11 (.reg 12) 150,  -- 2187
-  .vprolq 4 27 22 1,  -- 2188
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 2189
-  .vpternlogq 4 23 13 (.reg 0) 150,  -- 2190
-  .vpternlogq 4 23 1 (.reg 5) 150,  -- 2191
-  .vprolq 4 28 23 1,  -- 2192
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 2193
-  .vpternlogq 4 24 6 (.reg 9) 150,  -- 2194
-  .vpternlogq 4 24 15 (.reg 8) 150,  -- 2195
-  .vprolq 4 29 24 1,  -- 2196
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 2197
-  .vpternlogq 4 25 20 (.reg 19) 150,  -- 2198
-  .vpternlogq 4 25 16 (.reg 4) 150,  -- 2199
-  .vprolq 4 30 25 1,  -- 2200
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 2201
-  .vpternlogq 4 26 18 (.reg 7) 150,  -- 2202
-  .vpternlogq 4 26 14 (.reg 21) 150,  -- 2203
-  .vprolq 4 31 26 1,  -- 2204
-  .vmov 4 2 (.mem (.base 9 (160))) none,  -- 2205
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 2206
-  .vpternlogq 4 13 22 (.reg 29) 150,  -- 2207
-  .vprolq 4 13 13 44,  -- 2208
-  .vpternlogq 4 9 23 (.reg 30) 150,  -- 2209
-  .vprolq 4 9 9 43,  -- 2210
-  .vpternlogq 4 16 24 (.reg 31) 150,  -- 2211
-  .vprolq 4 16 16 21,  -- 2212
-  .vpternlogq 4 21 25 (.reg 27) 150,  -- 2213
-  .vprolq 4 21 21 14,  -- 2214
-  .vmov 4 17 (.reg 2) none,  -- 2215
-  .vpternlogq 4 17 13 (.reg 9) 210,  -- 2216
-  .vpxor 4 17 17 (.bcst (.rip 152)),  -- 2217
-  .vstore 4 (.base 9 (0)) 17,  -- 2218
-  .vmov 4 17 (.reg 13) none,  -- 2219
-  .vpternlogq 4 17 9 (.reg 16) 210,  -- 2220
-  .vstore 4 (.base 9 (32)) 17,  -- 2221
-  .vpternlogq 4 9 16 (.reg 21) 210,  -- 2222
-  .vstore 4 (.base 9 (64)) 9,  -- 2223
-  .vpternlogq 4 16 21 (.reg 2) 210,  -- 2224
-  .vstore 4 (.base 9 (96)) 16,  -- 2225
-  .vpternlogq 4 21 2 (.reg 13) 210,  -- 2226
-  .vstore 4 (.base 9 (128)) 21,  -- 2227
-  .vmov 4 13 (.mem (.base 9 (256))) none,  -- 2228
-  .vpternlogq 4 13 24 (.reg 31) 150,  -- 2229
-  .vprolq 4 13 13 28,  -- 2230
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 2231
-  .vprolq 4 18 18 20,  -- 2232
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 2233
-  .vprolq 4 3 3 3,  -- 2234
-  .vpternlogq 4 1 22 (.reg 29) 150,  -- 2235
-  .vprolq 4 1 1 45,  -- 2236
-  .vpternlogq 4 8 23 (.reg 30) 150,  -- 2237
-  .vprolq 4 8 8 61,  -- 2238
-  .vmov 4 2 (.reg 13) none,  -- 2239
-  .vpternlogq 4 2 18 (.reg 3) 210,  -- 2240
-  .vmov 4 17 (.reg 18) none,  -- 2241
-  .vpternlogq 4 17 3 (.reg 1) 210,  -- 2242
-  .vpternlogq 4 3 1 (.reg 8) 210,  -- 2243
-  .vpternlogq 4 1 8 (.reg 13) 210,  -- 2244
-  .vpternlogq 4 8 13 (.reg 18) 210,  -- 2245
-  .vmov 4 9 (.mem (.base 9 (192))) none,  -- 2246
-  .vpternlogq 4 9 22 (.reg 29) 150,  -- 2247
-  .vprolq 4 9 9 1,  -- 2248
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 2249
-  .vprolq 4 6 6 6,  -- 2250
-  .vpternlogq 4 19 24 (.reg 31) 150,  -- 2251
-  .vprolq 4 19 19 25,  -- 2252
-  .vpternlogq 4 14 25 (.reg 27) 150,  -- 2253
-  .vpshufb 4 14 14 (.mem (.rip 208)),  -- 2254
-  .vpternlogq 4 12 26 (.reg 28) 150,  -- 2255
-  .vprolq 4 12 12 18,  -- 2256
-  .vmov 4 16 (.reg 9) none,  -- 2257
-  .vpternlogq 4 16 6 (.reg 19) 210,  -- 2258
-  .vmov 4 21 (.reg 6) none,  -- 2259
-  .vpternlogq 4 21 19 (.reg 14) 210,  -- 2260
-  .vpternlogq 4 19 14 (.reg 12) 210,  -- 2261
-  .vpternlogq 4 14 12 (.reg 9) 210,  -- 2262
-  .vpternlogq 4 12 9 (.reg 6) 210,  -- 2263
-  .vmov 4 13 (.mem (.base 9 (288))) none,  -- 2264
-  .vpternlogq 4 13 25 (.reg 27) 150,  -- 2265
-  .vprolq 4 13 13 27,  -- 2266
-  .vpternlogq 4 10 26 (.reg 28) 150,  -- 2267
-  .vprolq 4 10 10 36,  -- 2268
-  .vpternlogq 4 0 22 (.reg 29) 150,  -- 2269
-  .vprolq 4 0 0 10,  -- 2270
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 2271
-  .vprolq 4 15 15 15,  -- 2272
-  .vpternlogq 4 4 24 (.reg 31) 150,  -- 2273
-  .vpshufb 4 4 4 (.mem (.rip 240)),  -- 2274
-  .vmov 4 18 (.reg 13) none,  -- 2275
-  .vpternlogq 4 18 10 (.reg 0) 210,  -- 2276
-  .vmov 4 9 (.reg 10) none,  -- 2277
-  .vpternlogq 4 9 0 (.reg 15) 210,  -- 2278
-  .vpternlogq 4 0 15 (.reg 4) 210,  -- 2279
-  .vpternlogq 4 15 4 (.reg 13) 210,  -- 2280
-  .vpternlogq 4 4 13 (.reg 10) 210,  -- 2281
-  .vmov 4 6 (.mem (.base 9 (224))) none,  -- 2282
-  .vpternlogq 4 6 23 (.reg 30) 150,  -- 2283
-  .vprolq 4 6 6 62,  -- 2284
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 2285
-  .vprolq 4 20 20 55,  -- 2286
-  .vpternlogq 4 7 25 (.reg 27) 150,  -- 2287
-  .vprolq 4 7 7 39,  -- 2288
-  .vpternlogq 4 11 26 (.reg 28) 150,  -- 2289
-  .vprolq 4 11 11 41,  -- 2290
-  .vpternlogq 4 5 22 (.reg 29) 150,  -- 2291
-  .vprolq 4 5 5 2,  -- 2292
-  .vmov 4 13 (.reg 6) none,  -- 2293
-  .vpternlogq 4 13 20 (.reg 7) 210,  -- 2294
-  .vmov 4 10 (.reg 20) none,  -- 2295
-  .vpternlogq 4 10 7 (.reg 11) 210,  -- 2296
-  .vpternlogq 4 7 11 (.reg 5) 210,  -- 2297
-  .vpternlogq 4 11 5 (.reg 6) 210,  -- 2298
-  .vpternlogq 4 5 6 (.reg 20) 210,  -- 2299
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 2300
-  .vpternlogq 4 22 2 (.reg 16) 150,  -- 2301
-  .vpternlogq 4 22 18 (.reg 13) 150,  -- 2302
-  .vprolq 4 27 22 1,  -- 2303
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 2304
-  .vpternlogq 4 23 17 (.reg 21) 150,  -- 2305
-  .vpternlogq 4 23 9 (.reg 10) 150,  -- 2306
-  .vprolq 4 28 23 1,  -- 2307
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 2308
-  .vpternlogq 4 24 3 (.reg 19) 150,  -- 2309
-  .vpternlogq 4 24 0 (.reg 7) 150,  -- 2310
-  .vprolq 4 29 24 1,  -- 2311
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 2312
-  .vpternlogq 4 25 1 (.reg 14) 150,  -- 2313
-  .vpternlogq 4 25 15 (.reg 11) 150,  -- 2314
-  .vprolq 4 30 25 1,  -- 2315
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 2316
-  .vpternlogq 4 26 8 (.reg 12) 150,  -- 2317
-  .vpternlogq 4 26 4 (.reg 5) 150,  -- 2318
-  .vprolq 4 31 26 1,  -- 2319
-  .vmov 4 6 (.mem (.base 9 (0))) none,  -- 2320
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 2321
-  .vpternlogq 4 17 22 (.reg 29) 150,  -- 2322
-  .vprolq 4 17 17 44,  -- 2323
-  .vpternlogq 4 19 23 (.reg 30) 150,  -- 2324
-  .vprolq 4 19 19 43,  -- 2325
-  .vpternlogq 4 15 24 (.reg 31) 150,  -- 2326
-  .vprolq 4 15 15 21,  -- 2327
-  .vpternlogq 4 5 25 (.reg 27) 150,  -- 2328
-  .vprolq 4 5 5 14,  -- 2329
-  .vmov 4 20 (.reg 6) none,  -- 2330
-  .vpternlogq 4 20 17 (.reg 19) 210,  -- 2331
-  .vpxor 4 20 20 (.bcst (.rip 160)),  -- 2332
-  .vstore 4 (.base 9 (160)) 20,  -- 2333
-  .vmov 4 20 (.reg 17) none,  -- 2334
-  .vpternlogq 4 20 19 (.reg 15) 210,  -- 2335
-  .vstore 4 (.base 9 (192)) 20,  -- 2336
-  .vpternlogq 4 19 15 (.reg 5) 210,  -- 2337
-  .vstore 4 (.base 9 (224)) 19,  -- 2338
-  .vpternlogq 4 15 5 (.reg 6) 210,  -- 2339
-  .vstore 4 (.base 9 (256)) 15,  -- 2340
-  .vpternlogq 4 5 6 (.reg 17) 210,  -- 2341
-  .vstore 4 (.base 9 (288)) 5,  -- 2342
-  .vmov 4 17 (.mem (.base 9 (96))) none,  -- 2343
-  .vpternlogq 4 17 24 (.reg 31) 150,  -- 2344
-  .vprolq 4 17 17 28,  -- 2345
-  .vpternlogq 4 8 25 (.reg 27) 150,  -- 2346
-  .vprolq 4 8 8 20,  -- 2347
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 2348
-  .vprolq 4 16 16 3,  -- 2349
-  .vpternlogq 4 9 22 (.reg 29) 150,  -- 2350
-  .vprolq 4 9 9 45,  -- 2351
-  .vpternlogq 4 7 23 (.reg 30) 150,  -- 2352
-  .vprolq 4 7 7 61,  -- 2353
-  .vmov 4 6 (.reg 17) none,  -- 2354
-  .vpternlogq 4 6 8 (.reg 16) 210,  -- 2355
-  .vmov 4 20 (.reg 8) none,  -- 2356
-  .vpternlogq 4 20 16 (.reg 9) 210,  -- 2357
-  .vpternlogq 4 16 9 (.reg 7) 210,  -- 2358
-  .vpternlogq 4 9 7 (.reg 17) 210,  -- 2359
-  .vpternlogq 4 7 17 (.reg 8) 210,  -- 2360
-  .vmov 4 19 (.mem (.base 9 (32))) none,  -- 2361
-  .vpternlogq 4 19 22 (.reg 29) 150,  -- 2362
-  .vprolq 4 19 19 1,  -- 2363
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 2364
-  .vprolq 4 3 3 6,  -- 2365
-  .vpternlogq 4 14 24 (.reg 31) 150,  -- 2366
-  .vprolq 4 14 14 25,  -- 2367
-  .vpternlogq 4 4 25 (.reg 27) 150,  -- 2368
-  .vpshufb 4 4 4 (.mem (.rip 208)),  -- 2369
-  .vpternlogq 4 13 26 (.reg 28) 150,  -- 2370
-  .vprolq 4 13 13 18,  -- 2371
-  .vmov 4 15 (.reg 19) none,  -- 2372
-  .vpternlogq 4 15 3 (.reg 14) 210,  -- 2373
-  .vmov 4 5 (.reg 3) none,  -- 2374
-  .vpternlogq 4 5 14 (.reg 4) 210,  -- 2375
-  .vpternlogq 4 14 4 (.reg 13) 210,  -- 2376
-  .vpternlogq 4 4 13 (.reg 19) 210,  -- 2377
-  .vpternlogq 4 13 19 (.reg 3) 210,  -- 2378
-  .vmov 4 17 (.mem (.base 9 (128))) none,  -- 2379
-  .vpternlogq 4 17 25 (.reg 27) 150,  -- 2380
-  .vprolq 4 17 17 27,  -- 2381
-  .vpternlogq 4 2 26 (.reg 28) 150,  -- 2382
-  .vprolq 4 2 2 36,  -- 2383
-  .vpternlogq 4 21 22 (.reg 29) 150,  -- 2384
-  .vprolq 4 21 21 10,  -- 2385
-  .vpternlogq 4 0 23 (.reg 30) 150,  -- 2386
-  .vprolq 4 0 0 15,  -- 2387
-  .vpternlogq 4 11 24 (.reg 31) 150,  -- 2388
-  .vpshufb 4 11 11 (.mem (.rip 240)),  -- 2389
-  .vmov 4 8 (.reg 17) none,  -- 2390
-  .vpternlogq 4 8 2 (.reg 21) 210,  -- 2391
-  .vmov 4 19 (.reg 2) none,  -- 2392
-  .vpternlogq 4 19 21 (.reg 0) 210,  -- 2393
-  .vpternlogq 4 21 0 (.reg 11) 210,  -- 2394
-  .vpternlogq 4 0 11 (.reg 17) 210,  -- 2395
-  .vpternlogq 4 11 17 (.reg 2) 210,  -- 2396
-  .vmov 4 3 (.mem (.base 9 (64))) none,  -- 2397
-  .vpternlogq 4 3 23 (.reg 30) 150,  -- 2398
-  .vprolq 4 3 3 62,  -- 2399
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 2400
-  .vprolq 4 1 1 55,  -- 2401
-  .vpternlogq 4 12 25 (.reg 27) 150,  -- 2402
-  .vprolq 4 12 12 39,  -- 2403
-  .vpternlogq 4 18 26 (.reg 28) 150,  -- 2404
-  .vprolq 4 18 18 41,  -- 2405
-  .vpternlogq 4 10 22 (.reg 29) 150,  -- 2406
-  .vprolq 4 10 10 2,  -- 2407
-  .vmov 4 17 (.reg 3) none,  -- 2408
-  .vpternlogq 4 17 1 (.reg 12) 210,  -- 2409
-  .vmov 4 2 (.reg 1) none,  -- 2410
-  .vpternlogq 4 2 12 (.reg 18) 210,  -- 2411
-  .vpternlogq 4 12 18 (.reg 10) 210,  -- 2412
-  .vpternlogq 4 18 10 (.reg 3) 210,  -- 2413
-  .vpternlogq 4 10 3 (.reg 1) 210,  -- 2414
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 2415
-  .vpternlogq 4 22 6 (.reg 15) 150,  -- 2416
-  .vpternlogq 4 22 8 (.reg 17) 150,  -- 2417
-  .vprolq 4 27 22 1,  -- 2418
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 2419
-  .vpternlogq 4 23 20 (.reg 5) 150,  -- 2420
-  .vpternlogq 4 23 19 (.reg 2) 150,  -- 2421
-  .vprolq 4 28 23 1,  -- 2422
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 2423
-  .vpternlogq 4 24 16 (.reg 14) 150,  -- 2424
-  .vpternlogq 4 24 21 (.reg 12) 150,  -- 2425
-  .vprolq 4 29 24 1,  -- 2426
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 2427
-  .vpternlogq 4 25 9 (.reg 4) 150,  -- 2428
-  .vpternlogq 4 25 0 (.reg 18) 150,  -- 2429
-  .vprolq 4 30 25 1,  -- 2430
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 2431
-  .vpternlogq 4 26 7 (.reg 13) 150,  -- 2432
-  .vpternlogq 4 26 11 (.reg 10) 150,  -- 2433
-  .vprolq 4 31 26 1,  -- 2434
-  .vmov 4 3 (.mem (.base 9 (160))) none,  -- 2435
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 2436
-  .vpternlogq 4 20 22 (.reg 29) 150,  -- 2437
-  .vprolq 4 20 20 44,  -- 2438
-  .vpternlogq 4 14 23 (.reg 30) 150,  -- 2439
-  .vprolq 4 14 14 43,  -- 2440
-  .vpternlogq 4 0 24 (.reg 31) 150,  -- 2441
-  .vprolq 4 0 0 21,  -- 2442
-  .vpternlogq 4 10 25 (.reg 27) 150,  -- 2443
-  .vprolq 4 10 10 14,  -- 2444
-  .vmov 4 1 (.reg 3) none,  -- 2445
-  .vpternlogq 4 1 20 (.reg 14) 210,  -- 2446
-  .vpxor 4 1 1 (.bcst (.rip 168)),  -- 2447
-  .vstore 4 (.base 9 (0)) 1,  -- 2448
-  .vmov 4 1 (.reg 20) none,  -- 2449
-  .vpternlogq 4 1 14 (.reg 0) 210,  -- 2450
-  .vstore 4 (.base 9 (32)) 1,  -- 2451
-  .vpternlogq 4 14 0 (.reg 10) 210,  -- 2452
-  .vstore 4 (.base 9 (64)) 14,  -- 2453
-  .vpternlogq 4 0 10 (.reg 3) 210,  -- 2454
-  .vstore 4 (.base 9 (96)) 0,  -- 2455
-  .vpternlogq 4 10 3 (.reg 20) 210,  -- 2456
-  .vstore 4 (.base 9 (128)) 10,  -- 2457
-  .vmov 4 20 (.mem (.base 9 (256))) none,  -- 2458
-  .vpternlogq 4 20 24 (.reg 31) 150,  -- 2459
-  .vprolq 4 20 20 28,  -- 2460
-  .vpternlogq 4 7 25 (.reg 27) 150,  -- 2461
-  .vprolq 4 7 7 20,  -- 2462
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 2463
-  .vprolq 4 15 15 3,  -- 2464
-  .vpternlogq 4 19 22 (.reg 29) 150,  -- 2465
-  .vprolq 4 19 19 45,  -- 2466
-  .vpternlogq 4 12 23 (.reg 30) 150,  -- 2467
-  .vprolq 4 12 12 61,  -- 2468
-  .vmov 4 3 (.reg 20) none,  -- 2469
-  .vpternlogq 4 3 7 (.reg 15) 210,  -- 2470
-  .vmov 4 1 (.reg 7) none,  -- 2471
-  .vpternlogq 4 1 15 (.reg 19) 210,  -- 2472
-  .vpternlogq 4 15 19 (.reg 12) 210,  -- 2473
-  .vpternlogq 4 19 12 (.reg 20) 210,  -- 2474
-  .vpternlogq 4 12 20 (.reg 7) 210,  -- 2475
-  .vmov 4 14 (.mem (.base 9 (192))) none,  -- 2476
-  .vpternlogq 4 14 22 (.reg 29) 150,  -- 2477
-  .vprolq 4 14 14 1,  -- 2478
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 2479
-  .vprolq 4 16 16 6,  -- 2480
-  .vpternlogq 4 4 24 (.reg 31) 150,  -- 2481
-  .vprolq 4 4 4 25,  -- 2482
-  .vpternlogq 4 11 25 (.reg 27) 150,  -- 2483
-  .vpshufb 4 11 11 (.mem (.rip 208)),  -- 2484
-  .vpternlogq 4 17 26 (.reg 28) 150,  -- 2485
-  .vprolq 4 17 17 18,  -- 2486
-  .vmov 4 0 (.reg 14) none,  -- 2487
-  .vpternlogq 4 0 16 (.reg 4) 210,  -- 2488
-  .vmov 4 10 (.reg 16) none,  -- 2489
-  .vpternlogq 4 10 4 (.reg 11) 210,  -- 2490
-  .vpternlogq 4 4 11 (.reg 17) 210,  -- 2491
-  .vpternlogq 4 11 17 (.reg 14) 210,  -- 2492
-  .vpternlogq 4 17 14 (.reg 16) 210,  -- 2493
-  .vmov 4 20 (.mem (.base 9 (288))) none,  -- 2494
-  .vpternlogq 4 20 25 (.reg 27) 150,  -- 2495
-  .vprolq 4 20 20 27,  -- 2496
-  .vpternlogq 4 6 26 (.reg 28) 150,  -- 2497
-  .vprolq 4 6 6 36,  -- 2498
-  .vpternlogq 4 5 22 (.reg 29) 150,  -- 2499
-  .vprolq 4 5 5 10,  -- 2500
-  .vpternlogq 4 21 23 (.reg 30) 150,  -- 2501
-  .vprolq 4 21 21 15,  -- 2502
-  .vpternlogq 4 18 24 (.reg 31) 150,  -- 2503
-  .vpshufb 4 18 18 (.mem (.rip 240)),  -- 2504
-  .vmov 4 7 (.reg 20) none,  -- 2505
-  .vpternlogq 4 7 6 (.reg 5) 210,  -- 2506
-  .vmov 4 14 (.reg 6) none,  -- 2507
-  .vpternlogq 4 14 5 (.reg 21) 210,  -- 2508
-  .vpternlogq 4 5 21 (.reg 18) 210,  -- 2509
-  .vpternlogq 4 21 18 (.reg 20) 210,  -- 2510
-  .vpternlogq 4 18 20 (.reg 6) 210,  -- 2511
-  .vmov 4 16 (.mem (.base 9 (224))) none,  -- 2512
-  .vpternlogq 4 16 23 (.reg 30) 150,  -- 2513
-  .vprolq 4 16 16 62,  -- 2514
-  .vpternlogq 4 9 24 (.reg 31) 150,  -- 2515
-  .vprolq 4 9 9 55,  -- 2516
-  .vpternlogq 4 13 25 (.reg 27) 150,  -- 2517
-  .vprolq 4 13 13 39,  -- 2518
-  .vpternlogq 4 8 26 (.reg 28) 150,  -- 2519
-  .vprolq 4 8 8 41,  -- 2520
-  .vpternlogq 4 2 22 (.reg 29) 150,  -- 2521
-  .vprolq 4 2 2 2,  -- 2522
-  .vmov 4 20 (.reg 16) none,  -- 2523
-  .vpternlogq 4 20 9 (.reg 13) 210,  -- 2524
-  .vmov 4 6 (.reg 9) none,  -- 2525
-  .vpternlogq 4 6 13 (.reg 8) 210,  -- 2526
-  .vpternlogq 4 13 8 (.reg 2) 210,  -- 2527
-  .vpternlogq 4 8 2 (.reg 16) 210,  -- 2528
-  .vpternlogq 4 2 16 (.reg 9) 210,  -- 2529
-  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 2530
-  .vpternlogq 4 22 3 (.reg 0) 150,  -- 2531
-  .vpternlogq 4 22 7 (.reg 20) 150,  -- 2532
-  .vprolq 4 27 22 1,  -- 2533
-  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 2534
-  .vpternlogq 4 23 1 (.reg 10) 150,  -- 2535
-  .vpternlogq 4 23 14 (.reg 6) 150,  -- 2536
-  .vprolq 4 28 23 1,  -- 2537
-  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 2538
-  .vpternlogq 4 24 15 (.reg 4) 150,  -- 2539
-  .vpternlogq 4 24 5 (.reg 13) 150,  -- 2540
-  .vprolq 4 29 24 1,  -- 2541
-  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 2542
-  .vpternlogq 4 25 19 (.reg 11) 150,  -- 2543
-  .vpternlogq 4 25 21 (.reg 8) 150,  -- 2544
-  .vprolq 4 30 25 1,  -- 2545
-  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 2546
-  .vpternlogq 4 26 12 (.reg 17) 150,  -- 2547
-  .vpternlogq 4 26 18 (.reg 2) 150,  -- 2548
-  .vprolq 4 31 26 1,  -- 2549
-  .vmov 4 16 (.mem (.base 9 (0))) none,  -- 2550
-  .vpternlogq 4 16 26 (.reg 28) 150,  -- 2551
-  .vpternlogq 4 1 22 (.reg 29) 150,  -- 2552
-  .vprolq 4 1 1 44,  -- 2553
-  .vpternlogq 4 4 23 (.reg 30) 150,  -- 2554
-  .vprolq 4 4 4 43,  -- 2555
-  .vpternlogq 4 21 24 (.reg 31) 150,  -- 2556
-  .vprolq 4 21 21 21,  -- 2557
-  .vpternlogq 4 2 25 (.reg 27) 150,  -- 2558
-  .vprolq 4 2 2 14,  -- 2559
-  .vmov 4 9 (.reg 16) none,  -- 2560
-  .vpternlogq 4 9 1 (.reg 4) 210,  -- 2561
-  .vpxor 4 9 9 (.bcst (.rip 176)),  -- 2562
-  .vstore 4 (.base 9 (160)) 9,  -- 2563
-  .vmov 4 9 (.reg 1) none,  -- 2564
-  .vpternlogq 4 9 4 (.reg 21) 210,  -- 2565
-  .vstore 4 (.base 9 (192)) 9,  -- 2566
-  .vpternlogq 4 4 21 (.reg 2) 210,  -- 2567
-  .vstore 4 (.base 9 (224)) 4,  -- 2568
-  .vpternlogq 4 21 2 (.reg 16) 210,  -- 2569
-  .vstore 4 (.base 9 (256)) 21,  -- 2570
-  .vpternlogq 4 2 16 (.reg 1) 210,  -- 2571
-  .vstore 4 (.base 9 (288)) 2,  -- 2572
-  .vmov 4 1 (.mem (.base 9 (96))) none,  -- 2573
-  .vpternlogq 4 1 24 (.reg 31) 150,  -- 2574
-  .vprolq 4 1 1 28,  -- 2575
-  .vpternlogq 4 12 25 (.reg 27) 150,  -- 2576
-  .vprolq 4 12 12 20,  -- 2577
-  .vpternlogq 4 0 26 (.reg 28) 150,  -- 2578
-  .vprolq 4 0 0 3,  -- 2579
-  .vpternlogq 4 14 22 (.reg 29) 150,  -- 2580
-  .vprolq 4 14 14 45,  -- 2581
-  .vpternlogq 4 13 23 (.reg 30) 150,  -- 2582
-  .vprolq 4 13 13 61,  -- 2583
-  .vmov 4 16 (.reg 1) none,  -- 2584
-  .vpternlogq 4 16 12 (.reg 0) 210,  -- 2585
-  .vmov 4 9 (.reg 12) none,  -- 2586
-  .vpternlogq 4 9 0 (.reg 14) 210,  -- 2587
-  .vpternlogq 4 0 14 (.reg 13) 210,  -- 2588
-  .vpternlogq 4 14 13 (.reg 1) 210,  -- 2589
-  .vpternlogq 4 13 1 (.reg 12) 210,  -- 2590
-  .vmov 4 4 (.mem (.base 9 (32))) none,  -- 2591
-  .vpternlogq 4 4 22 (.reg 29) 150,  -- 2592
-  .vprolq 4 4 4 1,  -- 2593
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 2594
-  .vprolq 4 15 15 6,  -- 2595
-  .vpternlogq 4 11 24 (.reg 31) 150,  -- 2596
-  .vprolq 4 11 11 25,  -- 2597
-  .vpternlogq 4 18 25 (.reg 27) 150,  -- 2598
-  .vpshufb 4 18 18 (.mem (.rip 208)),  -- 2599
-  .vpternlogq 4 20 26 (.reg 28) 150,  -- 2600
-  .vprolq 4 20 20 18,  -- 2601
-  .vmov 4 21 (.reg 4) none,  -- 2602
-  .vpternlogq 4 21 15 (.reg 11) 210,  -- 2603
-  .vmov 4 2 (.reg 15) none,  -- 2604
-  .vpternlogq 4 2 11 (.reg 18) 210,  -- 2605
-  .vpternlogq 4 11 18 (.reg 20) 210,  -- 2606
-  .vpternlogq 4 18 20 (.reg 4) 210,  -- 2607
-  .vpternlogq 4 20 4 (.reg 15) 210,  -- 2608
-  .vmov 4 1 (.mem (.base 9 (128))) none,  -- 2609
-  .vpternlogq 4 1 25 (.reg 27) 150,  -- 2610
-  .vprolq 4 1 1 27,  -- 2611
-  .vpternlogq 4 3 26 (.reg 28) 150,  -- 2612
-  .vprolq 4 3 3 36,  -- 2613
-  .vpternlogq 4 10 22 (.reg 29) 150,  -- 2614
-  .vprolq 4 10 10 10,  -- 2615
-  .vpternlogq 4 5 23 (.reg 30) 150,  -- 2616
-  .vprolq 4 5 5 15,  -- 2617
-  .vpternlogq 4 8 24 (.reg 31) 150,  -- 2618
-  .vpshufb 4 8 8 (.mem (.rip 240)),  -- 2619
-  .vmov 4 12 (.reg 1) none,  -- 2620
-  .vpternlogq 4 12 3 (.reg 10) 210,  -- 2621
-  .vmov 4 4 (.reg 3) none,  -- 2622
-  .vpternlogq 4 4 10 (.reg 5) 210,  -- 2623
-  .vpternlogq 4 10 5 (.reg 8) 210,  -- 2624
-  .vpternlogq 4 5 8 (.reg 1) 210,  -- 2625
-  .vpternlogq 4 8 1 (.reg 3) 210,  -- 2626
-  .vmov 4 15 (.mem (.base 9 (64))) none,  -- 2627
-  .vpternlogq 4 15 23 (.reg 30) 150,  -- 2628
-  .vprolq 4 15 15 62,  -- 2629
-  .vpternlogq 4 19 24 (.reg 31) 150,  -- 2630
-  .vprolq 4 19 19 55,  -- 2631
-  .vpternlogq 4 17 25 (.reg 27) 150,  -- 2632
-  .vprolq 4 17 17 39,  -- 2633
-  .vpternlogq 4 7 26 (.reg 28) 150,  -- 2634
-  .vprolq 4 7 7 41,  -- 2635
-  .vpternlogq 4 6 22 (.reg 29) 150,  -- 2636
-  .vprolq 4 6 6 2,  -- 2637
-  .vmov 4 1 (.reg 15) none,  -- 2638
-  .vpternlogq 4 1 19 (.reg 17) 210,  -- 2639
-  .vmov 4 3 (.reg 19) none,  -- 2640
-  .vpternlogq 4 3 17 (.reg 7) 210,  -- 2641
-  .vpternlogq 4 17 7 (.reg 6) 210,  -- 2642
-  .vpternlogq 4 7 6 (.reg 15) 210,  -- 2643
-  .vpternlogq 4 6 15 (.reg 19) 210,  -- 2644
-  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 2645
-  .vpternlogq 4 22 16 (.reg 21) 150,  -- 2646
-  .vpternlogq 4 22 12 (.reg 1) 150,  -- 2647
-  .vprolq 4 27 22 1,  -- 2648
-  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 2649
-  .vpternlogq 4 23 9 (.reg 2) 150,  -- 2650
-  .vpternlogq 4 23 4 (.reg 3) 150,  -- 2651
-  .vprolq 4 28 23 1,  -- 2652
-  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 2653
-  .vpternlogq 4 24 0 (.reg 11) 150,  -- 2654
-  .vpternlogq 4 24 10 (.reg 17) 150,  -- 2655
-  .vprolq 4 29 24 1,  -- 2656
-  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 2657
-  .vpternlogq 4 25 14 (.reg 18) 150,  -- 2658
-  .vpternlogq 4 25 5 (.reg 7) 150,  -- 2659
-  .vprolq 4 30 25 1,  -- 2660
-  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 2661
-  .vpternlogq 4 26 13 (.reg 20) 150,  -- 2662
-  .vpternlogq 4 26 8 (.reg 6) 150,  -- 2663
-  .vprolq 4 31 26 1,  -- 2664
-  .vmov 4 15 (.mem (.base 9 (160))) none,  -- 2665
-  .vpternlogq 4 15 26 (.reg 28) 150,  -- 2666
-  .vpternlogq 4 9 22 (.reg 29) 150,  -- 2667
-  .vprolq 4 9 9 44,  -- 2668
-  .vpternlogq 4 11 23 (.reg 30) 150,  -- 2669
-  .vprolq 4 11 11 43,  -- 2670
-  .vpternlogq 4 5 24 (.reg 31) 150,  -- 2671
-  .vprolq 4 5 5 21,  -- 2672
-  .vpternlogq 4 6 25 (.reg 27) 150,  -- 2673
-  .vprolq 4 6 6 14,  -- 2674
-  .vmov 4 19 (.reg 15) none,  -- 2675
-  .vpternlogq 4 19 9 (.reg 11) 210,  -- 2676
-  .vpxor 4 19 19 (.bcst (.rip 184)),  -- 2677
-  .vpternlogq 4 9 11 (.reg 5) 210,  -- 2678
-  .vpternlogq 4 11 5 (.reg 6) 210,  -- 2679
-  .vpternlogq 4 5 6 (.reg 15) 210,  -- 2680
-  .vpunpcklqdq 4 25 19 (.reg 9),  -- 2681
-  .vpunpckhqdq 4 26 19 (.reg 9),  -- 2682
-  .vpunpcklqdq 4 27 11 (.reg 5),  -- 2683
-  .vpunpckhqdq 4 28 11 (.reg 5),  -- 2684
-  .vshufi64x2 4 0 25 (.reg 27) 0,  -- 2685
-  .vshufi64x2 4 1 26 (.reg 28) 0,  -- 2686
-  .vshufi64x2 4 2 25 (.reg 27) 3,  -- 2687
-  .vshufi64x2 4 3 26 (.reg 28) 3,  -- 2688
-  .vstore 4 (.base 11 (0)) 0,  -- 2689
-  .vstore 4 (.base 11 (32)) 1,  -- 2690
-  .vstore 4 (.base 11 (64)) 2,  -- 2691
-  .vstore 4 (.base 11 (96)) 3,  -- 2692
-  .ret,  -- 2693
-  .nop,  -- 2694
-  .nop,  -- 2695
-  .nop,  -- 2696
-  .nop,  -- 2697
-  .push 5,  -- 2698
-  .mov 5 4,  -- 2699
-  .sub 4 (880),  -- 2700
-  .andi 4 (-64),  -- 2701
-  .mov 9 4,  -- 2702
-  .mov 10 6,  -- 2703
-  .mov 11 7,  -- 2704
-  .cmpi 2 (4),  -- 2705
-  .jcc .b 2712,  -- 2706
-  .call 0,  -- 2707
-  .add 10 (256),  -- 2708
-  .add 11 (128),  -- 2709
-  .sub 2 (4),  -- 2710
-  .jmp 2705,  -- 2711
-  .test 2 2,  -- 2712
-  .jcc .e 2728,  -- 2713
-  .mov 0 2,  -- 2714
-  .mov 6 10,  -- 2715
-  .lea 7 (.base 4 (320)),  -- 2716
-  .mov 1 0,  -- 2717
-  .shl 1 6,  -- 2718
-  .repmovsb,  -- 2719
-  .mov 7 11,  -- 2720
-  .lea 10 (.base 4 (320)),  -- 2721
-  .lea 11 (.base 4 (576)),  -- 2722
-  .call 0,  -- 2723
-  .lea 6 (.base 4 (576)),  -- 2724
-  .mov 1 0,  -- 2725
-  .shl 1 5,  -- 2726
-  .repmovsb,  -- 2727
-  .xorz 0,  -- 2728
-  .vzeroupper,  -- 2729
-  .mov 4 5,  -- 2730
-  .pop 5,  -- 2731
-  .ret  -- 2732
+  .lea 8 (.rip 0),  -- 25
+  .vpxor 4 22 0 (.reg 5),  -- 26
+  .vpxor 4 23 1 (.reg 6),  -- 27
+  .vpxor 4 23 23 (.bcst (.rip 200)),  -- 28
+  .vpxor 4 24 2 (.reg 7),  -- 29
+  .vpxor 4 25 3 (.bcst (.rip 192)),  -- 30
+  .vprolq 4 27 23 1,  -- 31
+  .vpxor 4 27 27 (.reg 4),  -- 32
+  .vprolq 4 28 24 1,  -- 33
+  .vpxor 4 28 28 (.reg 22),  -- 34
+  .vprolq 4 29 25 1,  -- 35
+  .vpxor 4 29 29 (.reg 23),  -- 36
+  .vprolq 4 30 4 1,  -- 37
+  .vpxor 4 30 30 (.reg 24),  -- 38
+  .vprolq 4 31 22 1,  -- 39
+  .vpxor 4 31 31 (.reg 25),  -- 40
+  .vpxor 4 0 0 (.reg 27),  -- 41
+  .vpxor 4 6 6 (.reg 28),  -- 42
+  .vprolq 4 6 6 44,  -- 43
+  .vprolq 4 8 29 43,  -- 44
+  .vprolq 4 9 30 21,  -- 45
+  .vprolq 4 10 31 14,  -- 46
+  .vmov 4 11 (.reg 0) none,  -- 47
+  .vpternlogq 4 11 6 (.reg 8) 210,  -- 48
+  .vpxor 4 11 11 (.bcst (.rip 0)),  -- 49
+  .vstore 4 (.base 9 (160)) 11,  -- 50
+  .vmov 4 11 (.reg 6) none,  -- 51
+  .vpternlogq 4 11 8 (.reg 9) 210,  -- 52
+  .vstore 4 (.base 9 (192)) 11,  -- 53
+  .vpternlogq 4 8 9 (.reg 10) 210,  -- 54
+  .vstore 4 (.base 9 (224)) 8,  -- 55
+  .vpternlogq 4 9 10 (.reg 0) 210,  -- 56
+  .vstore 4 (.base 9 (256)) 9,  -- 57
+  .vpternlogq 4 10 0 (.reg 6) 210,  -- 58
+  .vstore 4 (.base 9 (288)) 10,  -- 59
+  .vpxor 4 3 3 (.reg 30),  -- 60
+  .vprolq 4 3 3 28,  -- 61
+  .vprolq 4 0 31 20,  -- 62
+  .vprolq 4 6 27 3,  -- 63
+  .vpxor 4 8 28 (.bcst (.rip 200)),  -- 64
+  .vprolq 4 8 8 45,  -- 65
+  .vprolq 4 9 29 61,  -- 66
+  .vmov 4 10 (.reg 3) none,  -- 67
+  .vpternlogq 4 10 0 (.reg 6) 210,  -- 68
+  .vmov 4 11 (.reg 0) none,  -- 69
+  .vpternlogq 4 11 6 (.reg 8) 210,  -- 70
+  .vpternlogq 4 6 8 (.reg 9) 210,  -- 71
+  .vpternlogq 4 8 9 (.reg 3) 210,  -- 72
+  .vpternlogq 4 9 3 (.reg 0) 210,  -- 73
+  .vpxor 4 1 1 (.reg 28),  -- 74
+  .vprolq 4 1 1 1,  -- 75
+  .vpxor 4 7 7 (.reg 29),  -- 76
+  .vprolq 4 7 7 6,  -- 77
+  .vprolq 4 12 30 25,  -- 78
+  .vprolq 4 13 31 8,  -- 79
+  .vprolq 4 14 27 18,  -- 80
+  .vmov 4 3 (.reg 1) none,  -- 81
+  .vpternlogq 4 3 7 (.reg 12) 210,  -- 82
+  .vmov 4 0 (.reg 7) none,  -- 83
+  .vpternlogq 4 0 12 (.reg 13) 210,  -- 84
+  .vpternlogq 4 12 13 (.reg 14) 210,  -- 85
+  .vpternlogq 4 13 14 (.reg 1) 210,  -- 86
+  .vpternlogq 4 14 1 (.reg 7) 210,  -- 87
+  .vpxor 4 4 4 (.reg 31),  -- 88
+  .vprolq 4 4 4 27,  -- 89
+  .vpxor 4 5 5 (.reg 27),  -- 90
+  .vprolq 4 5 5 36,  -- 91
+  .vprolq 4 15 28 10,  -- 92
+  .vprolq 4 16 29 15,  -- 93
+  .vprolq 4 17 30 56,  -- 94
+  .vmov 4 1 (.reg 4) none,  -- 95
+  .vpternlogq 4 1 5 (.reg 15) 210,  -- 96
+  .vmov 4 7 (.reg 5) none,  -- 97
+  .vpternlogq 4 7 15 (.reg 16) 210,  -- 98
+  .vpternlogq 4 15 16 (.reg 17) 210,  -- 99
+  .vpternlogq 4 16 17 (.reg 4) 210,  -- 100
+  .vpternlogq 4 17 4 (.reg 5) 210,  -- 101
+  .vpxor 4 2 2 (.reg 29),  -- 102
+  .vprolq 4 2 2 62,  -- 103
+  .vpxor 4 18 30 (.bcst (.rip 192)),  -- 104
+  .vprolq 4 18 18 55,  -- 105
+  .vprolq 4 19 31 39,  -- 106
+  .vprolq 4 20 27 41,  -- 107
+  .vprolq 4 21 28 2,  -- 108
+  .vmov 4 4 (.reg 2) none,  -- 109
+  .vpternlogq 4 4 18 (.reg 19) 210,  -- 110
+  .vmov 4 5 (.reg 18) none,  -- 111
+  .vpternlogq 4 5 19 (.reg 20) 210,  -- 112
+  .vpternlogq 4 19 20 (.reg 21) 210,  -- 113
+  .vpternlogq 4 20 21 (.reg 2) 210,  -- 114
+  .vpternlogq 4 21 2 (.reg 18) 210,  -- 115
+  .add 8 (8),  -- 116
+  .storeqi (.base 9 (320)) (5),  -- 117
+  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 118
+  .vpternlogq 4 22 10 (.reg 3) 150,  -- 119
+  .vpternlogq 4 22 1 (.reg 4) 150,  -- 120
+  .vprolq 4 27 22 1,  -- 121
+  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 122
+  .vpternlogq 4 23 11 (.reg 0) 150,  -- 123
+  .vpternlogq 4 23 7 (.reg 5) 150,  -- 124
+  .vprolq 4 28 23 1,  -- 125
+  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 126
+  .vpternlogq 4 24 6 (.reg 12) 150,  -- 127
+  .vpternlogq 4 24 15 (.reg 19) 150,  -- 128
+  .vprolq 4 29 24 1,  -- 129
+  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 130
+  .vpternlogq 4 25 8 (.reg 13) 150,  -- 131
+  .vpternlogq 4 25 16 (.reg 20) 150,  -- 132
+  .vprolq 4 30 25 1,  -- 133
+  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 134
+  .vpternlogq 4 26 9 (.reg 14) 150,  -- 135
+  .vpternlogq 4 26 17 (.reg 21) 150,  -- 136
+  .vprolq 4 31 26 1,  -- 137
+  .vmov 4 2 (.mem (.base 9 (160))) none,  -- 138
+  .vpternlogq 4 2 26 (.reg 28) 150,  -- 139
+  .vpternlogq 4 11 22 (.reg 29) 150,  -- 140
+  .vprolq 4 11 11 44,  -- 141
+  .vpternlogq 4 12 23 (.reg 30) 150,  -- 142
+  .vprolq 4 12 12 43,  -- 143
+  .vpternlogq 4 16 24 (.reg 31) 150,  -- 144
+  .vprolq 4 16 16 21,  -- 145
+  .vpternlogq 4 21 25 (.reg 27) 150,  -- 146
+  .vprolq 4 21 21 14,  -- 147
+  .vmov 4 18 (.reg 2) none,  -- 148
+  .vpternlogq 4 18 11 (.reg 12) 210,  -- 149
+  .vpxor 4 18 18 (.bcst (.base 8 (0))),  -- 150
+  .vstore 4 (.base 9 (0)) 18,  -- 151
+  .vmov 4 18 (.reg 11) none,  -- 152
+  .vpternlogq 4 18 12 (.reg 16) 210,  -- 153
+  .vstore 4 (.base 9 (32)) 18,  -- 154
+  .vpternlogq 4 12 16 (.reg 21) 210,  -- 155
+  .vstore 4 (.base 9 (64)) 12,  -- 156
+  .vpternlogq 4 16 21 (.reg 2) 210,  -- 157
+  .vstore 4 (.base 9 (96)) 16,  -- 158
+  .vpternlogq 4 21 2 (.reg 11) 210,  -- 159
+  .vstore 4 (.base 9 (128)) 21,  -- 160
+  .vmov 4 11 (.mem (.base 9 (256))) none,  -- 161
+  .vpternlogq 4 11 24 (.reg 31) 150,  -- 162
+  .vprolq 4 11 11 28,  -- 163
+  .vpternlogq 4 9 25 (.reg 27) 150,  -- 164
+  .vprolq 4 9 9 20,  -- 165
+  .vpternlogq 4 3 26 (.reg 28) 150,  -- 166
+  .vprolq 4 3 3 3,  -- 167
+  .vpternlogq 4 7 22 (.reg 29) 150,  -- 168
+  .vprolq 4 7 7 45,  -- 169
+  .vpternlogq 4 19 23 (.reg 30) 150,  -- 170
+  .vprolq 4 19 19 61,  -- 171
+  .vmov 4 2 (.reg 11) none,  -- 172
+  .vpternlogq 4 2 9 (.reg 3) 210,  -- 173
+  .vmov 4 18 (.reg 9) none,  -- 174
+  .vpternlogq 4 18 3 (.reg 7) 210,  -- 175
+  .vpternlogq 4 3 7 (.reg 19) 210,  -- 176
+  .vpternlogq 4 7 19 (.reg 11) 210,  -- 177
+  .vpternlogq 4 19 11 (.reg 9) 210,  -- 178
+  .vmov 4 12 (.mem (.base 9 (192))) none,  -- 179
+  .vpternlogq 4 12 22 (.reg 29) 150,  -- 180
+  .vprolq 4 12 12 1,  -- 181
+  .vpternlogq 4 6 23 (.reg 30) 150,  -- 182
+  .vprolq 4 6 6 6,  -- 183
+  .vpternlogq 4 13 24 (.reg 31) 150,  -- 184
+  .vprolq 4 13 13 25,  -- 185
+  .vpternlogq 4 17 25 (.reg 27) 150,  -- 186
+  .vpshufb 4 17 17 (.mem (.rip 208)),  -- 187
+  .vpternlogq 4 4 26 (.reg 28) 150,  -- 188
+  .vprolq 4 4 4 18,  -- 189
+  .vmov 4 16 (.reg 12) none,  -- 190
+  .vpternlogq 4 16 6 (.reg 13) 210,  -- 191
+  .vmov 4 21 (.reg 6) none,  -- 192
+  .vpternlogq 4 21 13 (.reg 17) 210,  -- 193
+  .vpternlogq 4 13 17 (.reg 4) 210,  -- 194
+  .vpternlogq 4 17 4 (.reg 12) 210,  -- 195
+  .vpternlogq 4 4 12 (.reg 6) 210,  -- 196
+  .vmov 4 11 (.mem (.base 9 (288))) none,  -- 197
+  .vpternlogq 4 11 25 (.reg 27) 150,  -- 198
+  .vprolq 4 11 11 27,  -- 199
+  .vpternlogq 4 10 26 (.reg 28) 150,  -- 200
+  .vprolq 4 10 10 36,  -- 201
+  .vpternlogq 4 0 22 (.reg 29) 150,  -- 202
+  .vprolq 4 0 0 10,  -- 203
+  .vpternlogq 4 15 23 (.reg 30) 150,  -- 204
+  .vprolq 4 15 15 15,  -- 205
+  .vpternlogq 4 20 24 (.reg 31) 150,  -- 206
+  .vpshufb 4 20 20 (.mem (.rip 240)),  -- 207
+  .vmov 4 9 (.reg 11) none,  -- 208
+  .vpternlogq 4 9 10 (.reg 0) 210,  -- 209
+  .vmov 4 12 (.reg 10) none,  -- 210
+  .vpternlogq 4 12 0 (.reg 15) 210,  -- 211
+  .vpternlogq 4 0 15 (.reg 20) 210,  -- 212
+  .vpternlogq 4 15 20 (.reg 11) 210,  -- 213
+  .vpternlogq 4 20 11 (.reg 10) 210,  -- 214
+  .vmov 4 6 (.mem (.base 9 (224))) none,  -- 215
+  .vpternlogq 4 6 23 (.reg 30) 150,  -- 216
+  .vprolq 4 6 6 62,  -- 217
+  .vpternlogq 4 8 24 (.reg 31) 150,  -- 218
+  .vprolq 4 8 8 55,  -- 219
+  .vpternlogq 4 14 25 (.reg 27) 150,  -- 220
+  .vprolq 4 14 14 39,  -- 221
+  .vpternlogq 4 1 26 (.reg 28) 150,  -- 222
+  .vprolq 4 1 1 41,  -- 223
+  .vpternlogq 4 5 22 (.reg 29) 150,  -- 224
+  .vprolq 4 5 5 2,  -- 225
+  .vmov 4 11 (.reg 6) none,  -- 226
+  .vpternlogq 4 11 8 (.reg 14) 210,  -- 227
+  .vmov 4 10 (.reg 8) none,  -- 228
+  .vpternlogq 4 10 14 (.reg 1) 210,  -- 229
+  .vpternlogq 4 14 1 (.reg 5) 210,  -- 230
+  .vpternlogq 4 1 5 (.reg 6) 210,  -- 231
+  .vpternlogq 4 5 6 (.reg 8) 210,  -- 232
+  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 233
+  .vpternlogq 4 22 2 (.reg 16) 150,  -- 234
+  .vpternlogq 4 22 9 (.reg 11) 150,  -- 235
+  .vprolq 4 27 22 1,  -- 236
+  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 237
+  .vpternlogq 4 23 18 (.reg 21) 150,  -- 238
+  .vpternlogq 4 23 12 (.reg 10) 150,  -- 239
+  .vprolq 4 28 23 1,  -- 240
+  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 241
+  .vpternlogq 4 24 3 (.reg 13) 150,  -- 242
+  .vpternlogq 4 24 0 (.reg 14) 150,  -- 243
+  .vprolq 4 29 24 1,  -- 244
+  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 245
+  .vpternlogq 4 25 7 (.reg 17) 150,  -- 246
+  .vpternlogq 4 25 15 (.reg 1) 150,  -- 247
+  .vprolq 4 30 25 1,  -- 248
+  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 249
+  .vpternlogq 4 26 19 (.reg 4) 150,  -- 250
+  .vpternlogq 4 26 20 (.reg 5) 150,  -- 251
+  .vprolq 4 31 26 1,  -- 252
+  .vmov 4 6 (.mem (.base 9 (0))) none,  -- 253
+  .vpternlogq 4 6 26 (.reg 28) 150,  -- 254
+  .vpternlogq 4 18 22 (.reg 29) 150,  -- 255
+  .vprolq 4 18 18 44,  -- 256
+  .vpternlogq 4 13 23 (.reg 30) 150,  -- 257
+  .vprolq 4 13 13 43,  -- 258
+  .vpternlogq 4 15 24 (.reg 31) 150,  -- 259
+  .vprolq 4 15 15 21,  -- 260
+  .vpternlogq 4 5 25 (.reg 27) 150,  -- 261
+  .vprolq 4 5 5 14,  -- 262
+  .vmov 4 8 (.reg 6) none,  -- 263
+  .vpternlogq 4 8 18 (.reg 13) 210,  -- 264
+  .vpxor 4 8 8 (.bcst (.base 8 (8))),  -- 265
+  .vstore 4 (.base 9 (160)) 8,  -- 266
+  .vmov 4 8 (.reg 18) none,  -- 267
+  .vpternlogq 4 8 13 (.reg 15) 210,  -- 268
+  .vstore 4 (.base 9 (192)) 8,  -- 269
+  .vpternlogq 4 13 15 (.reg 5) 210,  -- 270
+  .vstore 4 (.base 9 (224)) 13,  -- 271
+  .vpternlogq 4 15 5 (.reg 6) 210,  -- 272
+  .vstore 4 (.base 9 (256)) 15,  -- 273
+  .vpternlogq 4 5 6 (.reg 18) 210,  -- 274
+  .vstore 4 (.base 9 (288)) 5,  -- 275
+  .vmov 4 18 (.mem (.base 9 (96))) none,  -- 276
+  .vpternlogq 4 18 24 (.reg 31) 150,  -- 277
+  .vprolq 4 18 18 28,  -- 278
+  .vpternlogq 4 19 25 (.reg 27) 150,  -- 279
+  .vprolq 4 19 19 20,  -- 280
+  .vpternlogq 4 16 26 (.reg 28) 150,  -- 281
+  .vprolq 4 16 16 3,  -- 282
+  .vpternlogq 4 12 22 (.reg 29) 150,  -- 283
+  .vprolq 4 12 12 45,  -- 284
+  .vpternlogq 4 14 23 (.reg 30) 150,  -- 285
+  .vprolq 4 14 14 61,  -- 286
+  .vmov 4 6 (.reg 18) none,  -- 287
+  .vpternlogq 4 6 19 (.reg 16) 210,  -- 288
+  .vmov 4 8 (.reg 19) none,  -- 289
+  .vpternlogq 4 8 16 (.reg 12) 210,  -- 290
+  .vpternlogq 4 16 12 (.reg 14) 210,  -- 291
+  .vpternlogq 4 12 14 (.reg 18) 210,  -- 292
+  .vpternlogq 4 14 18 (.reg 19) 210,  -- 293
+  .vmov 4 13 (.mem (.base 9 (32))) none,  -- 294
+  .vpternlogq 4 13 22 (.reg 29) 150,  -- 295
+  .vprolq 4 13 13 1,  -- 296
+  .vpternlogq 4 3 23 (.reg 30) 150,  -- 297
+  .vprolq 4 3 3 6,  -- 298
+  .vpternlogq 4 17 24 (.reg 31) 150,  -- 299
+  .vprolq 4 17 17 25,  -- 300
+  .vpternlogq 4 20 25 (.reg 27) 150,  -- 301
+  .vpshufb 4 20 20 (.mem (.rip 208)),  -- 302
+  .vpternlogq 4 11 26 (.reg 28) 150,  -- 303
+  .vprolq 4 11 11 18,  -- 304
+  .vmov 4 15 (.reg 13) none,  -- 305
+  .vpternlogq 4 15 3 (.reg 17) 210,  -- 306
+  .vmov 4 5 (.reg 3) none,  -- 307
+  .vpternlogq 4 5 17 (.reg 20) 210,  -- 308
+  .vpternlogq 4 17 20 (.reg 11) 210,  -- 309
+  .vpternlogq 4 20 11 (.reg 13) 210,  -- 310
+  .vpternlogq 4 11 13 (.reg 3) 210,  -- 311
+  .vmov 4 18 (.mem (.base 9 (128))) none,  -- 312
+  .vpternlogq 4 18 25 (.reg 27) 150,  -- 313
+  .vprolq 4 18 18 27,  -- 314
+  .vpternlogq 4 2 26 (.reg 28) 150,  -- 315
+  .vprolq 4 2 2 36,  -- 316
+  .vpternlogq 4 21 22 (.reg 29) 150,  -- 317
+  .vprolq 4 21 21 10,  -- 318
+  .vpternlogq 4 0 23 (.reg 30) 150,  -- 319
+  .vprolq 4 0 0 15,  -- 320
+  .vpternlogq 4 1 24 (.reg 31) 150,  -- 321
+  .vpshufb 4 1 1 (.mem (.rip 240)),  -- 322
+  .vmov 4 19 (.reg 18) none,  -- 323
+  .vpternlogq 4 19 2 (.reg 21) 210,  -- 324
+  .vmov 4 13 (.reg 2) none,  -- 325
+  .vpternlogq 4 13 21 (.reg 0) 210,  -- 326
+  .vpternlogq 4 21 0 (.reg 1) 210,  -- 327
+  .vpternlogq 4 0 1 (.reg 18) 210,  -- 328
+  .vpternlogq 4 1 18 (.reg 2) 210,  -- 329
+  .vmov 4 3 (.mem (.base 9 (64))) none,  -- 330
+  .vpternlogq 4 3 23 (.reg 30) 150,  -- 331
+  .vprolq 4 3 3 62,  -- 332
+  .vpternlogq 4 7 24 (.reg 31) 150,  -- 333
+  .vprolq 4 7 7 55,  -- 334
+  .vpternlogq 4 4 25 (.reg 27) 150,  -- 335
+  .vprolq 4 4 4 39,  -- 336
+  .vpternlogq 4 9 26 (.reg 28) 150,  -- 337
+  .vprolq 4 9 9 41,  -- 338
+  .vpternlogq 4 10 22 (.reg 29) 150,  -- 339
+  .vprolq 4 10 10 2,  -- 340
+  .vmov 4 18 (.reg 3) none,  -- 341
+  .vpternlogq 4 18 7 (.reg 4) 210,  -- 342
+  .vmov 4 2 (.reg 7) none,  -- 343
+  .vpternlogq 4 2 4 (.reg 9) 210,  -- 344
+  .vpternlogq 4 4 9 (.reg 10) 210,  -- 345
+  .vpternlogq 4 9 10 (.reg 3) 210,  -- 346
+  .vpternlogq 4 10 3 (.reg 7) 210,  -- 347
+  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 348
+  .vpternlogq 4 22 6 (.reg 15) 150,  -- 349
+  .vpternlogq 4 22 19 (.reg 18) 150,  -- 350
+  .vprolq 4 27 22 1,  -- 351
+  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 352
+  .vpternlogq 4 23 8 (.reg 5) 150,  -- 353
+  .vpternlogq 4 23 13 (.reg 2) 150,  -- 354
+  .vprolq 4 28 23 1,  -- 355
+  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 356
+  .vpternlogq 4 24 16 (.reg 17) 150,  -- 357
+  .vpternlogq 4 24 21 (.reg 4) 150,  -- 358
+  .vprolq 4 29 24 1,  -- 359
+  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 360
+  .vpternlogq 4 25 12 (.reg 20) 150,  -- 361
+  .vpternlogq 4 25 0 (.reg 9) 150,  -- 362
+  .vprolq 4 30 25 1,  -- 363
+  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 364
+  .vpternlogq 4 26 14 (.reg 11) 150,  -- 365
+  .vpternlogq 4 26 1 (.reg 10) 150,  -- 366
+  .vprolq 4 31 26 1,  -- 367
+  .vmov 4 3 (.mem (.base 9 (160))) none,  -- 368
+  .vpternlogq 4 3 26 (.reg 28) 150,  -- 369
+  .vpternlogq 4 8 22 (.reg 29) 150,  -- 370
+  .vprolq 4 8 8 44,  -- 371
+  .vpternlogq 4 17 23 (.reg 30) 150,  -- 372
+  .vprolq 4 17 17 43,  -- 373
+  .vpternlogq 4 0 24 (.reg 31) 150,  -- 374
+  .vprolq 4 0 0 21,  -- 375
+  .vpternlogq 4 10 25 (.reg 27) 150,  -- 376
+  .vprolq 4 10 10 14,  -- 377
+  .vmov 4 7 (.reg 3) none,  -- 378
+  .vpternlogq 4 7 8 (.reg 17) 210,  -- 379
+  .vpxor 4 7 7 (.bcst (.base 8 (16))),  -- 380
+  .vstore 4 (.base 9 (0)) 7,  -- 381
+  .vmov 4 7 (.reg 8) none,  -- 382
+  .vpternlogq 4 7 17 (.reg 0) 210,  -- 383
+  .vstore 4 (.base 9 (32)) 7,  -- 384
+  .vpternlogq 4 17 0 (.reg 10) 210,  -- 385
+  .vstore 4 (.base 9 (64)) 17,  -- 386
+  .vpternlogq 4 0 10 (.reg 3) 210,  -- 387
+  .vstore 4 (.base 9 (96)) 0,  -- 388
+  .vpternlogq 4 10 3 (.reg 8) 210,  -- 389
+  .vstore 4 (.base 9 (128)) 10,  -- 390
+  .vmov 4 8 (.mem (.base 9 (256))) none,  -- 391
+  .vpternlogq 4 8 24 (.reg 31) 150,  -- 392
+  .vprolq 4 8 8 28,  -- 393
+  .vpternlogq 4 14 25 (.reg 27) 150,  -- 394
+  .vprolq 4 14 14 20,  -- 395
+  .vpternlogq 4 15 26 (.reg 28) 150,  -- 396
+  .vprolq 4 15 15 3,  -- 397
+  .vpternlogq 4 13 22 (.reg 29) 150,  -- 398
+  .vprolq 4 13 13 45,  -- 399
+  .vpternlogq 4 4 23 (.reg 30) 150,  -- 400
+  .vprolq 4 4 4 61,  -- 401
+  .vmov 4 3 (.reg 8) none,  -- 402
+  .vpternlogq 4 3 14 (.reg 15) 210,  -- 403
+  .vmov 4 7 (.reg 14) none,  -- 404
+  .vpternlogq 4 7 15 (.reg 13) 210,  -- 405
+  .vpternlogq 4 15 13 (.reg 4) 210,  -- 406
+  .vpternlogq 4 13 4 (.reg 8) 210,  -- 407
+  .vpternlogq 4 4 8 (.reg 14) 210,  -- 408
+  .vmov 4 17 (.mem (.base 9 (192))) none,  -- 409
+  .vpternlogq 4 17 22 (.reg 29) 150,  -- 410
+  .vprolq 4 17 17 1,  -- 411
+  .vpternlogq 4 16 23 (.reg 30) 150,  -- 412
+  .vprolq 4 16 16 6,  -- 413
+  .vpternlogq 4 20 24 (.reg 31) 150,  -- 414
+  .vprolq 4 20 20 25,  -- 415
+  .vpternlogq 4 1 25 (.reg 27) 150,  -- 416
+  .vpshufb 4 1 1 (.mem (.rip 208)),  -- 417
+  .vpternlogq 4 18 26 (.reg 28) 150,  -- 418
+  .vprolq 4 18 18 18,  -- 419
+  .vmov 4 0 (.reg 17) none,  -- 420
+  .vpternlogq 4 0 16 (.reg 20) 210,  -- 421
+  .vmov 4 10 (.reg 16) none,  -- 422
+  .vpternlogq 4 10 20 (.reg 1) 210,  -- 423
+  .vpternlogq 4 20 1 (.reg 18) 210,  -- 424
+  .vpternlogq 4 1 18 (.reg 17) 210,  -- 425
+  .vpternlogq 4 18 17 (.reg 16) 210,  -- 426
+  .vmov 4 8 (.mem (.base 9 (288))) none,  -- 427
+  .vpternlogq 4 8 25 (.reg 27) 150,  -- 428
+  .vprolq 4 8 8 27,  -- 429
+  .vpternlogq 4 6 26 (.reg 28) 150,  -- 430
+  .vprolq 4 6 6 36,  -- 431
+  .vpternlogq 4 5 22 (.reg 29) 150,  -- 432
+  .vprolq 4 5 5 10,  -- 433
+  .vpternlogq 4 21 23 (.reg 30) 150,  -- 434
+  .vprolq 4 21 21 15,  -- 435
+  .vpternlogq 4 9 24 (.reg 31) 150,  -- 436
+  .vpshufb 4 9 9 (.mem (.rip 240)),  -- 437
+  .vmov 4 14 (.reg 8) none,  -- 438
+  .vpternlogq 4 14 6 (.reg 5) 210,  -- 439
+  .vmov 4 17 (.reg 6) none,  -- 440
+  .vpternlogq 4 17 5 (.reg 21) 210,  -- 441
+  .vpternlogq 4 5 21 (.reg 9) 210,  -- 442
+  .vpternlogq 4 21 9 (.reg 8) 210,  -- 443
+  .vpternlogq 4 9 8 (.reg 6) 210,  -- 444
+  .vmov 4 16 (.mem (.base 9 (224))) none,  -- 445
+  .vpternlogq 4 16 23 (.reg 30) 150,  -- 446
+  .vprolq 4 16 16 62,  -- 447
+  .vpternlogq 4 12 24 (.reg 31) 150,  -- 448
+  .vprolq 4 12 12 55,  -- 449
+  .vpternlogq 4 11 25 (.reg 27) 150,  -- 450
+  .vprolq 4 11 11 39,  -- 451
+  .vpternlogq 4 19 26 (.reg 28) 150,  -- 452
+  .vprolq 4 19 19 41,  -- 453
+  .vpternlogq 4 2 22 (.reg 29) 150,  -- 454
+  .vprolq 4 2 2 2,  -- 455
+  .vmov 4 8 (.reg 16) none,  -- 456
+  .vpternlogq 4 8 12 (.reg 11) 210,  -- 457
+  .vmov 4 6 (.reg 12) none,  -- 458
+  .vpternlogq 4 6 11 (.reg 19) 210,  -- 459
+  .vpternlogq 4 11 19 (.reg 2) 210,  -- 460
+  .vpternlogq 4 19 2 (.reg 16) 210,  -- 461
+  .vpternlogq 4 2 16 (.reg 12) 210,  -- 462
+  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 463
+  .vpternlogq 4 22 3 (.reg 0) 150,  -- 464
+  .vpternlogq 4 22 14 (.reg 8) 150,  -- 465
+  .vprolq 4 27 22 1,  -- 466
+  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 467
+  .vpternlogq 4 23 7 (.reg 10) 150,  -- 468
+  .vpternlogq 4 23 17 (.reg 6) 150,  -- 469
+  .vprolq 4 28 23 1,  -- 470
+  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 471
+  .vpternlogq 4 24 15 (.reg 20) 150,  -- 472
+  .vpternlogq 4 24 5 (.reg 11) 150,  -- 473
+  .vprolq 4 29 24 1,  -- 474
+  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 475
+  .vpternlogq 4 25 13 (.reg 1) 150,  -- 476
+  .vpternlogq 4 25 21 (.reg 19) 150,  -- 477
+  .vprolq 4 30 25 1,  -- 478
+  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 479
+  .vpternlogq 4 26 4 (.reg 18) 150,  -- 480
+  .vpternlogq 4 26 9 (.reg 2) 150,  -- 481
+  .vprolq 4 31 26 1,  -- 482
+  .vmov 4 16 (.mem (.base 9 (0))) none,  -- 483
+  .vpternlogq 4 16 26 (.reg 28) 150,  -- 484
+  .vpternlogq 4 7 22 (.reg 29) 150,  -- 485
+  .vprolq 4 7 7 44,  -- 486
+  .vpternlogq 4 20 23 (.reg 30) 150,  -- 487
+  .vprolq 4 20 20 43,  -- 488
+  .vpternlogq 4 21 24 (.reg 31) 150,  -- 489
+  .vprolq 4 21 21 21,  -- 490
+  .vpternlogq 4 2 25 (.reg 27) 150,  -- 491
+  .vprolq 4 2 2 14,  -- 492
+  .vmov 4 12 (.reg 16) none,  -- 493
+  .vpternlogq 4 12 7 (.reg 20) 210,  -- 494
+  .vpxor 4 12 12 (.bcst (.base 8 (24))),  -- 495
+  .vstore 4 (.base 9 (160)) 12,  -- 496
+  .vmov 4 12 (.reg 7) none,  -- 497
+  .vpternlogq 4 12 20 (.reg 21) 210,  -- 498
+  .vstore 4 (.base 9 (192)) 12,  -- 499
+  .vpternlogq 4 20 21 (.reg 2) 210,  -- 500
+  .vstore 4 (.base 9 (224)) 20,  -- 501
+  .vpternlogq 4 21 2 (.reg 16) 210,  -- 502
+  .vstore 4 (.base 9 (256)) 21,  -- 503
+  .vpternlogq 4 2 16 (.reg 7) 210,  -- 504
+  .vstore 4 (.base 9 (288)) 2,  -- 505
+  .vmov 4 7 (.mem (.base 9 (96))) none,  -- 506
+  .vpternlogq 4 7 24 (.reg 31) 150,  -- 507
+  .vprolq 4 7 7 28,  -- 508
+  .vpternlogq 4 4 25 (.reg 27) 150,  -- 509
+  .vprolq 4 4 4 20,  -- 510
+  .vpternlogq 4 0 26 (.reg 28) 150,  -- 511
+  .vprolq 4 0 0 3,  -- 512
+  .vpternlogq 4 17 22 (.reg 29) 150,  -- 513
+  .vprolq 4 17 17 45,  -- 514
+  .vpternlogq 4 11 23 (.reg 30) 150,  -- 515
+  .vprolq 4 11 11 61,  -- 516
+  .vmov 4 16 (.reg 7) none,  -- 517
+  .vpternlogq 4 16 4 (.reg 0) 210,  -- 518
+  .vmov 4 12 (.reg 4) none,  -- 519
+  .vpternlogq 4 12 0 (.reg 17) 210,  -- 520
+  .vpternlogq 4 0 17 (.reg 11) 210,  -- 521
+  .vpternlogq 4 17 11 (.reg 7) 210,  -- 522
+  .vpternlogq 4 11 7 (.reg 4) 210,  -- 523
+  .vmov 4 20 (.mem (.base 9 (32))) none,  -- 524
+  .vpternlogq 4 20 22 (.reg 29) 150,  -- 525
+  .vprolq 4 20 20 1,  -- 526
+  .vpternlogq 4 15 23 (.reg 30) 150,  -- 527
+  .vprolq 4 15 15 6,  -- 528
+  .vpternlogq 4 1 24 (.reg 31) 150,  -- 529
+  .vprolq 4 1 1 25,  -- 530
+  .vpternlogq 4 9 25 (.reg 27) 150,  -- 531
+  .vpshufb 4 9 9 (.mem (.rip 208)),  -- 532
+  .vpternlogq 4 8 26 (.reg 28) 150,  -- 533
+  .vprolq 4 8 8 18,  -- 534
+  .vmov 4 21 (.reg 20) none,  -- 535
+  .vpternlogq 4 21 15 (.reg 1) 210,  -- 536
+  .vmov 4 2 (.reg 15) none,  -- 537
+  .vpternlogq 4 2 1 (.reg 9) 210,  -- 538
+  .vpternlogq 4 1 9 (.reg 8) 210,  -- 539
+  .vpternlogq 4 9 8 (.reg 20) 210,  -- 540
+  .vpternlogq 4 8 20 (.reg 15) 210,  -- 541
+  .vmov 4 7 (.mem (.base 9 (128))) none,  -- 542
+  .vpternlogq 4 7 25 (.reg 27) 150,  -- 543
+  .vprolq 4 7 7 27,  -- 544
+  .vpternlogq 4 3 26 (.reg 28) 150,  -- 545
+  .vprolq 4 3 3 36,  -- 546
+  .vpternlogq 4 10 22 (.reg 29) 150,  -- 547
+  .vprolq 4 10 10 10,  -- 548
+  .vpternlogq 4 5 23 (.reg 30) 150,  -- 549
+  .vprolq 4 5 5 15,  -- 550
+  .vpternlogq 4 19 24 (.reg 31) 150,  -- 551
+  .vpshufb 4 19 19 (.mem (.rip 240)),  -- 552
+  .vmov 4 4 (.reg 7) none,  -- 553
+  .vpternlogq 4 4 3 (.reg 10) 210,  -- 554
+  .vmov 4 20 (.reg 3) none,  -- 555
+  .vpternlogq 4 20 10 (.reg 5) 210,  -- 556
+  .vpternlogq 4 10 5 (.reg 19) 210,  -- 557
+  .vpternlogq 4 5 19 (.reg 7) 210,  -- 558
+  .vpternlogq 4 19 7 (.reg 3) 210,  -- 559
+  .vmov 4 15 (.mem (.base 9 (64))) none,  -- 560
+  .vpternlogq 4 15 23 (.reg 30) 150,  -- 561
+  .vprolq 4 15 15 62,  -- 562
+  .vpternlogq 4 13 24 (.reg 31) 150,  -- 563
+  .vprolq 4 13 13 55,  -- 564
+  .vpternlogq 4 18 25 (.reg 27) 150,  -- 565
+  .vprolq 4 18 18 39,  -- 566
+  .vpternlogq 4 14 26 (.reg 28) 150,  -- 567
+  .vprolq 4 14 14 41,  -- 568
+  .vpternlogq 4 6 22 (.reg 29) 150,  -- 569
+  .vprolq 4 6 6 2,  -- 570
+  .vmov 4 7 (.reg 15) none,  -- 571
+  .vpternlogq 4 7 13 (.reg 18) 210,  -- 572
+  .vmov 4 3 (.reg 13) none,  -- 573
+  .vpternlogq 4 3 18 (.reg 14) 210,  -- 574
+  .vpternlogq 4 18 14 (.reg 6) 210,  -- 575
+  .vpternlogq 4 14 6 (.reg 15) 210,  -- 576
+  .vpternlogq 4 6 15 (.reg 13) 210,  -- 577
+  .vmov 4 15 (.reg 10) none,  -- 578
+  .vmov 4 10 (.reg 16) none,  -- 579
+  .vmov 4 16 (.reg 5) none,  -- 580
+  .vmov 4 5 (.reg 3) none,  -- 581
+  .vmov 4 3 (.reg 21) none,  -- 582
+  .vmov 4 21 (.reg 6) none,  -- 583
+  .vmov 4 6 (.reg 0) none,  -- 584
+  .vmov 4 0 (.reg 2) none,  -- 585
+  .vmov 4 13 (.reg 9) none,  -- 586
+  .vmov 4 9 (.reg 11) none,  -- 587
+  .vmov 4 11 (.reg 12) none,  -- 588
+  .vmov 4 12 (.reg 1) none,  -- 589
+  .vmov 4 1 (.reg 4) none,  -- 590
+  .vmov 4 4 (.reg 7) none,  -- 591
+  .vmov 4 7 (.reg 20) none,  -- 592
+  .vmov 4 20 (.reg 14) none,  -- 593
+  .vmov 4 14 (.reg 8) none,  -- 594
+  .vmov 4 8 (.reg 17) none,  -- 595
+  .vmov 4 17 (.reg 19) none,  -- 596
+  .vmov 4 19 (.reg 18) none,  -- 597
+  .add 8 (32),  -- 598
+  .decm (.base 9 (320)),  -- 599
+  .jcc .ne 118,  -- 600
+  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 601
+  .vpternlogq 4 22 10 (.reg 3) 150,  -- 602
+  .vpternlogq 4 22 1 (.reg 4) 150,  -- 603
+  .vprolq 4 27 22 1,  -- 604
+  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 605
+  .vpternlogq 4 23 11 (.reg 0) 150,  -- 606
+  .vpternlogq 4 23 7 (.reg 5) 150,  -- 607
+  .vprolq 4 28 23 1,  -- 608
+  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 609
+  .vpternlogq 4 24 6 (.reg 12) 150,  -- 610
+  .vpternlogq 4 24 15 (.reg 19) 150,  -- 611
+  .vprolq 4 29 24 1,  -- 612
+  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 613
+  .vpternlogq 4 25 8 (.reg 13) 150,  -- 614
+  .vpternlogq 4 25 16 (.reg 20) 150,  -- 615
+  .vprolq 4 30 25 1,  -- 616
+  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 617
+  .vpternlogq 4 26 9 (.reg 14) 150,  -- 618
+  .vpternlogq 4 26 17 (.reg 21) 150,  -- 619
+  .vprolq 4 31 26 1,  -- 620
+  .vmov 4 2 (.mem (.base 9 (160))) none,  -- 621
+  .vpternlogq 4 2 26 (.reg 28) 150,  -- 622
+  .vpternlogq 4 11 22 (.reg 29) 150,  -- 623
+  .vprolq 4 11 11 44,  -- 624
+  .vpternlogq 4 12 23 (.reg 30) 150,  -- 625
+  .vprolq 4 12 12 43,  -- 626
+  .vpternlogq 4 16 24 (.reg 31) 150,  -- 627
+  .vprolq 4 16 16 21,  -- 628
+  .vpternlogq 4 21 25 (.reg 27) 150,  -- 629
+  .vprolq 4 21 21 14,  -- 630
+  .vmov 4 18 (.reg 2) none,  -- 631
+  .vpternlogq 4 18 11 (.reg 12) 210,  -- 632
+  .vpxor 4 18 18 (.bcst (.rip 168)),  -- 633
+  .vstore 4 (.base 9 (0)) 18,  -- 634
+  .vmov 4 18 (.reg 11) none,  -- 635
+  .vpternlogq 4 18 12 (.reg 16) 210,  -- 636
+  .vstore 4 (.base 9 (32)) 18,  -- 637
+  .vpternlogq 4 12 16 (.reg 21) 210,  -- 638
+  .vstore 4 (.base 9 (64)) 12,  -- 639
+  .vpternlogq 4 16 21 (.reg 2) 210,  -- 640
+  .vstore 4 (.base 9 (96)) 16,  -- 641
+  .vpternlogq 4 21 2 (.reg 11) 210,  -- 642
+  .vstore 4 (.base 9 (128)) 21,  -- 643
+  .vmov 4 11 (.mem (.base 9 (256))) none,  -- 644
+  .vpternlogq 4 11 24 (.reg 31) 150,  -- 645
+  .vprolq 4 11 11 28,  -- 646
+  .vpternlogq 4 9 25 (.reg 27) 150,  -- 647
+  .vprolq 4 9 9 20,  -- 648
+  .vpternlogq 4 3 26 (.reg 28) 150,  -- 649
+  .vprolq 4 3 3 3,  -- 650
+  .vpternlogq 4 7 22 (.reg 29) 150,  -- 651
+  .vprolq 4 7 7 45,  -- 652
+  .vpternlogq 4 19 23 (.reg 30) 150,  -- 653
+  .vprolq 4 19 19 61,  -- 654
+  .vmov 4 2 (.reg 11) none,  -- 655
+  .vpternlogq 4 2 9 (.reg 3) 210,  -- 656
+  .vmov 4 18 (.reg 9) none,  -- 657
+  .vpternlogq 4 18 3 (.reg 7) 210,  -- 658
+  .vpternlogq 4 3 7 (.reg 19) 210,  -- 659
+  .vpternlogq 4 7 19 (.reg 11) 210,  -- 660
+  .vpternlogq 4 19 11 (.reg 9) 210,  -- 661
+  .vmov 4 12 (.mem (.base 9 (192))) none,  -- 662
+  .vpternlogq 4 12 22 (.reg 29) 150,  -- 663
+  .vprolq 4 12 12 1,  -- 664
+  .vpternlogq 4 6 23 (.reg 30) 150,  -- 665
+  .vprolq 4 6 6 6,  -- 666
+  .vpternlogq 4 13 24 (.reg 31) 150,  -- 667
+  .vprolq 4 13 13 25,  -- 668
+  .vpternlogq 4 17 25 (.reg 27) 150,  -- 669
+  .vpshufb 4 17 17 (.mem (.rip 208)),  -- 670
+  .vpternlogq 4 4 26 (.reg 28) 150,  -- 671
+  .vprolq 4 4 4 18,  -- 672
+  .vmov 4 16 (.reg 12) none,  -- 673
+  .vpternlogq 4 16 6 (.reg 13) 210,  -- 674
+  .vmov 4 21 (.reg 6) none,  -- 675
+  .vpternlogq 4 21 13 (.reg 17) 210,  -- 676
+  .vpternlogq 4 13 17 (.reg 4) 210,  -- 677
+  .vpternlogq 4 17 4 (.reg 12) 210,  -- 678
+  .vpternlogq 4 4 12 (.reg 6) 210,  -- 679
+  .vmov 4 11 (.mem (.base 9 (288))) none,  -- 680
+  .vpternlogq 4 11 25 (.reg 27) 150,  -- 681
+  .vprolq 4 11 11 27,  -- 682
+  .vpternlogq 4 10 26 (.reg 28) 150,  -- 683
+  .vprolq 4 10 10 36,  -- 684
+  .vpternlogq 4 0 22 (.reg 29) 150,  -- 685
+  .vprolq 4 0 0 10,  -- 686
+  .vpternlogq 4 15 23 (.reg 30) 150,  -- 687
+  .vprolq 4 15 15 15,  -- 688
+  .vpternlogq 4 20 24 (.reg 31) 150,  -- 689
+  .vpshufb 4 20 20 (.mem (.rip 240)),  -- 690
+  .vmov 4 9 (.reg 11) none,  -- 691
+  .vpternlogq 4 9 10 (.reg 0) 210,  -- 692
+  .vmov 4 12 (.reg 10) none,  -- 693
+  .vpternlogq 4 12 0 (.reg 15) 210,  -- 694
+  .vpternlogq 4 0 15 (.reg 20) 210,  -- 695
+  .vpternlogq 4 15 20 (.reg 11) 210,  -- 696
+  .vpternlogq 4 20 11 (.reg 10) 210,  -- 697
+  .vmov 4 6 (.mem (.base 9 (224))) none,  -- 698
+  .vpternlogq 4 6 23 (.reg 30) 150,  -- 699
+  .vprolq 4 6 6 62,  -- 700
+  .vpternlogq 4 8 24 (.reg 31) 150,  -- 701
+  .vprolq 4 8 8 55,  -- 702
+  .vpternlogq 4 14 25 (.reg 27) 150,  -- 703
+  .vprolq 4 14 14 39,  -- 704
+  .vpternlogq 4 1 26 (.reg 28) 150,  -- 705
+  .vprolq 4 1 1 41,  -- 706
+  .vpternlogq 4 5 22 (.reg 29) 150,  -- 707
+  .vprolq 4 5 5 2,  -- 708
+  .vmov 4 11 (.reg 6) none,  -- 709
+  .vpternlogq 4 11 8 (.reg 14) 210,  -- 710
+  .vmov 4 10 (.reg 8) none,  -- 711
+  .vpternlogq 4 10 14 (.reg 1) 210,  -- 712
+  .vpternlogq 4 14 1 (.reg 5) 210,  -- 713
+  .vpternlogq 4 1 5 (.reg 6) 210,  -- 714
+  .vpternlogq 4 5 6 (.reg 8) 210,  -- 715
+  .vmov 4 22 (.mem (.base 9 (0))) none,  -- 716
+  .vpternlogq 4 22 2 (.reg 16) 150,  -- 717
+  .vpternlogq 4 22 9 (.reg 11) 150,  -- 718
+  .vprolq 4 27 22 1,  -- 719
+  .vmov 4 23 (.mem (.base 9 (32))) none,  -- 720
+  .vpternlogq 4 23 18 (.reg 21) 150,  -- 721
+  .vpternlogq 4 23 12 (.reg 10) 150,  -- 722
+  .vprolq 4 28 23 1,  -- 723
+  .vmov 4 24 (.mem (.base 9 (64))) none,  -- 724
+  .vpternlogq 4 24 3 (.reg 13) 150,  -- 725
+  .vpternlogq 4 24 0 (.reg 14) 150,  -- 726
+  .vprolq 4 29 24 1,  -- 727
+  .vmov 4 25 (.mem (.base 9 (96))) none,  -- 728
+  .vpternlogq 4 25 7 (.reg 17) 150,  -- 729
+  .vpternlogq 4 25 15 (.reg 1) 150,  -- 730
+  .vprolq 4 30 25 1,  -- 731
+  .vmov 4 26 (.mem (.base 9 (128))) none,  -- 732
+  .vpternlogq 4 26 19 (.reg 4) 150,  -- 733
+  .vpternlogq 4 26 20 (.reg 5) 150,  -- 734
+  .vprolq 4 31 26 1,  -- 735
+  .vmov 4 6 (.mem (.base 9 (0))) none,  -- 736
+  .vpternlogq 4 6 26 (.reg 28) 150,  -- 737
+  .vpternlogq 4 18 22 (.reg 29) 150,  -- 738
+  .vprolq 4 18 18 44,  -- 739
+  .vpternlogq 4 13 23 (.reg 30) 150,  -- 740
+  .vprolq 4 13 13 43,  -- 741
+  .vpternlogq 4 15 24 (.reg 31) 150,  -- 742
+  .vprolq 4 15 15 21,  -- 743
+  .vpternlogq 4 5 25 (.reg 27) 150,  -- 744
+  .vprolq 4 5 5 14,  -- 745
+  .vmov 4 8 (.reg 6) none,  -- 746
+  .vpternlogq 4 8 18 (.reg 13) 210,  -- 747
+  .vpxor 4 8 8 (.bcst (.rip 176)),  -- 748
+  .vstore 4 (.base 9 (160)) 8,  -- 749
+  .vmov 4 8 (.reg 18) none,  -- 750
+  .vpternlogq 4 8 13 (.reg 15) 210,  -- 751
+  .vstore 4 (.base 9 (192)) 8,  -- 752
+  .vpternlogq 4 13 15 (.reg 5) 210,  -- 753
+  .vstore 4 (.base 9 (224)) 13,  -- 754
+  .vpternlogq 4 15 5 (.reg 6) 210,  -- 755
+  .vstore 4 (.base 9 (256)) 15,  -- 756
+  .vpternlogq 4 5 6 (.reg 18) 210,  -- 757
+  .vstore 4 (.base 9 (288)) 5,  -- 758
+  .vmov 4 18 (.mem (.base 9 (96))) none,  -- 759
+  .vpternlogq 4 18 24 (.reg 31) 150,  -- 760
+  .vprolq 4 18 18 28,  -- 761
+  .vpternlogq 4 19 25 (.reg 27) 150,  -- 762
+  .vprolq 4 19 19 20,  -- 763
+  .vpternlogq 4 16 26 (.reg 28) 150,  -- 764
+  .vprolq 4 16 16 3,  -- 765
+  .vpternlogq 4 12 22 (.reg 29) 150,  -- 766
+  .vprolq 4 12 12 45,  -- 767
+  .vpternlogq 4 14 23 (.reg 30) 150,  -- 768
+  .vprolq 4 14 14 61,  -- 769
+  .vmov 4 6 (.reg 18) none,  -- 770
+  .vpternlogq 4 6 19 (.reg 16) 210,  -- 771
+  .vmov 4 8 (.reg 19) none,  -- 772
+  .vpternlogq 4 8 16 (.reg 12) 210,  -- 773
+  .vpternlogq 4 16 12 (.reg 14) 210,  -- 774
+  .vpternlogq 4 12 14 (.reg 18) 210,  -- 775
+  .vpternlogq 4 14 18 (.reg 19) 210,  -- 776
+  .vmov 4 13 (.mem (.base 9 (32))) none,  -- 777
+  .vpternlogq 4 13 22 (.reg 29) 150,  -- 778
+  .vprolq 4 13 13 1,  -- 779
+  .vpternlogq 4 3 23 (.reg 30) 150,  -- 780
+  .vprolq 4 3 3 6,  -- 781
+  .vpternlogq 4 17 24 (.reg 31) 150,  -- 782
+  .vprolq 4 17 17 25,  -- 783
+  .vpternlogq 4 20 25 (.reg 27) 150,  -- 784
+  .vpshufb 4 20 20 (.mem (.rip 208)),  -- 785
+  .vpternlogq 4 11 26 (.reg 28) 150,  -- 786
+  .vprolq 4 11 11 18,  -- 787
+  .vmov 4 15 (.reg 13) none,  -- 788
+  .vpternlogq 4 15 3 (.reg 17) 210,  -- 789
+  .vmov 4 5 (.reg 3) none,  -- 790
+  .vpternlogq 4 5 17 (.reg 20) 210,  -- 791
+  .vpternlogq 4 17 20 (.reg 11) 210,  -- 792
+  .vpternlogq 4 20 11 (.reg 13) 210,  -- 793
+  .vpternlogq 4 11 13 (.reg 3) 210,  -- 794
+  .vmov 4 18 (.mem (.base 9 (128))) none,  -- 795
+  .vpternlogq 4 18 25 (.reg 27) 150,  -- 796
+  .vprolq 4 18 18 27,  -- 797
+  .vpternlogq 4 2 26 (.reg 28) 150,  -- 798
+  .vprolq 4 2 2 36,  -- 799
+  .vpternlogq 4 21 22 (.reg 29) 150,  -- 800
+  .vprolq 4 21 21 10,  -- 801
+  .vpternlogq 4 0 23 (.reg 30) 150,  -- 802
+  .vprolq 4 0 0 15,  -- 803
+  .vpternlogq 4 1 24 (.reg 31) 150,  -- 804
+  .vpshufb 4 1 1 (.mem (.rip 240)),  -- 805
+  .vmov 4 19 (.reg 18) none,  -- 806
+  .vpternlogq 4 19 2 (.reg 21) 210,  -- 807
+  .vmov 4 13 (.reg 2) none,  -- 808
+  .vpternlogq 4 13 21 (.reg 0) 210,  -- 809
+  .vpternlogq 4 21 0 (.reg 1) 210,  -- 810
+  .vpternlogq 4 0 1 (.reg 18) 210,  -- 811
+  .vpternlogq 4 1 18 (.reg 2) 210,  -- 812
+  .vmov 4 3 (.mem (.base 9 (64))) none,  -- 813
+  .vpternlogq 4 3 23 (.reg 30) 150,  -- 814
+  .vprolq 4 3 3 62,  -- 815
+  .vpternlogq 4 7 24 (.reg 31) 150,  -- 816
+  .vprolq 4 7 7 55,  -- 817
+  .vpternlogq 4 4 25 (.reg 27) 150,  -- 818
+  .vprolq 4 4 4 39,  -- 819
+  .vpternlogq 4 9 26 (.reg 28) 150,  -- 820
+  .vprolq 4 9 9 41,  -- 821
+  .vpternlogq 4 10 22 (.reg 29) 150,  -- 822
+  .vprolq 4 10 10 2,  -- 823
+  .vmov 4 18 (.reg 3) none,  -- 824
+  .vpternlogq 4 18 7 (.reg 4) 210,  -- 825
+  .vmov 4 2 (.reg 7) none,  -- 826
+  .vpternlogq 4 2 4 (.reg 9) 210,  -- 827
+  .vpternlogq 4 4 9 (.reg 10) 210,  -- 828
+  .vpternlogq 4 9 10 (.reg 3) 210,  -- 829
+  .vpternlogq 4 10 3 (.reg 7) 210,  -- 830
+  .vmov 4 22 (.mem (.base 9 (160))) none,  -- 831
+  .vpternlogq 4 22 6 (.reg 15) 150,  -- 832
+  .vpternlogq 4 22 19 (.reg 18) 150,  -- 833
+  .vprolq 4 27 22 1,  -- 834
+  .vmov 4 23 (.mem (.base 9 (192))) none,  -- 835
+  .vpternlogq 4 23 8 (.reg 5) 150,  -- 836
+  .vpternlogq 4 23 13 (.reg 2) 150,  -- 837
+  .vprolq 4 28 23 1,  -- 838
+  .vmov 4 24 (.mem (.base 9 (224))) none,  -- 839
+  .vpternlogq 4 24 16 (.reg 17) 150,  -- 840
+  .vpternlogq 4 24 21 (.reg 4) 150,  -- 841
+  .vprolq 4 29 24 1,  -- 842
+  .vmov 4 25 (.mem (.base 9 (256))) none,  -- 843
+  .vpternlogq 4 25 12 (.reg 20) 150,  -- 844
+  .vpternlogq 4 25 0 (.reg 9) 150,  -- 845
+  .vprolq 4 30 25 1,  -- 846
+  .vmov 4 26 (.mem (.base 9 (288))) none,  -- 847
+  .vpternlogq 4 26 14 (.reg 11) 150,  -- 848
+  .vpternlogq 4 26 1 (.reg 10) 150,  -- 849
+  .vprolq 4 31 26 1,  -- 850
+  .vmov 4 3 (.mem (.base 9 (160))) none,  -- 851
+  .vpternlogq 4 3 26 (.reg 28) 150,  -- 852
+  .vpternlogq 4 8 22 (.reg 29) 150,  -- 853
+  .vprolq 4 8 8 44,  -- 854
+  .vpternlogq 4 17 23 (.reg 30) 150,  -- 855
+  .vprolq 4 17 17 43,  -- 856
+  .vpternlogq 4 0 24 (.reg 31) 150,  -- 857
+  .vprolq 4 0 0 21,  -- 858
+  .vpternlogq 4 10 25 (.reg 27) 150,  -- 859
+  .vprolq 4 10 10 14,  -- 860
+  .vmov 4 7 (.reg 3) none,  -- 861
+  .vpternlogq 4 7 8 (.reg 17) 210,  -- 862
+  .vpxor 4 7 7 (.bcst (.rip 184)),  -- 863
+  .vpternlogq 4 8 17 (.reg 0) 210,  -- 864
+  .vpternlogq 4 17 0 (.reg 10) 210,  -- 865
+  .vpternlogq 4 0 10 (.reg 3) 210,  -- 866
+  .vpunpcklqdq 4 25 7 (.reg 8),  -- 867
+  .vpunpckhqdq 4 26 7 (.reg 8),  -- 868
+  .vpunpcklqdq 4 27 17 (.reg 0),  -- 869
+  .vpunpckhqdq 4 28 17 (.reg 0),  -- 870
+  .vshufi64x2 4 0 25 (.reg 27) 0,  -- 871
+  .vshufi64x2 4 1 26 (.reg 28) 0,  -- 872
+  .vshufi64x2 4 2 25 (.reg 27) 3,  -- 873
+  .vshufi64x2 4 3 26 (.reg 28) 3,  -- 874
+  .vstore 4 (.base 11 (0)) 0,  -- 875
+  .vstore 4 (.base 11 (32)) 1,  -- 876
+  .vstore 4 (.base 11 (64)) 2,  -- 877
+  .vstore 4 (.base 11 (96)) 3,  -- 878
+  .ret,  -- 879
+  .nop,  -- 880
+  .nop,  -- 881
+  .nop,  -- 882
+  .nop,  -- 883
+  .cmpi 2 (1),  -- 884
+  .jcct .be "keccaktree_keccak256_x86_x1",  -- 885
+  .push 5,  -- 886
+  .mov 5 4,  -- 887
+  .sub 4 (944),  -- 888
+  .andi 4 (-64),  -- 889
+  .mov 9 4,  -- 890
+  .mov 10 6,  -- 891
+  .mov 11 7,  -- 892
+  .cmpi 2 (4),  -- 893
+  .jcc .b 907,  -- 894
+  .call 0,  -- 895
+  .add 10 (256),  -- 896
+  .add 11 (128),  -- 897
+  .sub 2 (4),  -- 898
+  .cmpi 2 (4),  -- 899
+  .jcc .ae 895,  -- 900
+  .cmpi 2 (1),  -- 901
+  .jcc .a 907,  -- 902
+  .test 2 2,  -- 903
+  .jcc .e 933,  -- 904
+  .movi 0 (2),  -- 905
+  .jmp 934,  -- 906
+  .test 2 2,  -- 907
+  .jcc .e 933,  -- 908
+  .mov 0 2,  -- 909
+  .mov 6 10,  -- 910
+  .lea 7 (.base 4 (384)),  -- 911
+  .mov 1 0,  -- 912
+  .vmov 4 0 (.mem (.base 6 (0))) none,  -- 913
+  .vmov 4 1 (.mem (.base 6 (32))) none,  -- 914
+  .vstore 4 (.base 7 (0)) 0,  -- 915
+  .vstore 4 (.base 7 (32)) 1,  -- 916
+  .add 6 (64),  -- 917
+  .add 7 (64),  -- 918
+  .dec 1,  -- 919
+  .jcc .ne 913,  -- 920
+  .mov 7 11,  -- 921
+  .lea 10 (.base 4 (384)),  -- 922
+  .lea 11 (.base 4 (640)),  -- 923
+  .call 0,  -- 924
+  .lea 6 (.base 4 (640)),  -- 925
+  .mov 1 0,  -- 926
+  .vmov 4 0 (.mem (.base 6 (0))) none,  -- 927
+  .vstore 4 (.base 7 (0)) 0,  -- 928
+  .add 6 (32),  -- 929
+  .add 7 (32),  -- 930
+  .dec 1,  -- 931
+  .jcc .ne 927,  -- 932
+  .xorz 0,  -- 933
+  .vzeroupper,  -- 934
+  .mov 4 5,  -- 935
+  .pop 5,  -- 936
+  .test 0 0,  -- 937
+  .jcc .e 944,  -- 938
+  .mov 2 2,  -- 939
+  .mov 7 11,  -- 940
+  .mov 6 10,  -- 941
+  .cmpi 0 (2),  -- 942
+  .jcct .e "keccaktree_keccak256_x86_x1",  -- 943
+  .ret  -- 944
 ]
 
 /-- `.rodata`, as 64-bit words. -/
@@ -2754,6 +967,6 @@ def rodata : Array (BitVec 64) := #[
 ]
 
 /-- Instruction index of the function entry. -/
-def entry : Nat := 2698
+def entry : Nat := 884
 
 end Keccaktree.Kernels.Avx512vlX4

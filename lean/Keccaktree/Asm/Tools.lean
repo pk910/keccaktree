@@ -67,14 +67,27 @@ variable (T : IsaTool)
 /-- The stores an x86 instruction performs, as (region, word) cells, from the
 state before it. -/
 def x86StoreCells [LaneOps α] (s : State α) : Instr → List (Region × Int)
-  | .vstore lanes dst _ => let a := memAddr s dst; (List.range lanes).map fun (i : Nat) => (a.region, a.off / 8 + Int.ofNat i)
-  | .storeq m _ => let a := memAddr s m; [(a.region, a.off / 8)]
-  | .push _ | .call _ => let sp := s.getG 4; [(sp.region, sp.off / 8 - 1)]
+  | .vstore lanes dst _ => match memAddr? s dst with
+    | some a => (List.range lanes).map fun (i : Nat) => (a.region, a.off / 8 + Int.ofNat i)
+    | none => []
+  | .storeq m _ | .storeqi m _ | .xorm m _ | .addm m _ | .decm m => match memAddr? s m with
+    | some a => [(a.region, a.off / 8)]
+    | none => []
+  | .vextracti128 m _ _ => match memAddr? s m with
+    | some a => [(a.region, a.off / 8), (a.region, a.off / 8 + 1)]
+    | none => []
+  | .push _ | .call _ => match gx s 4 with
+    | some sp => [(sp.region, sp.off / 8 - 1)]
+    | none => []
+  | .repmovsb => match gx s 1, gx s 7 with
+    | some n, some dst => (List.range (n.off.toNat / 8)).map fun (i : Nat) => (dst.region, dst.off / 8 + Int.ofNat i)
+    | _, _ => []
   | _ => []
 
 def x86Tool : IsaTool :=
   { name := "X86.isa", Instr := Instr, exec := exec, nop := .nop, storeCells := x86StoreCells,
-    initState := fun input zero count entry => initState input zero count entry, countOf := fun s => (s.getG 2).off.toNat }
+    initState := fun input zero count entry => initState input zero count entry,
+    countOf := fun s => ((gx s 2).getD ⟨0, 0⟩).off.toNat }
 
 /-- The stores an AArch64 instruction performs. -/
 def armStoreCells [LaneOps α] (s : State α) : Arm.Instr → List (Region × Int)

@@ -33,7 +33,18 @@ inductive Src where
   deriving Repr, DecidableEq
 
 inductive Cond where
-  | e | ne | b | a
+  | e | ne | b | a | ae | be
+  deriving Repr, DecidableEq
+
+/-- Source operand of a scalar (general-register) instruction. -/
+inductive GSrc where
+  | reg (g : Nat)
+  | mem (m : MemOp)
+  | imm (i : Int)
+  deriving Repr, DecidableEq
+
+inductive AluOp where
+  | xor | and | or | add
   deriving Repr, DecidableEq
 
 inductive Instr where
@@ -50,17 +61,26 @@ inductive Instr where
   | vpsllq (lanes : Nat) (d a : Nat) (imm : Nat)
   | vpsrlq (lanes : Nat) (d a : Nat) (imm : Nat)
   | vprolq (lanes : Nat) (d a : Nat) (imm : Nat)
+  | vpsllvq (lanes : Nat) (d a : Nat) (b : Src)       -- per-lane shift counts (constants)
+  | vpsrlvq (lanes : Nat) (d a : Nat) (b : Src)
   | vpternlogq (lanes : Nat) (d a : Nat) (b : Src) (imm : Nat)
   | vpshufb (lanes : Nat) (d a : Nat) (ctrl : Src)
+  | vpshufd (lanes : Nat) (d a : Nat) (imm : Nat)     -- only whole-qword selections
+  | vpblendd (lanes : Nat) (d a : Nat) (b : Src) (imm : Nat)  -- only whole-qword blends
+  | vpalignr (lanes : Nat) (d a : Nat) (b : Src) (imm : Nat)  -- only multiples of 8 bytes
   | vpunpcklqdq (lanes : Nat) (d a : Nat) (b : Src)
   | vpunpckhqdq (lanes : Nat) (d a : Nat) (b : Src)
   | vperm2i128 (d a : Nat) (b : Src) (imm : Nat)
+  | vinserti128 (d a : Nat) (b : Src) (imm : Nat)
+  | vextracti128 (m : MemOp) (a : Nat) (imm : Nat)
   | vshufi64x2 (lanes : Nat) (d a : Nat) (b : Src) (imm : Nat)
   | vpermt2q (lanes : Nat) (d idx : Nat) (b : Src)
   | kmovw (k : Nat) (m : MemOp)
   | vzeroupper
-  -- general registers
+  -- general registers: words in `gd`; a pointer or count is a constant word in the `gprWord`
+  -- encoding, decoded (`gx`) where an instruction needs it
   | mov (d : Gpr) (s : Gpr)
+  | xchg (a b : Gpr)
   | movi (d : Gpr) (imm : Int)
   | lea (d : Gpr) (m : MemOp)
   | add (d : Gpr) (imm : Int)
@@ -71,9 +91,21 @@ inductive Instr where
   | xorz (d : Gpr)                  -- xor d, d
   | cmpi (a : Gpr) (imm : Int)
   | cmpr (a b : Gpr)
+  | cmpm (m : MemOp) (b : Gpr)      -- cmp qword ptr [m], b
+  | cmprm (a : Gpr) (m : MemOp)     -- cmp a, qword ptr [m]
   | test (a b : Gpr)
+  | bt (a b : Gpr)                  -- cf := bit b of a
+  | btc (a : Gpr) (imm : Nat)       -- complement bit imm of a, cf := its old value
+  | alu (op : AluOp) (d : Gpr) (b : GSrc)   -- d := d op b (data; flags not modelled)
+  | andn (d a : Gpr) (b : GSrc)     -- d := ~a & b
+  | rorx (d : Gpr) (b : GSrc) (imm : Nat)
+  | xorm (m : MemOp) (s : Gpr)      -- xor qword ptr [m], s
+  | storeqi (m : MemOp) (imm : Int) -- mov qword ptr [m], imm
+  | addm (m : MemOp) (imm : Int)    -- add qword ptr [m], imm
+  | decm (m : MemOp)                -- dec qword ptr [m] (a counter)
   | jcc (c : Cond) (target : Nat)   -- target: instruction index
   | jmp (target : Nat)
+  | jcct (c : Cond) (name : String)   -- conditional tail call (`jcc` to another function)
   | call (target : Nat)
   | ret
   | push (s : Gpr)
@@ -156,25 +188,66 @@ def memStoreFrom (m : Region → Int → α) (r : Region) (q : Int) : List α �
 def State.storeWords (s : State α) (a : Addr) (vs : List α) : Option (State α) :=
   if a.off % 8 = 0 ∧ a.region ≠ rRodata then some { s with mem := memStoreFrom s.mem a.region (a.off / 8) vs } else none
 
-def memAddr (s : State α) : MemOp → Addr
-  | .base g disp => let a := s.getG g; ⟨a.region, a.off + disp⟩
-  | .rip off => ⟨rRodata, off⟩
+/-- A word as a register value: a number as is, a pointer as (region << 56) | offset. -/
+def wordGpr (v : BitVec 64) : Addr :=
+  let r := (v >>> 56).toNat
+  if r = 0 then ⟨0, v.toInt⟩ else ⟨⟨r % 8, Nat.mod_lt _ (by decide)⟩, ((v &&& 0x00ffffffffffffff#64).toNat : Int)⟩
 
-/-- A source operand as `lanes` lane values (`none` on a misaligned load). -/
+/-- The general registers live in `gd`; a pointer or count is a constant word
+in the `gprWord` encoding.  `gx` decodes it; it is `none` for a non-constant
+(symbolic) word, and every instruction that needs it fails then. -/
+def gx (s : State α) (n : Nat) : Option Addr := (asConst (s.getGD n)).map wordGpr
+def setX (s : State α) (n : Nat) (a : Addr) : State α := s.setGD n (const (gprWord a))
+def withX (s : State α) (n : Nat) (k : Addr → State α) : State α :=
+  match gx s n with
+  | some a => k a
+  | none => s.fail
+
+def memAddr? (s : State α) : MemOp → Option Addr
+  | .base g disp => (gx s g).map fun a => ⟨a.region, a.off + disp⟩
+  | .rip off => some ⟨rRodata, off⟩
+
+def withMem (s : State α) (m : MemOp) (k : Addr → State α) : State α :=
+  match memAddr? s m with
+  | some a => k a
+  | none => s.fail
+
+/-- A source operand as `lanes` lane values (`none` on a misaligned or undecodable load). -/
 def readSrc (rodata : Array (BitVec 64)) (s : State α) (lanes : Nat) : Src → Option (List α)
   | .reg n => some ((s.getV n).take lanes)
-  | .mem m => s.loadWords rodata (memAddr s m) lanes
-  | .bcst m => (s.loadWords rodata (memAddr s m) 1).map fun l => List.replicate lanes (l.headD (const 0))
+  | .mem m => (memAddr? s m).bind fun a => s.loadWords rodata a lanes
+  | .bcst m => ((memAddr? s m).bind fun a => s.loadWords rodata a 1).map fun l => List.replicate lanes (l.headD (const 0))
+
+def withSrc (rodata : Array (BitVec 64)) (s : State α) (lanes : Nat) (b : Src) (k : List α → State α) : State α :=
+  match readSrc rodata s lanes b with
+  | some bs => k bs
+  | none => s.fail
+
+def withLoad (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (n : Nat) (k : List α → State α) : State α :=
+  match s.loadWords rodata a n with
+  | some ws => k ws
+  | none => s.fail
+
+def withStore (s : State α) (a : Addr) (vs : List α) (k : State α → State α) : State α :=
+  match s.storeWords a vs with
+  | some s' => k s'
+  | none => s.fail
+
+/-- A scalar source operand. -/
+def readG (rodata : Array (BitVec 64)) (s : State α) (b : GSrc) (k : α → State α) : State α :=
+  match b with
+  | .reg g => k (s.getGD g)
+  | .imm i => k (const (BitVec.ofInt 64 i))
+  | .mem m => withMem s m fun a => withLoad rodata s a 1 fun ws => k (ws.headD (const 0))
+
+def next (s : State α) : State α := { s with pc := s.pc + 1 }
 
 /-- Write a `lanes`-wide result: the lanes above are zeroed. -/
 def writeV (s : State α) (n : Nat) (lanes : Nat) (vs : List α) : State α :=
   s.setV n (Vector.ofFn fun i : Fin 8 => if i.val < lanes then vs.getD i.val (const 0) else const 0)
 
 def binop (rodata : Array (BitVec 64)) (s : State α) (lanes d a : Nat) (b : Src) (f : α → α → α) : State α :=
-  match readSrc rodata s lanes b with
-  | some bs =>
-    writeV s d lanes (List.zipWith f ((s.getV a).take lanes) bs)
-  | none => s.fail
+  withSrc rodata s lanes b fun bs => next (writeV s d lanes (List.zipWith f ((s.getV a).take lanes) bs))
 
 /-- `vpshufb` on one 128-bit lane (two words `lo`, `hi`) with control bytes
 `ctrl` (16 bytes, as two words): byte `i` is zero if the control's bit 7 is
@@ -196,211 +269,228 @@ def lane128 (xs : List α) (j : Nat) : List α := [xs.getD (2 * j) (const 0), xs
 def setFlagsSub (s : State α) (a b : Addr) : State α :=
   if a.region = b.region then { s with zf := a.off = b.off, cf := a.off < b.off } else s.fail
 
+/-- `vpshufd`: the source qword of result qword `m` (per 128-bit lane), if the
+two dword selectors of `imm` pick a whole qword. -/
+def qwordSel (imm m : Nat) : Option Nat :=
+  let a := (imm / 4 ^ (2 * m)) % 4
+  let b := (imm / 4 ^ (2 * m + 1)) % 4
+  if a % 2 = 0 ∧ b = a + 1 then some (a / 2) else none
+
+/-- The data-lane ALU operations. -/
+def aluOp : AluOp → α → α → α
+  | .xor => xor
+  | .and => and
+  | .or => or
+  | .add => add
+
+/-- The word after `vpshufd`/`vpblendd`/`vpalignr` selections: `some` per lane or fail. -/
+def allSome (l : List (Option α)) : Option (List α) :=
+  if l.all Option.isSome then some (l.map fun o => o.getD (const 0)) else none
+
+/-- `rep movsb` after decoding rcx, rsi, rdi: rcx bytes from [rsi] to [rdi]; whole aligned words only. -/
+def repBody (rodata : Array (BitVec 64)) (s : State α) (n src dst : Addr) : State α :=
+  if n.region = 0 ∧ n.off % 8 = 0 ∧ n.off ≥ 0 then
+    withLoad rodata s src (n.off.toNat / 8) fun vs => withStore s dst vs fun s' =>
+      next (setX (setX (setX s' 1 (Addr.num 0)) 6 ⟨src.region, src.off + n.off⟩) 7 ⟨dst.region, dst.off + n.off⟩)
+  else s.fail
+
+def condHolds (s : State α) : Cond → Bool
+  | .e => s.zf | .ne => !s.zf | .b => s.cf | .a => !s.cf && !s.zf | .ae => !s.cf | .be => s.cf || s.zf
+
 /-- Execute one instruction (`rodata` holds the read-only constants). -/
 def exec (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   if s.halted then s else
   match i with
-  | .vmov lanes dst src mask =>
-    match readSrc rodata s lanes src with
-    | some vs =>
-      let old := (s.getV dst)
-      let vs := match mask with
-        | none => vs
-        | some k =>
-          let m := s.k.getD k 0
-          (List.range lanes).map fun i => if m.testBit i then vs.getD i (const 0) else old.getD i (const 0)
-      { writeV s dst lanes vs with pc := s.pc + 1 }
-    | none => s.fail
-  | .vstore lanes dst src =>
-    match s.storeWords (memAddr s dst) ((s.getV src).take lanes) with
-    | some s' => { s' with pc := s.pc + 1 }
-    | none => s.fail
-  | .vpxor lanes d a b => { binop rodata s lanes d a b xor with pc := s.pc + 1 }
-  | .vpand lanes d a b => { binop rodata s lanes d a b and with pc := s.pc + 1 }
-  | .vpandn lanes d a b => { binop rodata s lanes d a b (fun x y => and (not x) y) with pc := s.pc + 1 }
-  | .vpor lanes d a b => { binop rodata s lanes d a b or with pc := s.pc + 1 }
-  | .vpaddq lanes d a b => { binop rodata s lanes d a b add with pc := s.pc + 1 }
+  | .vmov lanes dst src mask => withSrc rodata s lanes src fun vs =>
+    let old := (s.getV dst)
+    let vs := match mask with
+      | none => vs
+      | some k =>
+        let m := s.k.getD k 0
+        (List.range lanes).map fun i => if m.testBit i then vs.getD i (const 0) else old.getD i (const 0)
+    next (writeV s dst lanes vs)
+  | .vstore lanes dst src => withMem s dst fun a => withStore s a ((s.getV src).take lanes) next
+  | .vpxor lanes d a b => binop rodata s lanes d a b xor
+  | .vpand lanes d a b => binop rodata s lanes d a b and
+  | .vpandn lanes d a b => binop rodata s lanes d a b (fun x y => and (not x) y)
+  | .vpor lanes d a b => binop rodata s lanes d a b or
+  | .vpaddq lanes d a b => binop rodata s lanes d a b add
   | .vpsllq lanes d a imm =>
-    { writeV s d lanes (((s.getV a).take lanes).map fun x => if imm < 64 then shl x imm else const 0) with pc := s.pc + 1 }
+    next (writeV s d lanes (((s.getV a).take lanes).map fun x => if imm < 64 then shl x imm else const 0))
   | .vpsrlq lanes d a imm =>
-    { writeV s d lanes (((s.getV a).take lanes).map fun x => if imm < 64 then shr x imm else const 0) with pc := s.pc + 1 }
+    next (writeV s d lanes (((s.getV a).take lanes).map fun x => if imm < 64 then shr x imm else const 0))
   | .vprolq lanes d a imm =>
-    { writeV s d lanes (((s.getV a).take lanes).map fun x => rol x (imm % 64)) with pc := s.pc + 1 }
-  | .vpternlogq lanes d a b imm =>
-    match readSrc rodata s lanes b with
-    | some bs =>
-      let ds := (s.getV d).take lanes
-      let as_ := (s.getV a).take lanes
-      let r := (List.range lanes).map fun i => LaneOps.ternlog imm (ds.getD i (const 0)) (as_.getD i (const 0)) (bs.getD i (const 0))
-      { writeV s d lanes r with pc := s.pc + 1 }
-    | none => s.fail
-  | .vpshufb lanes d a ctrl =>
-    match readSrc rodata s lanes ctrl with
-    | some cs =>
-      let as_ := (s.getV a).take lanes
-      let cv := cs.map asConst
-      if cv.all Option.isSome then
-        let cs' := cv.map fun o => o.getD 0#64
-        let r := (List.range (lanes / 2)).foldr (fun j acc =>
-          let (lo, hi) := shufb128 (as_.getD (2 * j) (const 0)) (as_.getD (2 * j + 1) (const 0))
-                            (cs'.getD (2 * j) 0#64) (cs'.getD (2 * j + 1) 0#64)
-          lo :: hi :: acc) []
-        { writeV s d lanes r with pc := s.pc + 1 }
-      else s.fail
-    | none => s.fail
-  | .vpunpcklqdq lanes d a b =>
-    match readSrc rodata s lanes b with
-    | some bs =>
-      let as_ := (s.getV a).take lanes
-      let r := (List.range (lanes / 2)).foldr (fun j acc => as_.getD (2 * j) (const 0) :: bs.getD (2 * j) (const 0) :: acc) []
-      { writeV s d lanes r with pc := s.pc + 1 }
-    | none => s.fail
-  | .vpunpckhqdq lanes d a b =>
-    match readSrc rodata s lanes b with
-    | some bs =>
-      let as_ := (s.getV a).take lanes
-      let r := (List.range (lanes / 2)).foldr (fun j acc => as_.getD (2 * j + 1) (const 0) :: bs.getD (2 * j + 1) (const 0) :: acc) []
-      { writeV s d lanes r with pc := s.pc + 1 }
-    | none => s.fail
-  | .vperm2i128 d a b imm =>
-    match readSrc rodata s 4 b with
-    | some bs =>
-      let as_ := (s.getV a).take 4
-      let sel (c : Nat) (z : Bool) : List α :=
-        if z then [const 0, const 0] else
-        match c % 4 with
-        | 0 => lane128 as_ 0 | 1 => lane128 as_ 1 | 2 => lane128 bs 0 | _ => lane128 bs 1
-      { writeV s d 4 (sel imm (imm.testBit 3) ++ sel (imm / 16) (imm.testBit 7)) with pc := s.pc + 1 }
-    | none => s.fail
-  | .vshufi64x2 lanes d a b imm =>
-    match readSrc rodata s lanes b with
-    | some bs =>
-      let as_ := (s.getV a).take lanes
-      let n := lanes / 2   -- 128-bit lanes
-      let r := (List.range n).foldr (fun j acc =>
-        let src := if j < n / 2 then as_ else bs
-        let sel := if n = 4 then (imm / 4 ^ j) % 4 else (imm / 2 ^ j) % 2
-        lane128 src sel ++ acc) []
-      { writeV s d lanes r with pc := s.pc + 1 }
-    | none => s.fail
-  | .vpermt2q lanes d idx b =>
-    match readSrc rodata s lanes b with
-    | some bs =>
-      let ds := (s.getV d).take lanes
-      let is_ := ((s.getV idx).take lanes).map asConst
-      if is_.all Option.isSome then
-        let r := is_.map fun o =>
-          let i := (o.getD 0#64).toNat
-          if i % (2 * lanes) < lanes then ds.getD (i % lanes) (const 0) else bs.getD (i % lanes) (const 0)
-        { writeV s d lanes r with pc := s.pc + 1 }
-      else s.fail
-    | none => s.fail
-  | .kmovw k m =>
-    let a := memAddr s m
-    match asConst (s.read rodata a.region (a.off / 8)) with
-    | some w => { s with k := s.k.setIfInBounds k (((w >>> (8 * (a.off % 8).toNat)) &&& 0xffff#64).toNat), pc := s.pc + 1 }
-    | none => s.fail
-  | .vzeroupper => { s with pc := s.pc + 1 }
-  | .mov d src => { s.setG d (s.getG src) with pc := s.pc + 1 }
-  | .movi d imm => { s.setG d (Addr.num imm) with pc := s.pc + 1 }
-  | .lea d m => { s.setG d (memAddr s m) with pc := s.pc + 1 }
-  | .add d imm => let a := s.getG d; { s.setG d ⟨a.region, a.off + imm⟩ with pc := s.pc + 1 }
-  | .sub d imm =>
-    let a := s.getG d
-    let s' := s.setG d ⟨a.region, a.off - imm⟩
-    -- flags are only meaningful (and only used by the kernels) for plain numbers
-    { (if a.region = 0 then setFlagsSub s' a (Addr.num imm) else s') with pc := s.pc + 1 }
-  | .andi d imm =>
-    -- only used to align the stack pointer: `and rsp, -64`; region bases are 64-byte aligned
-    let a := s.getG d
-    if imm = -64 then { s.setG d ⟨a.region, a.off - (a.off % 64)⟩ with pc := s.pc + 1 } else s.fail
-  | .shl d imm =>
-    let a := s.getG d
-    if a.region = 0 then { s.setG d ⟨0, a.off * 2 ^ imm⟩ with pc := s.pc + 1 } else s.fail
-  | .dec d =>
-    let a := s.getG d
-    { s.setG d ⟨a.region, a.off - 1⟩ with zf := a.off - 1 = 0, pc := s.pc + 1 }
-  | .xorz d => { s.setG d (Addr.num 0) with zf := true, cf := false, pc := s.pc + 1 }
-  | .cmpi a imm => { setFlagsSub s (s.getG a) (Addr.num imm) with pc := s.pc + 1 }
-  | .cmpr a b => { setFlagsSub s (s.getG a) (s.getG b) with pc := s.pc + 1 }
-  | .test a b =>
-    let x := s.getG a; let y := s.getG b
-    if x.region = 0 ∧ y.region = 0 then
-      { s with zf := (BitVec.ofInt 64 x.off &&& BitVec.ofInt 64 y.off) = 0, cf := false, pc := s.pc + 1 }
+    next (writeV s d lanes (((s.getV a).take lanes).map fun x => rol x (imm % 64)))
+  | .vpsllvq lanes d a b => withSrc rodata s lanes b fun bs =>
+    let cv := bs.map asConst
+    if cv.all Option.isSome then
+      let cs := cv.map fun o => (o.getD 0#64).toNat
+      next (writeV s d lanes ((List.range lanes).map fun i =>
+        let n := cs.getD i 64
+        if n < 64 then shl ((s.getV a).getD i (const 0)) n else const 0))
     else s.fail
-  | .jcc c t =>
-    let taken := match c with
-      | .e => s.zf | .ne => !s.zf | .b => s.cf | .a => !s.cf && !s.zf
-    { s with pc := if taken then t else s.pc + 1 }
+  | .vpsrlvq lanes d a b => withSrc rodata s lanes b fun bs =>
+    let cv := bs.map asConst
+    if cv.all Option.isSome then
+      let cs := cv.map fun o => (o.getD 0#64).toNat
+      next (writeV s d lanes ((List.range lanes).map fun i =>
+        let n := cs.getD i 64
+        if n < 64 then shr ((s.getV a).getD i (const 0)) n else const 0))
+    else s.fail
+  | .vpternlogq lanes d a b imm => withSrc rodata s lanes b fun bs =>
+    let ds := (s.getV d).take lanes
+    let as_ := (s.getV a).take lanes
+    next (writeV s d lanes ((List.range lanes).map fun i =>
+      LaneOps.ternlog imm (ds.getD i (const 0)) (as_.getD i (const 0)) (bs.getD i (const 0))))
+  | .vpshufb lanes d a ctrl => withSrc rodata s lanes ctrl fun cs =>
+    let as_ := (s.getV a).take lanes
+    let cv := cs.map asConst
+    if cv.all Option.isSome then
+      let cs' := cv.map fun o => o.getD 0#64
+      let r := (List.range (lanes / 2)).foldr (fun j acc =>
+        let (lo, hi) := shufb128 (as_.getD (2 * j) (const 0)) (as_.getD (2 * j + 1) (const 0))
+                          (cs'.getD (2 * j) 0#64) (cs'.getD (2 * j + 1) 0#64)
+        lo :: hi :: acc) []
+      next (writeV s d lanes r)
+    else s.fail
+  | .vpshufd lanes d a imm =>
+    let as_ := (s.getV a).take lanes
+    match allSome ((List.range lanes).map fun i =>
+        (qwordSel imm (i % 2)).map fun q => as_.getD (2 * (i / 2) + q) (const 0)) with
+    | some r => next (writeV s d lanes r)
+    | none => s.fail
+  | .vpblendd lanes d a b imm => withSrc rodata s lanes b fun bs =>
+    let as_ := (s.getV a).take lanes
+    match allSome ((List.range lanes).map fun i =>
+        if imm.testBit (2 * i) = imm.testBit (2 * i + 1) then
+          some (if imm.testBit (2 * i) then bs.getD i (const 0) else as_.getD i (const 0))
+        else none) with
+    | some r => next (writeV s d lanes r)
+    | none => s.fail
+  | .vpalignr lanes d a b imm => withSrc rodata s lanes b fun bs =>
+    let as_ := (s.getV a).take lanes
+    if imm % 8 = 0 ∧ imm ≤ 32 then
+      let r := (List.range (lanes / 2)).foldr (fun j acc =>
+        let ws := lane128 bs j ++ lane128 as_ j ++ [const 0, const 0]
+        ws.getD (imm / 8) (const 0) :: ws.getD (imm / 8 + 1) (const 0) :: acc) []
+      next (writeV s d lanes r)
+    else s.fail
+  | .vpunpcklqdq lanes d a b => withSrc rodata s lanes b fun bs =>
+    let as_ := (s.getV a).take lanes
+    let r := (List.range (lanes / 2)).foldr (fun j acc => as_.getD (2 * j) (const 0) :: bs.getD (2 * j) (const 0) :: acc) []
+    next (writeV s d lanes r)
+  | .vpunpckhqdq lanes d a b => withSrc rodata s lanes b fun bs =>
+    let as_ := (s.getV a).take lanes
+    let r := (List.range (lanes / 2)).foldr (fun j acc => as_.getD (2 * j + 1) (const 0) :: bs.getD (2 * j + 1) (const 0) :: acc) []
+    next (writeV s d lanes r)
+  | .vperm2i128 d a b imm => withSrc rodata s 4 b fun bs =>
+    let as_ := (s.getV a).take 4
+    let sel (c : Nat) (z : Bool) : List α :=
+      if z then [const 0, const 0] else
+      match c % 4 with
+      | 0 => lane128 as_ 0 | 1 => lane128 as_ 1 | 2 => lane128 bs 0 | _ => lane128 bs 1
+    next (writeV s d 4 (sel imm (imm.testBit 3) ++ sel (imm / 16) (imm.testBit 7)))
+  | .vinserti128 d a b imm => withSrc rodata s 2 b fun bs =>
+    let as_ := (s.getV a).take 4
+    next (writeV s d 4 (if imm % 2 = 0 then bs ++ lane128 as_ 1 else lane128 as_ 0 ++ bs))
+  | .vextracti128 m a imm => withMem s m fun ad =>
+    withStore s ad (lane128 ((s.getV a).take 4) (imm % 2)) next
+  | .vshufi64x2 lanes d a b imm => withSrc rodata s lanes b fun bs =>
+    let as_ := (s.getV a).take lanes
+    let n := lanes / 2   -- 128-bit lanes
+    let r := (List.range n).foldr (fun j acc =>
+      let src := if j < n / 2 then as_ else bs
+      let sel := if n = 4 then (imm / 4 ^ j) % 4 else (imm / 2 ^ j) % 2
+      lane128 src sel ++ acc) []
+    next (writeV s d lanes r)
+  | .vpermt2q lanes d idx b => withSrc rodata s lanes b fun bs =>
+    let ds := (s.getV d).take lanes
+    let is_ := ((s.getV idx).take lanes).map asConst
+    if is_.all Option.isSome then
+      let r := is_.map fun o =>
+        let i := (o.getD 0#64).toNat
+        if i % (2 * lanes) < lanes then ds.getD (i % lanes) (const 0) else bs.getD (i % lanes) (const 0)
+      next (writeV s d lanes r)
+    else s.fail
+  | .kmovw k m => withMem s m fun a =>
+    match asConst (s.read rodata a.region (a.off / 8)) with
+    | some w => next { s with k := s.k.setIfInBounds k (((w >>> (8 * (a.off % 8).toNat)) &&& 0xffff#64).toNat) }
+    | none => s.fail
+  | .vzeroupper => next s
+  | .mov d src => next (s.setGD d (s.getGD src))
+  | .xchg a b => next ((s.setGD a (s.getGD b)).setGD b (s.getGD a))
+  | .movi d imm => next (s.setGD d (const (BitVec.ofInt 64 imm)))
+  | .lea d m => withMem s m fun a => next (setX s d a)
+  | .add d imm => withX s d fun a => next (setX s d ⟨a.region, a.off + imm⟩)
+  | .sub d imm => withX s d fun a =>
+    -- flags are only meaningful (and only used by the kernels) for plain numbers
+    if a.region = 0 then next (setFlagsSub (setX s d ⟨0, a.off - imm⟩) a (Addr.num imm))
+    else next (setX s d ⟨a.region, a.off - imm⟩)
+  | .andi d imm => withX s d fun a =>
+    -- only used to align the stack pointer: `and rsp, -64`; region bases are 64-byte aligned
+    if imm = -64 then next (setX s d ⟨a.region, a.off - (a.off % 64)⟩) else s.fail
+  | .shl d imm => withX s d fun a =>
+    if a.region = 0 then next (setX s d ⟨0, a.off * 2 ^ imm⟩) else s.fail
+  | .dec d => withX s d fun a => next { setX s d ⟨a.region, a.off - 1⟩ with zf := a.off - 1 = 0 }
+  | .xorz d => next { setX s d (Addr.num 0) with zf := true, cf := false }
+  | .cmpi a imm => withX s a fun x => next (setFlagsSub s x (Addr.num imm))
+  | .cmpr a b => withX s a fun x => withX s b fun y => next (setFlagsSub s x y)
+  | .cmpm m b => withMem s m fun ad => withLoad rodata s ad 1 fun ws =>
+    match asConst (ws.headD (const 0)) with
+    | some v => withX s b fun y => next (setFlagsSub s (wordGpr v) y)
+    | none => s.fail
+  | .cmprm a m => withMem s m fun ad => withLoad rodata s ad 1 fun ws =>
+    match asConst (ws.headD (const 0)) with
+    | some v => withX s a fun x => next (setFlagsSub s x (wordGpr v))
+    | none => s.fail
+  | .test a b => withX s a fun x => withX s b fun y =>
+    if x.region = 0 ∧ y.region = 0 then
+      next { s with zf := (BitVec.ofInt 64 x.off &&& BitVec.ofInt 64 y.off) = 0, cf := false }
+    else s.fail
+  | .bt a b =>
+    match asConst (s.getGD a) with
+    | some w => withX s b fun y =>
+      if y.region = 0 ∧ y.off ≥ 0 then next { s with cf := w.getLsbD (y.off.toNat % 64) } else s.fail
+    | none => s.fail
+  | .btc a imm =>
+    match asConst (s.getGD a) with
+    | some w => next { s.setGD a (const (w ^^^ (1#64 <<< (imm % 64)))) with cf := w.getLsbD (imm % 64) }
+    | none => s.fail
+  | .alu op d b => readG rodata s b fun y => next (s.setGD d (aluOp op (s.getGD d) y))
+  | .andn d a b => readG rodata s b fun y => next (s.setGD d (and (not (s.getGD a)) y))
+  | .rorx d b imm => readG rodata s b fun y => next (s.setGD d (rol y ((64 - imm % 64) % 64)))
+  | .xorm m src => withMem s m fun a => withLoad rodata s a 1 fun ws =>
+    withStore s a [xor (ws.headD (const 0)) (s.getGD src)] next
+  | .storeqi m imm => withMem s m fun a => withStore s a [const (BitVec.ofInt 64 imm)] next
+  | .addm m imm => withMem s m fun a => withLoad rodata s a 1 fun ws =>
+    withStore s a [add (ws.headD (const 0)) (const (BitVec.ofInt 64 imm))] next
+  | .decm m => withMem s m fun a => withLoad rodata s a 1 fun ws =>
+    match asConst (ws.headD (const 0)) with
+    | some v => withStore s a [const (v - 1#64)] fun s' => next { s' with zf := v - 1#64 = 0#64 }
+    | none => s.fail
+  | .jcc c t => { s with pc := if condHolds s c then t else s.pc + 1 }
   | .jmp t => { s with pc := t }
-  | .call t =>
-    let sp := s.getG 4
+  | .jcct c name => if condHolds s c then { s with halted := true, tail := some name } else next s
+  | .call t => withX s 4 fun sp =>
     let sp' : Addr := ⟨sp.region, sp.off - 8⟩
     -- the return address is modelled as the instruction index
-    match s.storeWords sp' [const (BitVec.ofNat 64 (s.pc + 1))] with
-    | some s' => { s'.setG 4 sp' with pc := t, depth := s.depth + 1 }
-    | none => s.fail
+    withStore s sp' [const (BitVec.ofNat 64 (s.pc + 1))] fun s' => { setX s' 4 sp' with pc := t, depth := s.depth + 1 }
   | .ret =>
     if s.depth = 0 then { s with halted := true } else
-    let sp := s.getG 4
-    match s.loadWords rodata sp 1 with
-    | some [r] =>
-      match asConst r with
-      | some ra => { (s.setG 4 ⟨sp.region, sp.off + 8⟩) with pc := ra.toNat, depth := s.depth - 1 }
+    withX s 4 fun sp => withLoad rodata s sp 1 fun ws =>
+      match asConst (ws.headD (const 0)) with
+      | some ra => { setX s 4 ⟨sp.region, sp.off + 8⟩ with pc := ra.toNat, depth := s.depth - 1 }
       | none => s.fail
-    | _ => s.fail
-  | .push src =>
-    let sp := s.getG 4
+  | .push src => withX s 4 fun sp =>
     let sp' : Addr := ⟨sp.region, sp.off - 8⟩
-    let a := s.getG src
-    -- general registers are saved as region/offset pairs in a side table: model as a word
-    -- tagged by region (region 0 values only, else fail)
-    let w := gprWord a
-    match s.storeWords sp' [const w] with
-    | some s' => { s'.setG 4 sp' with pc := s.pc + 1 }
-    | none => s.fail
-  | .pop d =>
-    let sp := s.getG 4
-    match s.loadWords rodata sp 1 with
-    | some [w] =>
-      match asConst w with
-      | some v =>
-        let r := (v >>> 56).toNat
-        let a : Addr := if r = 0 then ⟨0, v.toInt⟩ else ⟨⟨r % 8, Nat.mod_lt _ (by decide)⟩, ((v &&& 0x00ffffffffffffff#64).toNat : Int)⟩
-        { (s.setG d a).setG 4 ⟨sp.region, sp.off + 8⟩ with pc := s.pc + 1 }
-      | none => s.fail
-    | _ => s.fail
-  | .storeq m src =>
-    let w := gprWord (s.getG src)
-    match s.storeWords (memAddr s m) [const w] with
-    | some s' => { s' with pc := s.pc + 1 }
-    | none => s.fail
-  | .loadq d m =>
-    match s.loadWords rodata (memAddr s m) 1 with
-    | some [w] =>
-      match asConst w with
-      | some v =>
-        let r := (v >>> 56).toNat
-        let a : Addr := if r = 0 then ⟨0, v.toInt⟩ else ⟨⟨r % 8, Nat.mod_lt _ (by decide)⟩, ((v &&& 0x00ffffffffffffff#64).toNat : Int)⟩
-        { s.setG d a with pc := s.pc + 1 }
-      | none => s.fail
-    | _ => s.fail
-  | .repmovsb =>
-    -- rcx bytes from [rsi] to [rdi]; whole aligned words only
-    let n := s.getG 1; let src := s.getG 6; let dst := s.getG 7
-    if n.region = 0 ∧ n.off % 8 = 0 ∧ n.off ≥ 0 then
-      let words := n.off.toNat / 8
-      match s.loadWords rodata src words with
-      | some vs =>
-        match s.storeWords dst vs with
-        | some s' =>
-          { ((s'.setG 1 (Addr.num 0)).setG 6 ⟨src.region, src.off + n.off⟩).setG 7 ⟨dst.region, dst.off + n.off⟩ with
-              pc := s.pc + 1 }
-        | none => s.fail
-      | none => s.fail
-    else s.fail
+    withStore s sp' [s.getGD src] fun s' => next (setX s' 4 sp')
+  | .pop d => withX s 4 fun sp => withLoad rodata s sp 1 fun ws =>
+    next (setX (s.setGD d (ws.headD (const 0))) 4 ⟨sp.region, sp.off + 8⟩)
+  | .storeq m src => withMem s m fun a => withStore s a [s.getGD src] next
+  | .loadq d m => withMem s m fun a => withLoad rodata s a 1 fun ws => next (s.setGD d (ws.headD (const 0)))
+  | .repmovsb => withX s 1 fun n => withX s 6 fun src => withX s 7 fun dst => repBody rodata s n src dst
   | .tailcall name => { s with halted := true, tail := some name }
-  | .nop => { s with pc := s.pc + 1 }
+  | .nop => next s
 
 def step (rodata : Array (BitVec 64)) (prog : Array Instr) (s : State α) : State α := exec rodata (prog.getD s.pc .nop) s
 
