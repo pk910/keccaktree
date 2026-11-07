@@ -236,7 +236,8 @@ def execTrace (rodata : Array (BitVec 64)) (l : List Instr) (s : State α) : Sta
 def initState (input : Int → α) (zero : α) (count : Nat) (entry : Nat) : State α :=
   let g := ((((Vector.replicate 32 (⟨0, 0⟩ : Addr)).set 0 ⟨rOutput, 0⟩).set 1 ⟨rInput, 0⟩).set 2 ⟨0, count⟩).set 31 ⟨rStack, 1 <<< 20⟩
   { v := Vector.replicate 32 (Vector.replicate 8 (const 0#64))
-    g := g, gd := Vector.ofFn fun n : Fin 32 => ptr g[n]
+    -- the legacy pointer view `g` is never read: kept constant, so cuts do not depend on the count
+    g := Vector.replicate 32 ⟨0, 0⟩, gd := Vector.ofFn fun n : Fin 32 => ptr g[n]
     k := Vector.replicate 8 0
     zf := false, cf := false, nf := false, vf := false, vl := 0
     mem := initMem input zero
