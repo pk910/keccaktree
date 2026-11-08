@@ -2,6 +2,7 @@ import Keccaktree.Asm.LibX86
 import Keccaktree.Asm.Alias
 import Keccaktree.Asm.EntryCtlAl
 import Keccaktree.Asm.LibTable
+import Keccaktree.Asm.LibAliasGen
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -98,16 +99,6 @@ def AccessThm (rodata : Array (BitVec 64)) (prog : Array Instr) (entry : Nat) (s
           (normCtl { X86.isa.run rodata prog (steps off count) S with halted := false, tail := none }) →
         Bf ≤ 8 * ((off + done : Nat) : Int)
 
-/-- Digests are those of the message words of the node. -/
-theorem digest_input (input input' : Int → BitVec 64) (S : State (BitVec 64)) (n : Nat)
-    (h : ∀ w : Nat, input' (Int.ofNat (8 * n + w)) = input (Int.ofNat (8 * n + w)))
-    (hd : Digest input' S n) : Digest input S n := by
-  have hw : nodeWords input' n = nodeWords input n := by
-    funext w; exact h w
-  intro w i hw' hi
-  have := hd w i hw' hi
-  rw [hw] at this; exact this
-
 /-- **The in-place lifting, as a library outcome** (normalised entry): a kernel's all-count theorem
 (`NormThm`) and its access theorem (`AccessThm`) give the outcome of the aliased run, with the
 hand-over in place (`EntryAlX86`). -/
@@ -128,7 +119,7 @@ theorem inplace_outcome (rodata : Array (BitVec 64)) (prog : Array Instr) (entry
   have hmOut : ∀ q, Tf.mem rOutput q = Sf.mem rOutput q := hS.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
   have hdig : ∀ n, off ≤ n → Digest (fun q => T.mem rInput q) Sf n → Digest input Tf n := by
     intro n hn hd
-    apply digest_input _ _ _ _ (fun w => hin _ (by simp only [Int.ofNat_eq_coe]; omega))
+    apply LibAliasGen.digest_input _ _ _ _ (fun w => hin _ (by simp only [Int.ofNat_eq_coe]; omega))
     intro w i hw hi; rw [hmOut]; exact hd w i hw hi
   refine ⟨hS.2.2.2.2.2.2.2.2.2.2.2.2.1.trans hh, hS.2.2.2.2.2.2.2.2.2.2.2.1.trans he, ?_, ?_⟩
   · intro q hq

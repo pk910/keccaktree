@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""In-place hook: footprint summaries of a kernel's generated segments.
+"""In-place hook: footprint summaries of a kernel's generated segments (x86, AArch64, RISC-V).
 
-    gen_inplace.py <Kernel> <Seg>... [--eval]
+    gen_inplace.py <Kernel> <Seg>... [--eval] [--out <dir>]
 
 For each segment directory `Keccaktree/Kernels/<Kernel>/<Seg>` (a generated `Seg.lean` with slice
 certificates `cert0 .. certN`), emits `Keccaktree/Kernels/<Kernel>/InPlace/<Seg>.lean` with
@@ -10,37 +10,79 @@ certificates `cert0 .. certN`), emits `Keccaktree/Kernels/<Kernel>/InPlace/<Seg>
     theorem len : sum of slice lengths = segLen   theorem sums  : the slices' footprint summaries
 
 (`sums` by `decide +kernel`; its right-hand side is computed first by `#eval`, `--eval` runs it with
-`lake env lean`).  The kernel's in-place file then applies `X86.chain_access` with these facts, and the
-access condition of a segment at relocation `ρ` reduces to linear inequalities in `ρ.wshift` (`SummOk`).
+`lake env lean`).  The instruction set is read off the certificates' type in `Seg.lean`:
+
+    SliceCert X86.isa X86.isaReloc ...                  -> X86.chain_access   (AliasTrace.lean)
+    SliceCert Arm.isa Arm.isaReloc ...                  -> Arm.alIsa.chain_access   (ArmAliasTrace.lean)
+    SliceCert (Riscv.isa N) (Riscv.isaReloc N) ...      -> (Riscv.alIsa N).chain_access (RiscvAliasTrace.lean)
+
+The kernel's in-place file then applies `chain_access` with these facts, and the access condition of a
+segment at relocation `ρ` reduces to linear inequalities in `ρ.wshift` (`SummOk`).
 The generated proof files of the kernel are only read, never modified."""
 import os
 import re
 import subprocess
 import sys
 
-K = sys.argv[1]
-segs = [a for a in sys.argv[2:] if not a.startswith('--')]
-run_eval = '--eval' in sys.argv
-base = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Keccaktree', 'Kernels', K)
-out = os.path.join(base, 'InPlace')
+args = sys.argv[1:]
+run_eval = '--eval' in args
+outdir = None
+if '--out' in args:
+    i = args.index('--out')
+    outdir = args[i + 1]
+    del args[i:i + 2]
+args = [a for a in args if not a.startswith('--')]
+K, segs = args[0], args[1:]
+root = os.path.dirname(os.path.abspath(__file__))
+base = os.path.join(root, 'Keccaktree', 'Kernels', K)
+out = outdir or os.path.join(base, 'InPlace')
 os.makedirs(out, exist_ok=True)
+
 info = {}
+isa_kind = None
 for sg in segs:
     seg = open(os.path.join(base, sg, 'Seg.lean')).read()
     n = len(re.findall(r'^def cert\d+ ', seg, re.M))
-    B = 'Keccaktree.Kernels.%s.%s.B' % (K, sg)
-    info[sg] = n
-ev = ['import Keccaktree.Asm.AliasTrace'] + ['import Keccaktree.Kernels.%s.%s.Seg' % (K, sg) for sg in segs]
-ev += ['open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Kernels.%s' % K]
+    m = re.search(r'^def cert0 : SliceCert (.+) rodata prog B where', seg, re.M)
+    if not m:
+        sys.exit('no certificate type in %s/Seg.lean' % sg)
+    ty = m.group(1).strip()
+    if ty.startswith('X86.isa '):
+        kind = ('x86', None)
+    elif ty.startswith('Arm.isa '):
+        kind = ('arm', None)
+    else:
+        mr = re.match(r'\(Riscv\.isa (\S+)\) \(Riscv\.isaReloc \S+\)', ty)
+        if not mr:
+            sys.exit('unknown instruction set: ' + ty)
+        kind = ('rv', mr.group(1))
+    if isa_kind is not None and isa_kind != kind:
+        sys.exit('segments of different instruction sets')
+    isa_kind = kind
+    info[sg] = (n, ty)
+
+if isa_kind[0] == 'x86':
+    imp, opens = 'Keccaktree.Asm.AliasTrace', 'Keccaktree.Asm Keccaktree.Asm.X86'
+    trace, chain_ok = 'traceCells', 'ChainOk'
+elif isa_kind[0] == 'arm':
+    imp, opens = 'Keccaktree.Asm.ArmAliasTrace', 'Keccaktree.Asm Keccaktree.Asm.X86'
+    trace, chain_ok = 'Arm.alIsa.traceCells', 'Arm.alIsa.ChainOk'
+else:
+    imp, opens = 'Keccaktree.Asm.RiscvAliasTrace', 'Keccaktree.Asm Keccaktree.Asm.X86'
+    al = '(Riscv.alIsa %s)' % isa_kind[1]
+    trace, chain_ok = al + '.traceCells', al + '.ChainOk'
+
+ev = ['import ' + imp] + ['import Keccaktree.Kernels.%s.%s.Seg' % (K, sg) for sg in segs]
+ev += ['open %s Keccaktree.Kernels.%s' % (opens, K)]
 for sg in segs:
-    lst = ', '.join('%s.cert%d' % (sg, k) for k in range(info[sg]))
-    ev.append('#eval IO.println ((repr ([%s].map fun C => summ (traceCells rodata prog C.idx C.cut))).pretty 100000000)' % lst)
+    lst = ', '.join('%s.cert%d' % (sg, k) for k in range(info[sg][0]))
+    ev.append('#eval IO.println ((repr ([%s].map fun C => summ (%s rodata prog C.idx C.cut))).pretty 100000000)'
+              % (lst, trace))
 evf = os.path.join(out, 'SumEval.lean')
 open(evf, 'w').write('\n'.join(ev) + '\n')
 vals = {}
 if run_eval:
-    r = subprocess.run(['lake', 'env', 'lean', evf], capture_output=True, text=True,
-                       cwd=os.path.dirname(os.path.abspath(__file__)))
+    r = subprocess.run(['lake', 'env', 'lean', evf], capture_output=True, text=True, cwd=root)
     outs = [l for l in r.stdout.splitlines() if l.startswith('[')]
     if len(outs) != len(segs):
         sys.exit('eval failed:\n' + r.stdout + r.stderr)
@@ -48,29 +90,30 @@ if run_eval:
         # `repr` of Summ: { loR := some 0, hiW := none, ... }; Lean syntax is the same
         vals[sg] = o
 for sg in segs:
-    n = info[sg]
+    n, ty = info[sg]
     lst = ', '.join('%s.cert%d' % (sg, k) for k in range(n))
     chain = 'trivial'
     for _ in range(n - 1):
         chain = '⟨rfl, rfl, %s⟩' % chain
-    src = f'''import Keccaktree.Asm.AliasTrace
+    src = f'''import {imp}
 import Keccaktree.Kernels.{K}.{sg}.Seg
 /-! GENERATED by lean/gen_inplace.py: footprint summaries of segment `{sg}` (in-place hook). -/
 namespace Keccaktree.Kernels.{K}.InPlace.{sg}
-open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Kernels.{K}
+open {opens} Keccaktree.Kernels.{K}
 open Keccaktree.Kernels.{K} (prog rodata)
 
-def certs : List (SliceCert X86.isa X86.isaReloc rodata prog {sg}.B) := [{lst}]
+def certs : List (SliceCert {ty} rodata prog {sg}.B) := [{lst}]
 
-theorem chain : ChainOk certs := {chain}
+theorem chain : {chain_ok} certs := {chain}
 
 theorem len : (certs.map fun C => C.idx.length).sum = {sg}.segLen := by decide +kernel
 
 set_option maxRecDepth 100000 in
-theorem sums : certs.map (fun C => summ (traceCells rodata prog C.idx C.cut)) =
+theorem sums : certs.map (fun C => summ ({trace} rodata prog C.idx C.cut)) =
     {vals.get(sg, 'SUMS_' + sg)} := by decide +kernel
 
 end Keccaktree.Kernels.{K}.InPlace.{sg}
 '''
     open(os.path.join(out, sg + '.lean'), 'w').write(src)
-print('segments:', {s: info[s] for s in segs}, 'evaluated' if run_eval else '(run with --eval to fill the sums)')
+print('segments:', {s: info[s][0] for s in segs}, isa_kind[0],
+      'evaluated' if run_eval else '(run with --eval to fill the sums)')

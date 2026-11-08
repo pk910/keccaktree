@@ -1,5 +1,5 @@
 import Keccaktree.Asm.AliasTrace
-import Keccaktree.Asm.EntryCtl
+import Keccaktree.Asm.AliasIsa
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -163,19 +163,5 @@ theorem run_normCtl_al (rodata : Array (BitVec 64)) (prog : Array Instr) (m : Na
     (al_run_err_add rodata prog m r _ he)]
   rw [Isa.run_add] at he
   exact run_ovr_static_al rodata prog _ (Ctl.of s) hstatic r _ he
-
-/-! ## Overrides and the views of the aliased machine -/
-
-theorem normCtl_ovr (D : Dom) (c : Ctl) (X : State α) : normCtl (ovr D c X) = normCtl X := by
-  simp only [normCtl, ovr, Dom.all, Bool.cond_true, State.mk.injEq, and_true, true_and]
-  apply Vector.ext; intro i hi
-  simp only [Vector.getElem_ofFn]
-  have : [0, 1, 2, 3, 4, 5, 6, 7].contains i = true := by
-    simp only [List.contains_iff_mem]; simp; omega
-  rw [this]; rfl
-
-theorem dupState_ovr (D : Dom) (c : Ctl) (X : State α) : dupState (ovr D c X) = ovr D c (dupState X) := rfl
-
-theorem dupState_normCtl (X : State α) : dupState (normCtl X) = normCtl (dupState X) := rfl
 
 end Keccaktree.Asm.X86
