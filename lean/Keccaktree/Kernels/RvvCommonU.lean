@@ -531,7 +531,180 @@ theorem tailM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} 
   refine ⟨_, s11, ?_, ?_, ?_, ?_, ?_, ?_⟩
   all_goals (simp [upd]; try exact h2)
 
+theorem vstoreMem_other (M : Region → Int → BitVec 64) (a : Addr) (vs : List (BitVec 64)) (n : Nat) (r : Region) (q : Int)
+    (h : r ≠ a.region) : vstoreMem M a vs n r q = M r q := by
+  unfold vstoreMem
+  split <;> rw [memStoreFrom_get, if_neg (fun h' => h h'.1)]
+
+theorem memStoreFrom_other (M : Region → Int → BitVec 64) (r0 : Region) (q0 : Int) (L : List (BitVec 64)) (r : Region)
+    (h : r ≠ r0) : memStoreFrom M r0 q0 L r = M r := by
+  funext q; rw [memStoreFrom_get, if_neg (fun h' => h h'.1)]
+
+theorem cut_gd (ρ : Reloc) (hρ : ρ.ok) (ctl : List Nat) (sc C : State (BitVec 64)) (h : relocState ρ (cutOf ctl sc) = cutOf ctl C)
+    (n : Nat) (hn : n < 32) (hm : 256 + n ∈ ctl) (e : E) (hv : cutVar ctl sc (256 + n) = e) (hre : E.reloc ρ e = e) :
+    cutVar ctl C (256 + n) = e := by
+  have e1 := cut_word ρ hρ ctl sc C h (256 + n) (Or.inl (by omega))
+  rw [hv, hre] at e1; exact e1
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 100000000 in
+/-- **A bounce batch** of `w = min(c - j, V)` nodes: from the loop head after `j` nodes, `bSteps (c - j) len` steps
+hash nodes `off + j .. off + j + w - 1` and reach the loop head after `j + w` nodes, or the exit. -/
+theorem batchM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t len : Nat} (hp : MProg prog t)
+    (hV : 0 < V) (hV8 : V ≤ 8) (w : Nat) (B : MBody V rodata prog t w len)
+    (mi mo off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat) (hmi : mi < 8) (hmo : mo < 8)
+    (ha7 : 0 < mi ||| mo) (hb : 64 * (off + c) + 512 ≤ 2 ^ 54) (hM : MidU mi mo off c input S0 S j 7) (hj : j < c)
+    (hw : w = min (c - j) V) :
+    MidU mi mo off c input S0 ((Riscv.isa V).run rodata prog (bSteps (c - j) len) S) (j + w)
+      (if c - j - w = 0 then t + 14 else 7) := by
+  have hb54 : (2 : Nat) ^ 54 = 18014398509481984 := rfl
+  have hb55 : (2 : Int) ^ 55 = 36028797018963968 := rfl
+  have h7 := or_lt8 mi mo hmi hmo
+  have hw1 : 1 ≤ w := by omega
+  have hwV : w ≤ V := by omega
+  have hwr : w ≤ c - j := by omega
+  -- the head and the copy into the buffer
+  obtain ⟨R, s12, h28, hR⟩ := headM (V := V) (rodata := rodata) hp mi mo off c input S0 S j hmi hmo ha7 hM hj (by omega)
+  obtain ⟨R', sH, hR'5, hR'⟩ := preM hp hV hV8 S _ S.vl R S.mem s12 (min ((c : Int) - j) 8) h28 (by omega) (by omega)
+    (mi ||| mo) ((hR 17 (by decide) (by decide)).trans hM.a7) ha7 h7 ((mi : Int) + 64 * ((off + j : Nat) : Int))
+    ((hR 11 (by decide) (by decide)).trans (hM.a1.trans (congrArg (fun o => gprWord ⟨rInput, o⟩) (by push_cast; omega))))
+    (by omega) (by push_cast; omega) ((hR 2 (by decide) (by decide)).trans hM.sp) w (by omega)
+  generalize hH : (Riscv.isa V).run rodata prog ((if c - j ≤ 8 then 4 else 5) + 7) S = H at sH
+  have hHg : ∀ x, x < 32 → x ≠ 5 → x ≠ 28 → x ≠ 29 → H.getGD x = S.getGD x := by
+    intro x hx h5 h28 h29; rw [sH.regs x hx, hR' x h5 h28, hR x h28 h29]
+  -- the batch body's start cut
+  have hρ := rho_ok 0
+  have hc0 : relocState (rho 0) (cutOf B.ctl0 B.sc0) = cutOf B.ctl0 H := by
+    apply relocState_cutOf (rho 0) B.ctl0 B.sc0 H
+    · intro i hi
+      rw [B.hctl0] at hi
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hi
+      rcases hi with rfl | rfl | rfl
+      · rw [cutVar_ptr_of B.ctl0 H 258 ⟨rStack, SPv⟩ (by rw [B.hctl0]; decide)
+          ((envOf_gdVar H 2 (by decide)).trans ((hHg 2 (by decide) (by decide) (by decide) (by decide)).trans hM.sp)) spv_wf (by decide),
+          B.c258, reloc_ptr_stack]
+      · rw [Riscv.cutVar_const_of B.ctl0 H 261 (BitVec.ofNat 64 w) (by rw [B.hctl0]; decide)
+          ((envOf_gdVar H 5 (by decide)).trans ((sH.regs 5 (by decide)).trans hR'5)) (wordGpr_small w (by omega)), B.c261,
+          rho_const]
+      · rw [Riscv.cutVar_const_of B.ctl0 H 286 0x8000000000000000#64 (by rw [B.hctl0]; decide)
+          ((envOf_gdVar H 30 (by decide)).trans ((hHg 30 (by decide) (by decide) (by decide) (by decide)).trans hM.t5)) (by decide),
+          B.c286, rho_const]
+    · intro i hi h; rw [B.hctl0] at hi; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hi; omega
+    · obtain ⟨g, k, z, cc, nf, v, d, -⟩ := sH.ctl
+      obtain ⟨g', k', z', cc', nf', v', l', p', d'⟩ := B.hsc0
+      exact ⟨g.trans g'.symm, k.trans k'.symm, z.trans z'.symm, cc.trans cc'.symm, nf.trans nf'.symm, v.trans v'.symm,
+        sH.vl.trans l'.symm, sH.pc.trans p'.symm, d.trans d'.symm⟩
+  have hokH : SliceCert.Ok H := sH.ctl.ok
+  have sr := B.run H hc0 hokH
+  have fr := B.frame H hc0 hokH
+  have mv := B.moves H hc0 hokH
+  -- the node words in the buffer
+  have hbuf : ∀ l f, l < w → f < 8 → H.mem rStack (BUFq + (8 * l + f : Nat)) = nodeWordsB input mi (off + j + l) f := by
+    intro l f hl hf
+    rw [sH.mem, memStoreFrom_get, if_pos ⟨rfl, by omega, by simp; omega⟩]
+    rw [List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_range (by omega)]
+    simp only [Option.map_some, Option.getD_some]
+    have hm : S.mem rInput = input := funext hM.msg
+    rw [hm]
+    unfold nodeWordsB
+    congr 1
+    push_cast; omega
+  have dat := B.data H hc0 hokH (fun l f => nodeWordsB input mi (off + j + l) f) hbuf
+  generalize hC : B.segAt H = C at sr fr mv dat
+  obtain ⟨hrunC, hokC, hcutC⟩ := sr
+  -- the state after the body
+  have hCf := cut_fields _ _ _ _ hcutC
+  have hCtl : CtlV C := by
+    obtain ⟨g, k, z, cc, nf, v, l, p, d⟩ := hCf
+    obtain ⟨g', k', z', cc', nf', v', l', p', d'⟩ := B.hscK
+    exact ⟨g.trans g', k.trans k', z.trans z', cc.trans cc', nf.trans nf', v.trans v', d.trans d', hokC.1, hokC.2.1, hokC.2.2⟩
+  have hCpc : C.pc = t := hCf.2.2.2.2.2.2.2.1.trans B.hscK.2.2.2.2.2.2.2.1
+  have hCvl : C.vl = w := hCf.2.2.2.2.2.2.1.trans B.hscK.2.2.2.2.2.2.1
+  have hC2 : C.getGD 2 = gprWord ⟨rStack, SPv⟩ := by
+    have := cut_gd (rho 0) hρ B.ctlK B.scK C hcutC 2 (by decide) B.k258 _ B.d258 (reloc_ptr_stack 0 _)
+    rw [← envOf_gdVar C 2 (by decide)]; exact cut_ptr B.ctlK C 258 B.k258 _ this
+  have hC5 : C.getGD 5 = BitVec.ofNat 64 w := by
+    have := cut_gd (rho 0) hρ B.ctlK B.scK C hcutC 5 (by decide) B.k261 _ B.d261 (rho_const 0 _)
+    rw [← envOf_gdVar C 5 (by decide)]; exact cut_const B.ctlK C 261 B.k261 _ this
+  have hC30 : C.getGD 30 = 0x8000000000000000#64 := by
+    have := cut_gd (rho 0) hρ B.ctlK B.scK C hcutC 30 (by decide) B.k286 _ B.d286 (rho_const 0 _)
+    rw [← envOf_gdVar C 30 (by decide)]; exact cut_const B.ctlK C 286 B.k286 _ this
+  have hCmv : ∀ x, x = 10 ∨ x = 11 ∨ x = 12 ∨ x = 17 → C.getGD x = S.getGD x := by
+    intro x hx
+    have hx' : 256 + x ∈ ([266, 267, 268, 273] : List Nat) := by rcases hx with rfl | rfl | rfl | rfl <;> decide
+    rw [← envOf_gdVar C x (by omega), mv _ hx', envOf_gdVar H x (by omega), hHg x (by omega) (by omega) (by omega) (by omega)]
+  -- the tail
+  obtain ⟨R'', sU, hU2, hU10, hU11, hU12, hU17, hU30⟩ := tailM hp hV hV8 C w hCtl hCpc hCvl hw1 hwV hC2 hC5
+    ((mo : Int) + 32 * ((off + j : Nat) : Int)) ((hCmv 10 (by decide)).trans (hM.a0.trans (congrArg (fun o => gprWord ⟨rOutput, o⟩)
+      (by push_cast; omega)))) (by omega) (by push_cast; omega)
+    ((mi : Int) + 64 * ((off + j : Nat) : Int)) ((hCmv 11 (by decide)).trans (hM.a1.trans (congrArg (fun o => gprWord ⟨rInput, o⟩)
+      (by push_cast; omega))))
+    ((c : Int) - j) ((hCmv 12 (by decide)).trans hM.a2) (by omega) (by omega)
+    (mi ||| mo) ((hCmv 17 (by decide)).trans hM.a7) ha7 h7
+  have hrun : (Riscv.isa V).run rodata prog (bSteps (c - j) len) S = (Riscv.isa V).run rodata prog 12 C := by
+    rw [show bSteps (c - j) len = ((if c - j ≤ 8 then 4 else 5) + 7) + len + 12 by unfold bSteps; split <;> omega,
+      Isa.run_add, Isa.run_add, hH, hrunC]
+  rw [hrun]
+  generalize hU : (Riscv.isa V).run rodata prog 12 C = U at sU
+  -- memory: the input region and the output bytes
+  have hCmem : C.mem = H.mem := funext fun r => funext fun q => fr r q
+  have hUin : ∀ q, U.mem rInput q = input q := by
+    intro q
+    rw [sU.mem, vstoreMem_other _ _ _ _ _ _ (by show rInput ≠ rOutput; decide), show bufOut C.mem C w rInput = C.mem rInput from
+      memStoreFrom_other _ _ _ _ _ (by decide), hCmem, sH.mem, memStoreFrom_other _ _ _ _ _ (by decide), hM.msg]
+  have hUout : ∀ x : Int, byteAt (U.mem rOutput) x =
+      if (mo : Int) + 32 * ((off + j : Nat) : Int) ≤ x ∧ x < (mo : Int) + 32 * ((off + j : Nat) : Int) + 8 * ((4 * w : Nat) : Int)
+      then (L (Spec.keccakF (absorbNode (nodeWordsB input mi (off + j + ((x - ((mo : Int) + 32 * ((off + j : Nat) : Int))) / 32).toNat))))
+        (((x - ((mo : Int) + 32 * ((off + j : Nat) : Int))) / 8 % 4).toNat)).extractLsb'
+          (8 * ((x - ((mo : Int) + 32 * ((off + j : Nat) : Int))) % 8).toNat) 8
+      else byteAt (S.mem rOutput) x := by
+    intro x
+    rw [sU.mem, byteAt_vstoreMem _ _ _ _ (by simp) (by omega)]
+    by_cases hx : (mo : Int) + 32 * ((off + j : Nat) : Int) ≤ x ∧ x < (mo : Int) + 32 * ((off + j : Nat) : Int) + 8 * ((4 * w : Nat) : Int)
+    · rw [if_pos ⟨rfl, hx⟩, if_pos hx]
+      generalize hk : ((x - ((mo : Int) + 32 * ((off + j : Nat) : Int))) / 8).toNat = k
+      have hk4 : k < 4 * w := by omega
+      rw [List.getD_eq_getElem?_getD, List.getElem?_map, List.getElem?_range hk4]
+      simp only [Option.map_some, Option.getD_some]
+      rw [show SPv + 8 * (k : Int) = 8 * (BUFq + k) by unfold SPv BUFq; omega, wordAt_aligned]
+      unfold bufOut
+      rw [memStoreFrom_get, if_pos ⟨rfl, by omega, by simp; omega⟩, List.getD_eq_getElem?_getD, List.getElem?_map,
+        List.getElem?_range (by omega)]
+      simp only [Option.map_some, Option.getD_some]
+      rw [show (BUFq + (k : Int) - BUFq).toNat = k by omega]
+      rw [Nat.zero_add, dat (k / 4) (k % 4) (by omega) (Nat.mod_lt _ (by decide))]
+      have e1 : ((x - ((mo : Int) + 32 * ((off + j : Nat) : Int))) / 32).toNat = k / 4 := by omega
+      have e2 : (((x - ((mo : Int) + 32 * ((off + j : Nat) : Int))) / 8 % 4).toNat) = k % 4 := by omega
+      rw [e1, e2]
+    · rw [if_neg (fun h => hx h.2), if_neg hx]
+      unfold byteAt
+      rw [show bufOut C.mem C w rOutput = C.mem rOutput from memStoreFrom_other _ _ _ _ _ (by decide), hCmem, sH.mem,
+        memStoreFrom_other _ _ _ _ _ (by decide)]
+  refine ⟨sU.ctl, ?_, sU.regs 2 (by decide) |>.trans hU2, ?_, ?_, ?_, ?_, ?_, hUin, fun x hx => ?_, fun n hn => ?_⟩
+  · rw [sU.pc]
+    by_cases hz : c - j - w = 0
+    · rw [if_pos (by omega), if_pos hz]
+    · rw [if_neg (by omega), if_neg hz]
+  · rw [sU.regs 10 (by decide), hU10]; exact congrArg (fun o => gprWord ⟨rOutput, o⟩) (by push_cast; omega)
+  · rw [sU.regs 11 (by decide), hU11]; exact congrArg (fun o => gprWord ⟨rInput, o⟩) (by push_cast; omega)
+  · rw [sU.regs 12 (by decide), hU12]; exact congrArg (fun o => gprWord ⟨0, o⟩) (by push_cast; omega)
+  · rw [sU.regs 17 (by decide), hU17]; exact (hCmv 17 (by decide)).trans hM.a7
+  · rw [sU.regs 30 (by decide), hU30]; exact hC30
+  · rw [hUout, if_neg (by push_cast; omega)]; exact hM.pre x hx
+  · intro t' ht'
+    by_cases hnj : n < j
+    · rw [hUout, if_neg (by push_cast; omega)]; exact hM.dig n hnj t' ht'
+    · rw [hUout, if_pos (by push_cast; omega)]
+      have e0 : off + j + (((mo : Int) + 32 * ((off + n : Nat) : Int) + (t' : Int) - ((mo : Int) + 32 * ((off + j : Nat) : Int))) / 32).toNat
+          = off + n := by push_cast; omega
+      have e1 : ((((mo : Int) + 32 * ((off + n : Nat) : Int) + (t' : Int) - ((mo : Int) + 32 * ((off + j : Nat) : Int))) / 8 % 4).toNat)
+          = t' / 8 := by push_cast; omega
+      have e2 : (((mo : Int) + 32 * ((off + n : Nat) : Int) + (t' : Int) - ((mo : Int) + 32 * ((off + j : Nat) : Int))) % 8).toNat
+          = t' % 8 := by push_cast; omega
+      rw [e0, e1, e2, absorbNode_keccak, squeezeByte_eq]
+
 end Keccaktree.Kernels.RvvCommonU
+
 
 
 
