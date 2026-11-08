@@ -40,8 +40,18 @@ Scripts: `/root/kt-int-queue.sh <queuefile>` (lines `gen <Ns> <P> <Gen…>` / `m
 `stopifdisk <GB>`; log `/root/kt-int-logs/queue.log`), `/root/kt-int-mem.sh <unit>` (summed RSS of the
 unit's processes every 30 s → `/root/kt-int-logs/mem.log`, stops the unit above 24 GB), units
 `kt-int-build`, `kt-int-mem` (`systemd-run -p MemoryMax=infinity -p OOMPolicy=continue -p CPUWeight=200`).
-Phase A queue `/root/kt-int-queueA.txt`: core + programs, ARM kernels (P=2 for 1-/2-node, P=1 for 3-node),
-ArmLib, X86X1 All/Lib.  Phase B: RISC-V (disk permitting, see below).
+Phase A queue `/root/kt-int-queueA.txt` (unit `kt-int-build`, log `queue.log`): core + programs, ARM kernels
+(P=2 for 1-/2-node, P=1 for 3-node), ArmLib, X86X1 All/Lib.  (`error: build failed` after each segment's
+Invs/Final step in the log is `build_plan.sh` asking for the non-existent `Final` module of a segment dir.)
+Phase B (`/root/kt-int-chain.sh` waits for phase A, then unit `kt-int-buildB`, `/root/kt-int-queue2.sh
+/root/kt-int-queueB.txt`, log `queueB.log`): `#print axioms` of ARM + X86X1 (`/root/kt-int/axioms/<Name>.lean`
+→ `out_<Name>.txt`), prune the ARM Gen oleans only if that output is complete and clean, then Rv64X1/ZbbX1, and
+per VLEN group V ∈ {2,4,8}: RvvV, RvvZvkbV bodies (P=2 for ≤2 nodes, else 1), their All + RvLib<V>, axioms,
+prune; `stopifdisk 27` before every RVV body.  `RvLib.lean` (pure re-export of RvLib2/4/8, no theorems) is
+not built: the three groups do not fit on disk together.
+Core result (06:34): `Keccaktree.Asm.LibTable`, `Keccaktree.Dispatch` and all programs build on the merged
+core; `#print axioms` of `LibTable.lib_x86/lib_arm/lib_rv`, `Dispatch.hash_x86/hash_x86_reachable/hash_arm/
+hash_rv`: `[propext, Classical.choice, Quot.sound]`.
 
 Disk: ARM proofs ≈ 15 GB of oleans; RISC-V Gen sources are 357 MB for the RVV variants alone (olean/source
 ≈ 150–290×), so all RISC-V at once may not fit next to ARM above the 25 GB floor: phase B builds per VLEN
@@ -63,3 +73,21 @@ Finding (driver, not generator): `gen_segments_arm.py scalar_x1` does **not** re
 `gen_segments_scalar_x1.sh` with `[[24],[24]]`; the driver's Batch.lean gains an extra `aat_0` lemma).
 GenSB/GenSE1 agree.  notes/arm.md already names `gen_segments_scalar_x1.sh` as the scalar_x1 recipe; the
 `scalar_x1` entry of `gen_segments_arm.py` should get round 24 for GenSX (left as is; not a proof issue).
+
+## Open issues / notes for later merges
+* **ArmAlias vs ArmFootprint (latent duplicate)**: on `integrate`, `Asm/ArmAlias.lean` (from the in-place
+  work in c50027f) and `Asm/ArmFootprint.lean` (all-arm) both define `Keccaktree.Asm.Arm.writes`; a module
+  importing both fails (`environment already contains 'Keccaktree.Asm.Arm.writes._sparseCasesOn_3'`, checked
+  with `RiscvAlias` + `ArmFootprint`).  No module on `integrate` imports both today (only `RiscvAlias` imports
+  `ArmAlias`, and nothing imports `RiscvAlias`).  all-inplace 7dda8a7 resolves it (ArmAlias imports
+  ArmFootprint, one `Arm.writes`; its ArmFootprint.lean is blob-identical to all-arm's), so the all-inplace
+  merge fixes it.
+* **x86 / x86b generator merge (design)**: from `git diff 6774b63 all-x86b -- lean/gen_plan_proof.py`:
+  - `seg_count_text`/`COUNT_LOCS` (count followed through its stack spill) replaces `seg_moves` only when
+    `COUNT_LOCS` is set (X86 only) → goes next to `seg_moves_kept_text`; the chain variant stays for ARM.
+  - Seg.lean: `import Keccaktree.Asm.X86Kernel` and `seg_facts_text()` (`X86K.SegFacts`) are written
+    unconditionally there → must be gated to `ISA == 'X86'` in `seg_file_imports` / the Seg footer, or the
+    ARM/RISC-V segments stop regenerating byte-identically (and would not compile without X86Kernel).
+  - `PRUNE_RC` defaults to on and the RC-kind filter in `matches` is X86-gated; PRUNE_RC is not, so the
+    ARM/RISC-V regeneration check must be rerun after that merge (or PRUNE_RC gated to X86).
+  - `NODES`, mid-way `aat_n` (X A form), `FLAGS`/`HEAL`/`K1` overrides: env-gated, default-off; fine.
