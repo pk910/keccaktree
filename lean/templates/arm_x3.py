@@ -197,7 +197,7 @@ theorem iter (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) 
       · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
       · show U.pc = _; rw [hUpc, hz]; decide +kernel
       · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
-    · rw [hUcnt, hk3]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
+    · rw [hUcnt]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
 
 /-- **The loop**: from the loop head before batch `k`, the remaining `d + 1` batches reach the epilogue. -/
 theorem loop (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54) :
