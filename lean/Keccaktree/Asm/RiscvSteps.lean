@@ -254,10 +254,20 @@ open Keccaktree.Asm.X86 hiding gx setX withX next
 
 /-! ## Scalar programs do not depend on the vector length -/
 
-/-- The only instruction whose semantics reads `vlmax`. -/
+/-- The instructions whose semantics reads `vlmax`: `vsetvli` (e64 and e8) and the byte vector
+loads/stores (register-group layout). -/
 def Instr.usesVlmax : Instr → Bool
+  | .vsetvli _ _ | .vsetvlie8 _ _ _ | .vle8 _ _ | .vse8 _ _ => true
+  | _ => false
+
+/-- The instruction whose `vl` the hardware may choose (RVV 1.0 §6.3): `vsetvli … e64` (the `e8`
+settings of the kernels ask for at most `VLMAX`, where the choice is forced; the model fails otherwise). -/
+def Instr.isVset : Instr → Bool
   | .vsetvli _ _ => true
   | _ => false
+
+theorem Instr.isVset_of_usesVlmax (i : Instr) (h : i.usesVlmax = false) : i.isVset = false := by
+  cases i <;> simp_all [Instr.usesVlmax, Instr.isVset]
 
 theorem exec_vlmax {α : Type} [LaneOps α] (v1 v2 : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α)
     (h : i.usesVlmax = false) : exec v1 rodata i s = exec v2 rodata i s := by

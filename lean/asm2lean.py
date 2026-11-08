@@ -685,11 +685,52 @@ class Riscv:
                 if not lo or not re.match(r'^\.(ld %s %s \(0\)|mv %s %s)$' % (rd, rd, rd, rd), nxt):
                     raise ValueError('auipc %d not paired with its %%pcrel_lo addi/ld (%s)' % (i, nxt))
         self.check_shift_counts()
+        self.check_vtype()
+
+    def succs(self):
+        n = len(self.instrs)
+        succ = []
+        for i, x in enumerate(self.instrs):
+            m = re.match(r'^\.(br \.\w+ \d+ \d+|j) (\d+)$', x)
+            if x == '.ret' or x.startswith('.unsupported'):
+                succ.append([])
+            elif m:
+                succ.append([int(m.group(2))] + ([i + 1] if x.startswith('.br') else []))
+            else:
+                succ.append([i + 1] if i + 1 < n else [])
+        return succ
+
+    def check_vtype(self):
+        """The model has no `vtype`: `vsetvlie8` (`vsetvli .., e8, m<k>`) makes `vl` a byte count, which only
+        `vle8`/`vse8` read, and they read `vl` as bytes.  Require (forward may-analysis of the last vsetvli on
+        every path) that `e64` vector instructions never run under an `e8` setting and `vle8`/`vse8` only
+        under one."""
+        n = len(self.instrs)
+        succ = self.succs()
+        st = [None] * n
+        st[self.entry] = frozenset(['entry'])
+        work = [self.entry]
+        while work:
+            i = work.pop()
+            x = self.instrs[i]
+            o = frozenset(['e64']) if x.startswith('.vsetvli ') else frozenset(['e8']) if x.startswith('.vsetvlie8 ') else st[i]
+            for j in succ[i]:
+                if j < n and (st[j] is None or not o <= st[j]):
+                    st[j] = o if st[j] is None else st[j] | o
+                    work.append(j)
+        E64 = ('.vop ', '.vnot ', '.vshifti ', '.vshiftx ', '.vxorx ', '.vmvi ', '.vmvx ', '.vmvv ', '.vlseg ', '.vsseg ')
+        for i, x in enumerate(self.instrs):
+            if st[i] is None:
+                continue
+            if x.startswith(E64) and 'e8' in st[i]:
+                raise ValueError('e64 vector instruction %d (%s) under an e8 vsetvli' % (i, x))
+            if x.startswith(('.vle8 ', '.vse8 ')) and st[i] != {'e8'}:
+                raise ValueError('byte vector access %d (%s) not under an e8 vsetvli on every path' % (i, x))
 
     def check_shift_counts(self):
-        """`vsll.vx`/`vsrl.vx`/`vror.vx`: the model shifts by the register value if it is < 64 (else 0);
-        the CPU by its low 6 bits.  Require (forward must-analysis) that the count register holds a
-        `li` constant < 64 on every path."""
+        """`vsll.vx`/`vsrl.vx`/`vror.vx` shift by the count register's low 6 bits (model and CPU, since the
+        M9 fix); the kernels' counts are `li` constants < 64.  Kept as a check of that (forward
+        must-analysis: the count register holds a `li` constant < 64 on every path)."""
         n = len(self.instrs)
         succ = []
         for i, x in enumerate(self.instrs):
@@ -783,7 +824,14 @@ class Riscv:
             base, off = self.memop(args[1]); return '.ld %d %d (%d)' % (R(args[0]), R(base), off)
         if op == 'sd':
             base, off = self.memop(args[1]); return '.sd %d %d (%d)' % (R(args[0]), R(base), off)
-        if op in ('lbu', 'sb', 'vle8.v', 'vse8.v'): return '.unsupported "%s"' % op
+        if op == 'lbu':
+            base, off = self.memop(args[1]); return '.lbu %d %d (%d)' % (R(args[0]), R(base), off)
+        if op == 'sb':
+            base, off = self.memop(args[1]); return '.sb %d %d (%d)' % (R(args[0]), R(base), off)
+        if op in ('vle8.v', 'vse8.v'):
+            assert len(args) == 2, text            # unmasked
+            base, off = self.memop(args[1]); assert off == 0
+            return '.%s %d %d' % (op[:4], V(args[0]), R(base))
         if op == 'beqz': return '.br .eq %d 0 %d' % (R(args[0]), self.target(args[1]))
         if op == 'bnez': return '.br .ne %d 0 %d' % (R(args[0]), self.target(args[1]))
         if op == 'beq': return '.br .eq %d %d %d' % (R(args[0]), R(args[1]), self.target(args[2]))
@@ -791,6 +839,10 @@ class Riscv:
         if op == 'bgeu': return '.br .geu %d %d %d' % (R(args[0]), R(args[1]), self.target(args[2]))
         if op == 'j': return '.j %d' % self.target(args[0])
         if op == 'vsetvli':
+            # rs1 = x0 means VLMAX (rd ≠ x0) or "keep vl" (rd = x0), not avl = 0: not modelled
+            if R(args[1]) == 0: return '.unsupported "vsetvli x0"'
+            if args[2] == 'e8' and args[3] in ('m1', 'm2', 'm4', 'm8'):
+                return '.vsetvlie8 %d %d %s' % (R(args[0]), R(args[1]), args[3][1:])
             if args[2:4] != ['e64', 'm1']: return '.unsupported "vsetvli %s"' % ' '.join(args[2:4])
             return '.vsetvli %d %d' % (R(args[0]), R(args[1]))
         VOPS = {'vxor.vv': 'xor', 'vand.vv': 'and', 'vor.vv': 'or', 'vandn.vv': 'andn'}

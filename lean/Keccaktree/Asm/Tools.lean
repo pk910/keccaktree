@@ -112,7 +112,22 @@ def riscvStoreCells [LaneOps α] (s : State α) : Riscv.Instr → List (Region �
   | .vsseg _ base nf => match Arm.addr s base 0 with
     | some a => (List.range (nf * s.vl)).map fun (i : Nat) => (a.region, a.off / 8 + Int.ofNat i)
     | none => []
+  | .sb _ base off => match Arm.addr s base off with
+    | some a => [(a.region, a.off / 8)]
+    | none => []
+  | .vse8 _ base => match Arm.addr s base 0 with
+    | some a => (List.range (s.vl / 8 + 1)).map fun (i : Nat) => (a.region, a.off / 8 + Int.ofNat i)
+    | none => []
   | _ => []
+
+/-- A RISC-V entry state with the buffers at byte offsets `mi` (input) and `mo` (output) of their
+regions (`mi, mo < 8`): the message words of the input region shifted up by `mi` bytes, so that the
+message starts at byte `mi`. -/
+def riscvMisalign [LaneOps α] (mi mo : Nat) (s : State α) : State α :=
+  { s with gd := (s.gd.setIfInBounds 10 (LaneOps.ptr ⟨rOutput, mo⟩)).setIfInBounds 11 (LaneOps.ptr ⟨rInput, mi⟩),
+           mem := fun r q => if r = rInput ∧ mi % 8 ≠ 0 then
+             LaneOps.or (LaneOps.shl (s.mem r q) (8 * (mi % 8))) (LaneOps.shr (s.mem r (q - 1)) (64 - 8 * (mi % 8)))
+             else s.mem r q }
 
 def riscvTool (vlmax : Nat) : IsaTool :=
   { name := s!"(Riscv.isa {vlmax})", Instr := Riscv.Instr, exec := Riscv.exec vlmax, nop := .nop, storeCells := riscvStoreCells,

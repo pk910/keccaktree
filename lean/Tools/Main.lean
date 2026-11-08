@@ -76,7 +76,13 @@ def main (args : List String) : IO UInt32 := do
     match kernels.find? (·.1 == k) with
     | none => IO.eprintln s!"unknown kernel {k}"; return 1
     | some (_, K) =>
-      let T := K.T; let prog := K.prog; let entry := K.entry
+      -- `KT_MIS=mi,mo` (RISC-V): the buffers at byte offsets `mi`/`mo` of their regions (misaligned paths)
+      let mis := ((← IO.getEnv "KT_MIS").getD "").splitOn "," |>.filterMap String.toNat?
+      let T : IsaTool := { K.T with initState := fun input zero count entry =>
+        match mis with
+        | [mi, mo] => riscvMisalign mi mo (K.T.initState input zero count entry)
+        | _ => K.T.initState input zero count entry }
+      let prog : Array T.Instr := K.prog; let entry := K.entry
       -- `KT_PATCH=word:value,..`: override words of the constant image (the runtime-settable `.data`
       -- thresholds, e.g. avx2_x4's small-tail maximum, to explore the code paths of every setting)
       let patches := ((← IO.getEnv "KT_PATCH").getD "").splitOn "," |>.filterMap fun p =>

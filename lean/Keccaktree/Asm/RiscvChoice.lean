@@ -43,9 +43,16 @@ def vlFor (ch : Nat → Nat) (V : Nat) (i : Instr) (s : State α) : Nat :=
 def execCh (V : Nat) (ch : Nat → Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α) : State α :=
   exec (vlFor ch V i s) rodata i s
 
-theorem vlFor_not_vset (ch : Nat → Nat) (V : Nat) (i : Instr) (s : State α) (h : i.usesVlmax = false) :
+theorem vlFor_not_isVset (ch : Nat → Nat) (V : Nat) (i : Instr) (s : State α) (h : i.isVset = false) :
     vlFor ch V i s = V := by
-  cases i <;> simp [Instr.usesVlmax] at h <;> rfl
+  cases i <;> simp [Instr.isVset] at h <;> rfl
+
+theorem vlFor_not_vset (ch : Nat → Nat) (V : Nat) (i : Instr) (s : State α) (h : i.usesVlmax = false) :
+    vlFor ch V i s = V := vlFor_not_isVset ch V i s (Instr.isVset_of_usesVlmax i h)
+
+theorem execCh_not_isVset (V : Nat) (ch : Nat → Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α)
+    (h : i.isVset = false) : execCh V ch rodata i s = exec V rodata i s := by
+  unfold execCh; rw [vlFor_not_isVset ch V i s h]
 
 theorem execCh_not_vset (V : Nat) (ch : Nat → Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α)
     (h : i.usesVlmax = false) : execCh V ch rodata i s = exec V rodata i s := by
@@ -59,11 +66,11 @@ theorem execCh_map {β : Type} [LaneOps β] {f : α → β} (hf : IsHom f) (V : 
     (rodata : Array (BitVec 64)) (i : Instr) (st : State α) (hne : (execCh V ch rodata i st).err = false) :
     execCh V ch rodata i (mapState f st) = mapState f (execCh V ch rodata i st) := by
   cases hh : st.halted
-  · cases hu : i.usesVlmax
-    · rw [execCh_not_vset V ch rodata i _ hu, execCh_not_vset V ch rodata i _ hu]
-      rw [execCh_not_vset V ch rodata i _ hu] at hne
+  · cases hu : i.isVset
+    · rw [execCh_not_isVset V ch rodata i _ hu, execCh_not_isVset V ch rodata i _ hu]
+      rw [execCh_not_isVset V ch rodata i _ hu] at hne
       exact exec_map hf V rodata i st hne
-    · cases i <;> simp [Instr.usesVlmax] at hu
+    · cases i <;> simp [Instr.isVset] at hu
       rename_i d a
       unfold execCh at hne ⊢
       have hv : vlFor ch V (.vsetvli d a) (mapState f st) = vlFor ch V (.vsetvli d a) st := by
@@ -91,9 +98,9 @@ theorem err_execCh (V : Nat) (ch : Nat → Nat) (rodata : Array (BitVec 64)) (i 
 /-- The deterministic model is the `min` choice. -/
 theorem execCh_min (V : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α) :
     execCh V (fun a => min a V) rodata i s = exec V rodata i s := by
-  cases hu : i.usesVlmax
-  · exact execCh_not_vset V _ rodata i s hu
-  · cases i <;> simp [Instr.usesVlmax] at hu
+  cases hu : i.isVset
+  · exact execCh_not_isVset V _ rodata i s hu
+  · cases i <;> simp [Instr.isVset] at hu
     rename_i d a
     unfold execCh
     cases hh : s.halted

@@ -14,8 +14,8 @@ kernel's theorem holds for any `vl`/`vtype` at the call (unspecified by the ABI)
 namespace Keccaktree.Kernels.RvVl
 open Keccaktree.Asm Keccaktree.Asm.Riscv
 
-def rv64_x1 : List (Nat × Nat) := [(1, 28), (34, 5405), (5410, 5430)]
-def zbb_x1 : List (Nat × Nat) := [(1, 28), (34, 3474), (3479, 3499)]
+def rv64_x1 : List (Nat × Nat) := [(1, 5430)]
+def zbb_x1 : List (Nat × Nat) := [(1, 3499)]
 def rvv : List (Nat × Nat) := [(1, 13), (383, 384)]
 def rvv_zvkb : List (Nat × Nat) := [(1, 13), (240, 241)]
 

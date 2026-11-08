@@ -23,13 +23,13 @@ variable {α : Type} [LaneOps α]
 
 def isVec : Instr → Bool
   | .vop .. | .vnot .. | .vshifti .. | .vshiftx .. | .vxorx .. | .vmvi .. | .vmvx .. | .vmvv .. | .vlseg ..
-  | .vsseg .. => true
+  | .vsseg .. | .vle8 .. | .vse8 .. => true
   | _ => false
 
 def ctlOk (D : Dom) (i : Instr) : Bool := !(isVec i && D.vl)
 
 def ctlAfter (D : Dom) : Instr → Dom
-  | .vsetvli _ _ => { D with vl := false }
+  | .vsetvli _ _ | .vsetvlie8 _ _ _ => { D with vl := false }
   | _ => D
 
 def succs (p : Nat) : Instr → List Nat
@@ -50,6 +50,42 @@ theorem foldl_setActive_ovr (zf cf nf vf : Bool) (k : List Nat) (c : Ctl) (g : N
     simp only [List.foldl_cons]
     rw [setActive_ovr]
     exact foldl_setActive_ovr zf cf nf vf k c g d l _
+
+theorem setLanes_ovr (D : Dom) (c : Ctl) (s : State α) (d n : Nat) (f : Nat → α) :
+    setLanes (ovr D c s) d n f = ovr D c (setLanes s d n f) := rfl
+
+theorem setGroup_ovr (D : Dom) (c : Ctl) (vlmax : Nat) (s : State α) (d : Nat) (ws : List α) (n : Nat) :
+    setGroup vlmax (ovr D c s) d ws n = ovr D c (setGroup vlmax s d ws n) := by
+  unfold setGroup
+  generalize List.range ((n + vlmax - 1) / vlmax) = l
+  induction l generalizing s with
+  | nil => rfl
+  | cons x l ih => simp only [List.foldl_cons]; rw [setLanes_ovr]; exact ih _
+
+theorem loadBytes_ovr (D : Dom) (c : Ctl) (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (n : Nat) :
+    loadBytes rodata (ovr D c s) a n = loadBytes rodata s a n := rfl
+
+theorem storeBytes_ovr (D : Dom) (c : Ctl) (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (vs : List α) (n : Nat) :
+    storeBytes rodata (ovr D c s) a vs n = (storeBytes rodata s a vs n).map (ovr D c) := by
+  unfold storeBytes
+  split
+  · exact X86.storeWords_ovr D c s a vs
+  · simp only [loadWords_ovr]
+    split
+    · exact X86.storeWords_ovr D c s _ _
+    · rfl
+
+theorem groupWord_ovr (D : Dom) (c : Ctl) (vlmax : Nat) (s : State α) (src j : Nat) :
+    groupWord vlmax (ovr D c s) src j = groupWord vlmax s src j := rfl
+
+theorem storeBytes_some (rodata : Array (BitVec 64)) (s : State α) (a : Addr) (vs : List α) (n : Nat) (s' : State α)
+    (h : storeBytes rodata s a vs n = some s') : s'.halted = s.halted ∧ s'.pc = s.pc := by
+  unfold storeBytes at h
+  split at h
+  · exact X86.storeWords_some _ _ _ _ h
+  · split at h
+    · exact X86.storeWords_some _ _ _ _ h
+    · cases h
 
 theorem storeWords_ovr' (D : Dom) (c : Ctl) (s : State α) (a : Addr) (vs : List α) :
     (ovr D c s).storeWords a vs = (s.storeWords a vs).map (ovr D c) := X86.storeWords_ovr D c s a vs
@@ -103,6 +139,62 @@ theorem exec_ovr (vlmax : Nat) (rodata : Array (BitVec 64)) (D : Dom) (c : Ctl) 
       rw [e]
       rcases (s.storeWords a ((List.range (nf * s.vl)).map fun q => lane s (src + q % nf) (q / nf))) with _ | s' <;> rfl
     · rfl
+  case vle8 d b =>
+    obtain ⟨zf, cf, nf', vf, vl, k⟩ := D
+    simp only [ctlOk, isVec, Bool.true_and, Bool.not_eq_true'] at hok
+    subst hok
+    simp only [exec, ovr_halted, hh, Bool.false_eq_true, ↓reduceIte, ctlAfter, withAddr, addr, gx, getGD_ovr,
+      fail_ovr] at he ⊢
+    split
+    · rename_i a _
+      have e1 : (ovr ⟨zf, cf, nf', vf, false, k⟩ c s).vl = s.vl := rfl
+      rw [e1, loadBytes_ovr]
+      split
+      · rcases loadBytes rodata s a (s.vl / 8) with _ | ws
+        · rfl
+        · show next (setGroup vlmax (ovr _ c s) d ws (s.vl / 8)) = _
+          rw [setGroup_ovr]; rfl
+      · rfl
+    · rfl
+  case vse8 src b =>
+    obtain ⟨zf, cf, nf', vf, vl, k⟩ := D
+    simp only [ctlOk, isVec, Bool.true_and, Bool.not_eq_true'] at hok
+    subst hok
+    simp only [exec, ovr_halted, hh, Bool.false_eq_true, ↓reduceIte, ctlAfter, withAddr, addr, gx, getGD_ovr,
+      fail_ovr] at he ⊢
+    split
+    · rename_i a _
+      have e1 : (ovr ⟨zf, cf, nf', vf, false, k⟩ c s).vl = s.vl := rfl
+      simp only [e1, groupWord_ovr, storeBytes_ovr]
+      split
+      · split
+        · rfl
+        · rcases (storeBytes rodata s a ((List.range (s.vl / 8)).map fun j => groupWord vlmax s src j) (s.vl / 8))
+            with _ | s' <;> rfl
+      · rfl
+    · rfl
+  case vsetvlie8 d a lmul =>
+    obtain ⟨zf, cf, nf', vf, vl, k⟩ := D
+    simp only [exec, ovr_halted, hh, Bool.false_eq_true, ↓reduceIte, ctlAfter] at he ⊢
+    have e : getR (ovr ⟨zf, cf, nf', vf, vl, k⟩ c s) a = getR s a := rfl
+    rw [e]
+    rcases hx : asConst (getR s a) with _ | avl
+    · simp [hx, State.fail] at he
+    · simp only [hx] at he ⊢
+      by_cases h : avl.toNat ≤ 8 * vlmax * lmul
+      · simp only [h, ↓reduceIte]; simp only [setR]; split <;> rfl
+      · simp [h, State.fail] at he
+  case sb src b off =>
+    simp only [exec, ovr_halted, hh, Bool.false_eq_true, ↓reduceIte, ctlAfter, ctlOk, withAddr, addr, gx,
+      getGD_ovr, fail_ovr, loadWords_ovr] at he hok ⊢
+    split
+    · split
+      · rename_i w _
+        have e : getR (ovr D c s) src = getR s src := rfl
+        rw [e, storeWords_ovr']
+        rcases (s.storeWords _ [insByte w (getR s src) _]) with _ | s' <;> rfl
+      · rfl
+    · rfl
   case vsetvli d a =>
     obtain ⟨zf, cf, nf', vf, vl, k⟩ := D
     simp only [exec, ovr_halted, hh, Bool.false_eq_true, ↓reduceIte, ctlAfter] at he ⊢
@@ -137,6 +229,18 @@ theorem foldl_setActive_pc (g : Nat → Nat → α) (d : Nat) : ∀ (l : List Na
   | f :: l, s => foldl_setActive_pc g d l _
 end
 
+theorem setGroup_pc_halted (vlmax : Nat) (s : State α) (d : Nat) (ws : List α) (n : Nat) :
+    (setGroup vlmax s d ws n).pc = s.pc ∧ (setGroup vlmax s d ws n).halted = s.halted := by
+  unfold setGroup
+  generalize List.range ((n + vlmax - 1) / vlmax) = l
+  induction l generalizing s with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons x l ih => simp only [List.foldl_cons]; exact ih _
+@[simp] theorem setGroup_pc' (vlmax : Nat) (s : State α) (d : Nat) (ws : List α) (n : Nat) :
+    (setGroup vlmax s d ws n).pc = s.pc := (setGroup_pc_halted vlmax s d ws n).1
+@[simp] theorem setGroup_halted' (vlmax : Nat) (s : State α) (d : Nat) (ws : List α) (n : Nat) :
+    (setGroup vlmax s d ws n).halted = s.halted := (setGroup_pc_halted vlmax s d ws n).2
+
 set_option maxHeartbeats 1000000 in
 theorem exec_pc (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : State α) (hh : s.halted = false)
     (he : (exec vlmax rodata i s).err = false) :
@@ -153,6 +257,39 @@ theorem exec_pc (vlmax : Nat) (rodata : Array (BitVec 64)) (i : Instr) (s : Stat
       · simp only [hst]
         obtain ⟨h1, h2⟩ := X86.storeWords_some _ _ _ _ hst
         left; exact ⟨by simp [h1, hh], by simp [succs, h2]⟩
+  case sb src b off =>
+    simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withAddr] at he ⊢
+    rcases ha : addr s b off with _ | a
+    · simp [ha, State.fail] at he
+    · simp only [ha] at he ⊢
+      rcases hl : s.loadWords rodata (wordOf a) 1 with _ | l
+      · simp [hl, State.fail] at he
+      · rcases l with _ | ⟨w, _ | ⟨w2, l⟩⟩
+        · simp [hl, State.fail] at he
+        · simp only [hl] at he ⊢
+          rcases hst : s.storeWords (wordOf a) [insByte w (getR s src) (byteOf a)] with _ | s'
+          · simp [hst, State.fail] at he
+          · simp only [hst]
+            obtain ⟨h1, h2⟩ := X86.storeWords_some _ _ _ _ hst
+            left; exact ⟨by simp [h1, hh], by simp [succs, h2]⟩
+        · simp [hl, State.fail] at he
+  case vse8 src b =>
+    simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withAddr] at he ⊢
+    rcases ha : addr s b 0 with _ | a
+    · simp [ha, State.fail] at he
+    · simp only [ha] at he ⊢
+      split
+      · split
+        · left; exact ⟨by simp [hh], by simp [succs]⟩
+        · rename_i h1 h2
+          simp only [h1, h2, ↓reduceIte] at he
+          rcases hst : storeBytes rodata s a ((List.range (s.vl / 8)).map fun j => groupWord vlmax s src j) (s.vl / 8)
+            with _ | s'
+          · simp [hst, State.fail] at he
+          · simp only [hst]
+            obtain ⟨h1, h2⟩ := storeBytes_some _ _ _ _ _ _ hst
+            left; exact ⟨by simp [h1, hh], by simp [succs, h2]⟩
+      · rename_i h1; simp [h1, State.fail] at he
   case vsseg src b nf =>
     simp only [exec, hh, Bool.false_eq_true, ↓reduceIte, withAddr] at he ⊢
     rcases ha : addr s b 0 with _ | a
