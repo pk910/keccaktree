@@ -209,4 +209,23 @@ theorem ctlThm_of (rodata : Array (BitVec 64)) (prog : Array I.isa.Instr) (entry
   rw [h1] at hc'
   exact ⟨_, c', hc', hfp _⟩
 
+/-- `CtlThm` from a run lemma that needs an invariant `P` of the normalised entry state (e.g. agent
+x86b's `run_ovr_annJ` with its call-depth invariant `DepthInv`). -/
+theorem ctlThm_of_pred (rodata : Array (BitVec 64)) (prog : Array I.isa.Instr) (entry : Nat) (steps : Nat → Nat → Nat)
+    (ann : Nat → Dom) (hentry : ann entry = Dom.all) (P : State (BitVec 64) → Prop)
+    (hP : ∀ (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)), E0 off count input (normCtl S) →
+      S.pc = entry → P (normCtl S))
+    (hfp : ∀ p, I.fpOk (ann p) (prog.getD p I.isa.nop) = true)
+    (hrun : ∀ (n : Nat) (s : State (BitVec 64)) (c : Ctl), P s → (I.isa.run rodata prog n s).err = false →
+      ∃ c' : Ctl, I.isa.run rodata prog n (ovr (ann s.pc) c s) = ovr (ann (I.isa.run rodata prog n s).pc) c' (I.isa.run rodata prog n s)) :
+    CtlThm I E0 rodata prog entry steps := by
+  intro off count input S hE hb hpc herr k hk
+  have hek := run_err_le I.isa rodata prog (normCtl S) k _ hk herr
+  obtain ⟨c', hc'⟩ := hrun k (normCtl S) (Ctl.of S) (hP off count input S hE hpc) hek
+  have h1 : ovr (ann (normCtl S).pc) (Ctl.of S) (normCtl S) = S := by
+    show ovr (ann S.pc) _ (normCtl S) = S
+    rw [hpc, hentry, ovr_normCtl]
+  rw [h1] at hc'
+  exact ⟨_, c', hc', hfp _⟩
+
 end Keccaktree.Asm.LibAliasGen

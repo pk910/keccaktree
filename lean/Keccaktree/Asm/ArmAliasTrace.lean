@@ -99,7 +99,7 @@ theorem cells_reloc (ρ : Reloc) (hρ : ρ.ok) (rodata : Array (BitVec 64)) (i :
   all_goals exact ⟨rfl, rfl⟩
 
 /-- **AArch64 as an instruction set for the in-place development.** -/
-def alIsa : AlIsa where
+@[reducible] def alIsa : AlIsa where
   isa := isa
   R := isaReloc
   reads := reads
@@ -111,6 +111,52 @@ def alIsa : AlIsa where
   exec_local := fun rodata m' i s hh hne hag => exec_local rodata m' i s hh hne hag
   cells_map := fun f hf rodata i X hh hne => cells_map hf rodata i X hh hne
   cells_reloc := fun ρ hρ rodata i X hh hne hok => cells_reloc ρ hρ rodata i X hh hne hok
+
+/-! ## The access condition in AArch64 terms (for the kernels' in-place proofs) -/
+
+/-- The access condition along an AArch64 run. -/
+abbrev AccessRun (rodata : Array (BitVec 64)) (prog : Array Instr) : Nat → Int → Int → State (BitVec 64) → Prop :=
+  alIsa.AccessRun rodata prog
+
+theorem accessRun_add (rodata : Array (BitVec 64)) (prog : Array Instr) (n m : Nat) (B B' Bf : Int)
+    (s : State (BitVec 64)) (h1 : AccessRun rodata prog n B B' s)
+    (h2 : AccessRun rodata prog m B' Bf (isa.run rodata prog n s)) : AccessRun rodata prog (n + m) B Bf s :=
+  alIsa.accessRun_add rodata prog n m B B' Bf s h1 h2
+
+/-- One step without input or output cells. -/
+theorem accessRun_step (rodata : Array (BitVec 64)) (prog : Array Instr) (m : Nat) (B Bf : Int)
+    (s : State (BitVec 64)) (hh : s.halted = false)
+    (hne : (exec rodata (prog.getD s.pc .nop) s).err = false)
+    (hr : ∀ c ∈ reads s (prog.getD s.pc .nop), c.1 ≠ X86.rInput)
+    (hw : ∀ c ∈ writes s (prog.getD s.pc .nop), c.1 ≠ X86.rInput ∧ c.1 ≠ X86.rOutput)
+    (h : AccessRun rodata prog m B Bf (exec rodata (prog.getD s.pc .nop) s)) :
+    AccessRun rodata prog (m + 1) B Bf s :=
+  alIsa.accessRun_step rodata prog m B Bf s hh hne hr hw h
+
+/-- The flags put back: a state is its copy with other flags, overridden with its own control. -/
+theorem ovr_all_flags (S : State α) (z c n v : Bool) :
+    ovr Dom.all (X86.Ctl.of S) ({ S with zf := z, cf := c, nf := n, vf := v } : State α) = S := by
+  cases S
+  simp only [ovr, Dom.all, X86.Ctl.of, Bool.cond_true, State.mk.injEq, and_true, true_and]
+  apply Vector.ext; intro i hi
+  simp only [Vector.getElem_ofFn]
+  have : [0, 1, 2, 3, 4, 5, 6, 7].contains i = true := by
+    simp only [List.contains_iff_mem]; simp; omega
+  rw [this]; rfl
+
+/-- **The access condition from another flag state**: at an index where the flags are dirty in a
+consistent annotation (`ann p = Dom.all`), the run from `S` and the run from `X` (`S` up to its
+control components, e.g. the flags a segment was recorded with) satisfy the same access condition. -/
+theorem accessRun_ann (rodata : Array (BitVec 64)) (prog : Array Instr) (ann : Nat → Dom) (hann : AnnOk prog ann)
+    (n : Nat) (B Bf : Int) (S X : State (BitVec 64)) (hX : ovr Dom.all (X86.Ctl.of S) X = S)
+    (hpc : ann X.pc = Dom.all) (herr : (isa.run rodata prog n X).err = false) (h : AccessRun rodata prog n B Bf X) :
+    AccessRun rodata prog n B Bf S := by
+  apply alIsa.accessRun_ovr rodata prog n B Bf X S _ h
+  intro k hk
+  obtain ⟨c', hc'⟩ := run_ovr_ann rodata prog ann hann k X (X86.Ctl.of S)
+    (LibAliasGen.run_err_le isa rodata prog X k n hk herr)
+  rw [hpc, hX] at hc'
+  exact ⟨_, c', hc', rfl⟩
 
 end Keccaktree.Asm.Arm
 

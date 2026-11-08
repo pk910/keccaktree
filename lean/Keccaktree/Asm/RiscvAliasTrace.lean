@@ -105,7 +105,7 @@ theorem cells_reloc (ρ : Reloc) (hρ : ρ.ok) (vlmax : Nat) (rodata : Array (Bi
   all_goals exact ⟨rfl, rfl⟩
 
 /-- **RISC-V (VLEN = 64·`vlmax`) as an instruction set for the in-place development.** -/
-def alIsa (vlmax : Nat) : AlIsa where
+@[reducible] def alIsa (vlmax : Nat) : AlIsa where
   isa := isa vlmax
   R := isaReloc vlmax
   reads := reads
