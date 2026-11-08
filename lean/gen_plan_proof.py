@@ -518,7 +518,8 @@ theorem rounds_succ (r : Nat) (X : Spec.State) : Spec.round r (Spec.rounds r X) 
         nodes_ = [int(x) for x in os.environ.get('NODES', '').split(',') if x] or list(range(count))
         for n in range(count):
             r0n = PLAN['rounds'][0][n]
-            if r0n != 0 and n not in nodes_:
+            if r0n != 0 and (ISA != 'X86' or n not in nodes_):
+                # (AArch64 / RISC-V: no mid-way `aat` lemma, as their proved segments were generated)
                 continue
             if r0n == 0:
                 f.write(f'''set_option maxRecDepth 100000 in
