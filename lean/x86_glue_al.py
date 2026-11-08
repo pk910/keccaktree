@@ -256,7 +256,9 @@ def main():
     prog, entry, rodata = X.load_prog(kernel)
     N, d = A['N'], A['dir']
     segs = A['segments']
-    exits = A['exits']
+    # as x86_glue.py: the default image never reaches the threshold-only exits (`patch`)
+    exits = [ex for ex in A['exits'] if THRESH or not ex.get('patch')]
+    segs = {k_: v_ for k_, v_ in segs.items() if not k_.startswith('X') or k_ in {ex['name'] for ex in exits}}
     shape = open(os.path.join(HERE, 'Keccaktree/Asm/LibTable.lean')).read()
     m_ = re.search(r'\(sym "' + kernel + r'", (\d+), \[(.*?)\]\)', shape)
     rank = int(m_.group(1))
@@ -436,8 +438,19 @@ theorem bodyA_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitV
         nm = ex['name']; G = gen(nm)
         rem0 = ex['vals'].get('2'); b0 = ex['src']['count'] - rem0
         sig = prev_base - b0
-        assert sig >= 0, (prev_base, b0)
         o = lambda t: out.append(' ' * ind + t)
+        if sig < 0:
+            # as x86_glue.py: the exit's segment was recorded after more batches than this point; the loop
+            # control's cut is first moved by j batches
+            assert prev_cut == 'hcut' and prev_m == f'(off + {N} * k)' and (-sig) % N == 0, (prev_cut, prev_m, sig)
+            j = (-sig) // N
+            o(f'have hkj : {j} ≤ k := by omega')
+            o(f'have hrj := relocState_cutOf (rho {-sig}) GenBb.facts.ctlK GenBb.facts.scK ({scK_moved(-sig)})')
+            o(f'  (by decide +kernel) (by decide +kernel) ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩')
+            o(f'have hcutj : relocState (rho (off + {N} * (k - {j}))) (cutOf GenBb.facts.ctlK ({scK_moved(-sig)})) = cutOf GenBb.facts.ctlK T := by')
+            o(f'  rw [← hrj, relocState_add _ _ (rho_ok _) (rho_ok _), rho_add, show off + {N} * (k - {j}) + {-sig} = off + {N} * k by omega]')
+            o(f'  exact hcut')
+            prev_m, prev_cut, sig = f'(off + {N} * (k - {j}))', 'hcutj', 0
         o(f'have hx := Fr.cut (rho_ok {prev_m}) (rho_ok {sig}) _ {G}.facts.ctl0 _ {G}.facts.sc0')
         o(f'  (PreCut.of_cut _ (rho_ok _) _ _ _ {prev_cut}) {ch.cur()}.fr {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel)')
         o(f'  (by fr_eq) (by fr_eq) (by decide +kernel)')
@@ -446,6 +459,23 @@ theorem bodyA_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitV
         o(f'rw [len_{nm}] at hd')
         o(f'exact DoneA.mono (DoneA.run ({ch.cur()}.acc _) rfl hd (by omega)) (by unfold XM LI; omega)')
         return ex
+
+    def scK_moved(dn):
+        """the loop control's cut moved by `dn` nodes: its input/output pointer control words shifted (as x86_glue.py)"""
+        seg = open(os.path.join(HERE, f'Keccaktree/Kernels/{d}/GenBb/Seg.lean')).read()
+        ck = re.search(r'^  ctlK := (ctl\d+)$', seg, re.M).group(1); sk = re.search(r'^  scK := (sc\d+)$', seg, re.M).group(1)
+        ctl = json.loads(re.search(rf'^def {ck} : List Nat := (.*)$', seg, re.M).group(1))
+        sc = re.search(rf'^def {sk} : State \(BitVec 64\) := (.*)$', seg, re.M).group(1)
+        gd = re.findall(r'#v\[([^\]]*)\]', sc)[1].split(', ')
+        assert len(gd) == 32, len(gd)
+        for n in range(32):
+            if 256 + n not in ctl:
+                continue
+            w = int(gd[n].replace('#64', ''), 16)
+            r, off_ = w >> 56, w & ((1 << 56) - 1)
+            if r in (1, 2):
+                gd[n] = hex((r << 56) | (off_ + (64 if r == 1 else 32) * dn)) + '#64'
+        return '{ GenBb.facts.scK with gd := #v[' + ', '.join(gd) + '] }'
 
     def path_from(pc0, y_rdx, stop):
         ch = FrChain(prog, rodata, 'x', [], 0)
@@ -568,9 +598,28 @@ theorem bodyA_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitV
                 pcs = path_from(C, v + N, H)
         U = [v for v in range(N, A['maxc'] + 1) if v not in seen]
         print('unreachable loop-head counts:', U)
+    # exits recorded after more than one batch (as x86_glue.py): the counts reaching them after fewer batches
+    # are handed to another kernel at the entry; `hE` carries c ≠ those counts
+    U0 = []
+    for ex in exits:
+        if not ex.get('kset', False):
+            continue
+        y_ = ex['vals'].get('2'); b0_ = ex['src']['count'] - y_
+        for kk in range(N, b0_, N):
+            c_ = kk + y_
+            ch_ = FrChain(prog, rodata, 'x', [], 0)
+            ch_.vals = {2: Val('c', c_)}; ch_.pc = entry
+            tail_ = False
+            while X.fr_step(prog, rodata, ch_.pc, {k_: v_.rep for k_, v_ in ch_.vals.items()}, bool(ch_.zf), bool(ch_.cf)) is not None:
+                if ch_.step()[0] == 'tail':
+                    tail_ = True; break
+            assert tail_, ('exit recorded after more batches, but count reaches the loop', ex['name'], c_)
+            U0.append(c_)
+    U0 = sorted(set(U0))
     def hE_t(kexpr):
-        return ' ∧ '.join(f'c - {N} * {kexpr} ≠ {v}' for v in U)
-    HE_ARG = ' (by omega)' if U else ''
+        return ' ∧ '.join([f'c - {N} * {kexpr} ≠ {v}' for v in U] + [f'c ≠ {v}' for v in U0])
+    HE_ARG = ' (by omega)' if (U or U0) else ''
+    UU = bool(U or U0)
     BN = lambda e: f'4 * ((off + {e} : Nat) : Int)'
     L.append(f"""set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -578,10 +627,10 @@ set_option maxHeartbeats 40000000 in
 theorem afterBA_step (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54)
     (k : Nat) (T : State (BitVec 64)) (hk : {N} * (k + 1) ≤ c)
     (hcut : relocState (rho (off + {N} * k)) (cutOf GenBb.facts.ctlK GenBb.facts.scK) = cutOf GenBb.facts.ctlK T)
-    (hI : Inv off c input S0 T ({N} * (k + 1))) (hrdx : T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int))){f' (hE : {hE_t("k")})' if U else ''}
+    (hI : Inv off c input S0 T ({N} * (k + 1))) (hrdx : T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int))){f' (hE : {hE_t("k")})' if UU else ''}
     (cont : {N} ≤ c - {N} * (k + 1) → ∀ T' : State (BitVec 64),
       relocState (rho (off + {N} * (k + 1))) (cutOf GenBb.facts.ctlK GenBb.facts.scK) = cutOf GenBb.facts.ctlK T' →
-      Inv off c input S0 T' ({N} * (k + 1 + 1)) → T'.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * ((k + 1 : Nat) : Int)) →{f' ({hE_t("(k + 1)")}) →' if U else ''}
+      Inv off c input S0 T' ({N} * (k + 1 + 1)) → T'.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * ((k + 1 : Nat) : Int)) →{f' ({hE_t("(k + 1)")}) →' if UU else ''}
       DoneAK off c input T' (LI * (c - {N} * (k + 1 + 1)) + XM) ({BN(f'{N} * (k + 1 + 1)')})) :
     DoneAK off c input T (LI * (c - {N} * (k + 1)) + XM) ({BN(f'{N} * (k + 1)')}) := by
   have hc55 : (c : Int) < 36028797018963968 := by
@@ -622,17 +671,17 @@ set_option maxHeartbeats 40000000 in
 theorem afterBA (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54) :
     ∀ j k (T : State (BitVec 64)), c - {N} * (k + 1) ≤ j → {N} * (k + 1) ≤ c →
       relocState (rho (off + {N} * k)) (cutOf GenBb.facts.ctlK GenBb.facts.scK) = cutOf GenBb.facts.ctlK T →
-      Inv off c input S0 T ({N} * (k + 1)) → T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int)) →{f' ({hE_t("k")}) →' if U else ''}
+      Inv off c input S0 T ({N} * (k + 1)) → T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int)) →{f' ({hE_t("k")}) →' if UU else ''}
       DoneAK off c input T (LI * (c - {N} * (k + 1)) + XM) ({BN(f'{N} * (k + 1)')}) := by
   intro j
   induction j with
   | zero =>
-    intro k T hj hk hcut hI hrdx{' hE' if U else ''}
-    exact afterBA_step off c input S0 hb k T hk hcut hI hrdx{' hE' if U else ''} (fun hcont => absurd hcont (by omega))
+    intro k T hj hk hcut hI hrdx{' hE' if UU else ''}
+    exact afterBA_step off c input S0 hb k T hk hcut hI hrdx{' hE' if UU else ''} (fun hcont => absurd hcont (by omega))
   | succ j ih =>
-    intro k T hj hk hcut hI hrdx{' hE' if U else ''}
-    exact afterBA_step off c input S0 hb k T hk hcut hI hrdx{' hE' if U else ''} (fun hcont T' hcut' hI' hrdx'{" hE'" if U else ''} =>
-      ih (k + 1) T' (by omega) (by omega) hcut' hI' hrdx'{" hE'" if U else ''})
+    intro k T hj hk hcut hI hrdx{' hE' if UU else ''}
+    exact afterBA_step off c input S0 hb k T hk hcut hI hrdx{' hE' if UU else ''} (fun hcont T' hcut' hI' hrdx'{" hE'" if UU else ''} =>
+      ih (k + 1) T' (by omega) (by omega) hcut' hI' hrdx'{" hE'" if UU else ''})
 """)
     # ------------------------------------------------------------------ after the prologue
     G_pc = A['G']
