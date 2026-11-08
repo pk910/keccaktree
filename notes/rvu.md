@@ -85,22 +85,28 @@ completely (then a following `exact` fails).  Debugging before a long segment bu
 the generated `Seg` statements as axioms (remote-only scratch files `GenSCStub.lean`, `AllUT.lean`;
 never committed) let `AllU`/`All` be checked hours before the real `GenSC` was built.
 
-## RVV at misaligned buffers: plan (not done)
-The model, translator and difftests cover the RVV bounce instructions (`vsetvlie8`, `vle8`, `vse8`,
-misaligned and aligned, VLEN 128/256/512).  The proof plan, reusing the scalar method:
-* misaligned iff `a7 = (a0|a1) & 7 ≠ 0` (then *both* buffers go through the stack); `a7` is constant over
-  the call.  The head takes `9..11` (`li t4, 8; bleu t3, t4; mv t3, t4`): `vl = min(r, 8, VLMAX)` =
-  `min(r, VLMAX)` for VLEN ≤ 512 — but under a vl *choice* `ch` the request is `min(r, 8)`, so the
-  batch counts differ from the aligned `nb ch`; deterministic `min` first.
-* restructure each body variant `GenB<w>` into `IN_al<w>` [14,22) (`vlseg (a1)`), a shared core
-  `CORE<w>` [22,368) (a0/a1/a7 as *moves*, not control words), `OUT_al<w>` [368,380); misaligned:
-  `IN_mis<w>` [21,22) (`vlseg (sp)`, `KT_MIS` run), `OUT_mis<w>` [371,372) (`vsseg4 (sp)`); the bounce
-  copies `16..20` and `372..375` concrete: lemmas `groupWord (setGroup ..) = ws[j]`, `joinWords` = `wordAt`
-  (by construction), and a byte lemma for `splitWords` (8×7 `bv_decide` cases) giving the output bytes.
-* `gen_all_rvv.py`: compose 3 segments per aligned batch and 3 segments + 2 concrete copies per
-  misaligned batch; `RvvCommon`: a `Mid` with `a7 ≠ 0` and byte-level output/preservation.
-Cost: a second, smaller set of segments per `w`; the cores are shared only if the aligned bodies are
-restructured at the same time.
+## Milestone 4: RVV at misaligned buffers
+Structure (`Kernels/RvvCommonU.lean`, generic in the kernel, VLEN and `vl`):
+* misaligned iff `a7 = (a0 | a1) & 7 = mi ||| mo ≠ 0` (`a7_val`); then both buffers go through the
+  stack; batches `vl = min(r, 8, VLMAX) = min(r, VLMAX)`; head path `9..11` (6 or 7 steps: `bSteps`).
+* straight-line concrete steps `StV` (control part without `vl`, pc, `vl`, registers, memory):
+  `mv/li/slli/addp/subn/op/opi/br2/brz/vsetvli/vsetvli8`, the byte-vector copy `copy8`
+  (`vle8 d, (b1); vse8 d, (b2)`: `RiscvBytesV.loadBytes_conc`, `groupWord_setGroup`, `vstoreMem`) and
+  `vsseg`.  `headM` (7..12), `preM` (12..21: the node bytes into the buffer), `tailM` (`bnez a7` after the
+  rounds .. `bnez a2`: digests into the buffer, copied to the output with `byteAt_vstoreMem`).
+* the batch body per `vl = w`: `GenM<w>` = [`vlseg8e64 v0, (sp)`, `bnez a7`) of the count-`w` run with
+  `KT_MIS=1,0` (`gen_segments_rvvu.sh`; positions rvv [17, 5776), rvv_zvkb [17, 3169)); input the buffer
+  words (mem3), output v0..v3 lanes (regs), a0/a1/a2/a7 as moves, sp/t0/t5 control (`NO_RC_MID`: no
+  round-constant look-alikes at inner cuts — the misaligned input pointer equals `RC17 ⋘ 57`).
+  Abstracted as `MBody` (cut data, `run`, `frame`, `moves`, `data`); `batchM`, `entryM`, `exitM`, `loopM`,
+  **`allM`** (8 + `stepsM V len c` steps).
+* per kernel/VLEN `AllUM.lean` (generated: `gen_all_rvvu.py <k> <Ns> <Pns> <V> <t> <proj>` with `LEN`):
+  `MBody` instances from `GenM<w>`, `norm_thmU mi mo` (aligned `All.norm_thm` at `0, 0` via
+  `LibRvU.normU_zero`, else `allM`), `kernelU`; `Kernels/RvLibUV.lean`: the four kernels at any
+  alignment, `lib2U/lib4U/lib8U` (`LibRvU.lib_rvU`).
+* Only the deterministic `vl = min(avl, VLMAX)` model (`Riscv.isa`) on the bounce path.
+* Remote queue: `/root/kt-rvu-queue3.sh` (per configuration: generate, build the bodies, generate and build
+  `AllUM`; VLEN 512 after the aligned rebuild `queue2`; then `RvLibUV`).
 
 ## Status
 * Milestone 1 (model, translator, M9, difftests): done, 93fa04f.
@@ -112,6 +118,7 @@ restructured at the same time.
   rebuild; regenerated with the unchanged pipeline (`/root/kt-rvu-gen-rvv.sh`, queue
   `/root/kt-rvu-queue2.sh`): the generated `All.lean` files are byte-identical to the committed ones;
   VLEN 128 (`RvvV2`, `RvvZvkbV2`, `RvLib2`) rebuilt green; VLEN 256/512 queued (see final report).
-* Milestone 4 (RVV at misaligned buffers): not done — plan above; groundwork `RiscvBytesV.lean`.
+* Milestone 4: `RvvV2.AllUM` (rvv, VLEN 128) green (`norm_thmU`, `kernelU`: standard axioms only); the other
+  five configurations and `RvLibUV` are building in `queue3` (see final report).
 * Remote scratch (never committed): `/root/kt-rvu-scratch/`, `Rv64X1/GenSCStub.lean`, `AllUT.lean`,
   `AllT.lean`, `ZbbX1/{GenSCStub,AllUT,AllT}.lean`, `RvLibUT.lean` (stub-based early checks).
