@@ -399,6 +399,8 @@ def render(kernel):
     # gen_segments_arm.py): the generated module's last cut is `ctl<K>`/`sc<K>`/`segAt<K>`/`Inv<K>`
     for g in ('GenSB', 'GenSBe', 'GenSBo'):
         f = os.path.join(HERE, 'plans', f'{kernel}_{g}.json')
+        if not os.path.exists(f):   # the committed copies of the proved segments' plans
+            f = os.path.join(HERE, 'plans_arm', f'{kernel}_{g}.json')
         if os.path.exists(f):
             P['K_' + g] = len(json.load(open(f))['cuts']) + 1
     if kind in ('x3', 'x3r'):

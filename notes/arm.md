@@ -3,15 +3,22 @@
 Branch `all-arm` (worktree `src/wt-arm`, off `lean-verification` f3a7dc5), remote `/root/kt-arm`
 (rsync excluding .lake/.git/Gen*/; lake builds under `systemd-run --scope -p MemoryMax=25G`).
 
-## Status
-| kernel | all-count theorem | axioms | notes |
+## Status: ALL SIX AArch64 KERNELS PROVED FOR EVERY COUNT (2026-11-08)
+| kernel | theorem | bv_decide certs | structure |
 |---|---|---|---|
-| scalar_x1 | `ScalarX1.All.scalar_x1_all`, `lib_scalar_x1` PROVED | propext, Classical.choice, Quot.sound + 610 bv_decide certs, no sorry | 3 segments (E1, body, epilogue) |
-| sha3_x2 | `Sha3X2.All.all`, `norm_thm`, `kernel` (mkKernelArm), `lib` PROVED | propext, Classical.choice, Quot.sound + 1187 bv_decide certs, no sorry | 8 segments (E1, head, 3 csel variants, even/odd batch, epilogue) |
-| neon_x2 | `NeonX2.All.all`, `kernel`, `lib` PROVED | propext, Classical.choice, Quot.sound + 1185 bv_decide certs, no sorry | same template as sha3_x2 |
-| sha3_x3 | `Sha3X3.All.all`, `norm_thm`, `kernel` PROVED | propext, Classical.choice, Quot.sound + 1277 bv_decide certs, no sorry | tail call to scalar_x1 with c mod 3 nodes, body on the common round cuts |
-| neon_x3 | building | | same template as sha3_x3 |
-| sha3_x3r | `Sha3X3r.All.all`, `norm_thm`, `kernel` PROVED | propext, Classical.choice, Quot.sound + 1323 bv_decide certs, no sorry | tail call to sha3_x2 with 0/1/2/4 nodes (`cmp x2, #4` paths), body on the common round cuts |
+| scalar_x1 | `ScalarX1.All.scalar_x1_all`, `kernel`, `lib` | 610 | E1, body (1 node), epilogue |
+| sha3_x2 | `Sha3X2.All.all`, `norm_thm`, `kernel`, `lib` | 1187 | E1, head, 3 csel variants, even/odd batch, epilogue |
+| neon_x2 | `NeonX2.All.all`, `norm_thm`, `kernel`, `lib` | 1185 | as sha3_x2 |
+| sha3_x3 | `Sha3X3.All.all`, `norm_thm`, `kernel` | 1277 | tail call to scalar_x1 with `c mod 3` nodes |
+| neon_x3 | `NeonX3.All.all`, `norm_thm`, `kernel` | 1185 | as sha3_x3 |
+| sha3_x3r | `Sha3X3r.All.all`, `norm_thm`, `kernel` | 1323 | tail call to sha3_x2 with 0/1/2/4 nodes |
+| **library** | **`ArmLib.lib_arm_all`** (`LibTable.lib_arm` on the six-kernel table, `table_shape : table.shape = armShape := rfl`) | 6631 | every kernel entry (any flags), every count, every node |
+
+Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` + the `bv_decide` certificates; no `sorryAx`.
+`lib_arm_all : ∀ K ∈ table, ∀ off count input S, LibTable.EntryArm K.name off count input S → Library.LibOk table K off count input S`.
+Rebuild: `python3 gen_segments_arm.py <k>` (scalar_x1: `gen_segments_scalar_x1.sh`) on the remote, then build
+`Keccaktree.Kernels.<Ns>.<Gen>.Seg` for every segment and `Keccaktree.Kernels.ArmLib`; `All.lean` re-renders
+locally from `plans_arm/` (`python3 gen_all_arm.py <k>` reproduces the committed files).
 
 ## Findings
 * **Translator bug (fixed, 3b5de45)**: `asm2lean.py` split the AArch64 operands on commas outside brackets, so the
