@@ -18,6 +18,10 @@ import x86_all as X
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIG = 10 ** 6
 THRESH = bool(os.environ.get('THRESH'))
+# kernels proved with an earlier emitter: their committed glue is reproduced as it was
+LEGACY = {'avx2_x2'}
+LEGACY_LIB = {'avx2_x2', 'avx2_x4'}
+OUT = os.environ.get('GLUE_OUT')   # write All/Lib there instead of the kernel's directory (reproduction checks)
 UNREACH = bool(os.environ.get('UNREACH'))   # set on retry: loop-head counts no run reaches
 SYM = lambda k: f'keccaktree_keccak256_{k}'
 
@@ -333,7 +337,9 @@ def main():
     prog, entry, rodata = X.load_prog(kernel)
     N, d = A['N'], A['dir']
     segs = A['segments']
-    exits = A['exits']
+    # the default image never reaches the threshold-only exits (`patch`): they belong to THRESH mode
+    exits = [ex for ex in A['exits'] if THRESH or not ex.get('patch')]
+    segs = {k_: v_ for k_, v_ in segs.items() if not k_.startswith('X') or k_ in {ex['name'] for ex in exits}}
     used = set(ex['term'][1] for ex in exits if ex['term'][0] != 'ret')
     # the entry policy's conditional tail calls
     for i_, ins in enumerate(prog):
@@ -407,6 +413,12 @@ abbrev DoneK := Done rodata prog targets
     · have := dg (n - done) (by omega)
       rw [show m + {b0} + (n - done) = off + n by omega] at this
       exact this
+"""
+        elif kernel in LEGACY and b0 == 0:
+            # the form avx2_x2 was proved with (committed glue unchanged)
+            data = f"""  have hI' := hI.seg {G}.facts m (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
+  have hdig : ∀ n, n < done + 0 → Digest input (X86.isa.run rodata prog {G}.facts.len U) (off + n) :=
+    fun n hn => hI'.dig n (by omega)
 """
         else:
             data = f"""  have hI' := hI.seg' {G}.facts m {b0} (by omega) hmb hcut (by wok_in) (by wok_out {G}.facts)
@@ -952,8 +964,7 @@ namespace Keccaktree.Kernels.{d}.Lib
 open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Asm.LibX86
 open Keccaktree.Kernels.{d} (prog rodata)
 
-set_option maxHeartbeats 4000000 in
-def kernel : Library.KernelThm X86.isa EntryX86 Digest :=
+{'' if kernel in LEGACY_LIB else 'set_option maxHeartbeats 4000000 in' + chr(10)}def kernel : Library.KernelThm X86.isa EntryX86 Digest :=
   mkKernel "{SYM(kernel)}" {rank} All.targets rodata prog {entry} All.steps {prefix_m} (by decide +kernel) (by decide +kernel)
     (fun _ _ => by unfold All.steps; omega) All.norm_thm
 
@@ -961,11 +972,11 @@ end Keccaktree.Kernels.{d}.Lib
 """
     if THRESH:
         text, lib = thresh_transform(text, lib, d, sorted(segs))
-        open(os.path.join(kdir, 'AllV.lean'), 'w').write(text)
-        open(os.path.join(kdir, 'LibV.lean'), 'w').write(lib)
+        open(os.path.join(OUT or kdir, 'AllV.lean'), 'w').write(text)
+        open(os.path.join(OUT or kdir, 'LibV.lean'), 'w').write(lib)
     else:
-        open(os.path.join(kdir, 'Lib.lean'), 'w').write(lib)
-        open(os.path.join(kdir, 'All.lean'), 'w').write(text)
+        open(os.path.join(OUT or kdir, 'Lib.lean'), 'w').write(lib)
+        open(os.path.join(OUT or kdir, 'All.lean'), 'w').write(text)
     print('written (exits, body)')
 
 

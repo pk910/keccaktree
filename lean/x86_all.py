@@ -248,6 +248,7 @@ def find_plan(kernel, count, fuel=4000000, patch=None):
 
 
 BATCH_N = None   # the kernel's batch size (set by gen_segments)
+BATCH_KERNEL = ''   # the kernel (the scalar-node cut rule is for the AVX2 kernels)
 
 
 def window(plan, a, b, nodes):
@@ -270,7 +271,7 @@ def window(plan, a, b, nodes):
         # registers, their rounds spread through the vector rounds): cut only where the whole batch is at one round
         # (a scalar node at round r next to vector lanes at r + 1 is mid-round; its partial outputs have no match)
         N = BATCH_N
-        if N and N % 4:
+        if N and N % 4 and BATCH_KERNEL.startswith('avx2_'):
             for g in set(n // N for n in nodes):
                 grp = [n for n in nodes if n // N == g]
                 if any(n % N >= 4 * (N // 4) for n in grp) and len(set(row[n] for n in grp)) > 1:
@@ -283,7 +284,8 @@ def window(plan, a, b, nodes):
 
 
 def gen_segments(kernel, patch=None):
-    global BATCH_N
+    global BATCH_N, BATCH_KERNEL
+    BATCH_KERNEL = kernel
     A = json.load(open(os.path.join(HERE, f'plans/{kernel}_all.json')))
     N, d = A['N'], A['dir']
     BATCH_N = N
