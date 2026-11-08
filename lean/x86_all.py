@@ -367,6 +367,11 @@ def gen_segments(kernel, patch=None):
                             'base': (src['count'] - len(nodes) - (src['rem'] if src['tail'] else 0)) if nodes else None}
     if only_exits:
         # regenerate just these exits (e.g. after a matcher change); keep the other segments' data
+        if os.environ.get('SEG_SPLIT'):
+            # parallel runs: each writes its exits' segment data apart (merged into _all.json afterwards)
+            json.dump(info, open(os.path.join(HERE, f"plans/{kernel}_segs_{'_'.join(only_exits)}.json"), 'w'),
+                      indent=1, default=str)
+            return
         A.setdefault('segments', {}).update(info)
         json.dump(A, open(os.path.join(HERE, f'plans/{kernel}_all.json'), 'w'), indent=1, default=str)
         return
