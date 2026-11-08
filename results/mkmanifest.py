@@ -71,6 +71,23 @@ for (name, p, thms) in LIBS:
         w(f'  theorem   {KN}{t}')
         w(f'    axioms  {ax.get(KN + t, "NOT CHECKED (integrated build in progress)")}')
     w('')
+IP = [('scalar_x1', 'ScalarX1', 'lib_inplace_scalar_x1'), ('sha3_x2', 'Sha3X2', 'lib_inplace_sha3_x2'),
+      ('neon_x2', 'NeonX2', 'lib_inplace_neon_x2'), ('sha3_x3', 'Sha3X3', None), ('sha3_x3r', 'Sha3X3r', None),
+      ('neon_x3', 'NeonX3', None), ('x86_x1', 'X86X1', 'lib_inplace_x86_x1'), ('rv64_x1', 'Rv64X1', 'lib_inplace_rv64_x1')]
+for (k, ns, lib) in IP:
+    ap = f'lean/Keccaktree/Kernels/{ns}/InPlaceAll.lean'
+    w(f'[in place: {k}] {ap} sha256 {sha(ap)}')
+    d = os.path.join(repo, f'lean/Keccaktree/Kernels/{ns}/InPlace')
+    for f in sorted(os.listdir(d)):
+        w(f'  summary   {ns}/InPlace/{f} sha256 {sha(os.path.join("lean/Keccaktree/Kernels", ns, "InPlace", f))}')
+    for t in [f'{ns}.InPlaceAll.access_thm'] + ([f'{ns}.InPlaceAll.{lib}'] if lib else []):
+        w(f'  theorem   {KN}{t}')
+        w(f'    axioms  {ax.get(KN + t, "NOT CHECKED (integrated build in progress)")}')
+    w('')
+w('[in place: AArch64 library] lean/Keccaktree/Kernels/ArmLibInPlace.lean sha256 ' + sha('lean/Keccaktree/Kernels/ArmLibInPlace.lean'))
+w(f'  theorem   {KN}ArmLibInPlace.lib_inplace_arm_all')
+w(f'    axioms  {ax.get(KN + "ArmLibInPlace.lib_inplace_arm_all", "NOT CHECKED (integrated build in progress)")}')
+w('')
 w('[core] lean/Keccaktree/Asm/LibTable.lean, lean/Keccaktree/Dispatch.lean')
 for t in ('Keccaktree.Asm.LibTable.lib_x86', 'Keccaktree.Asm.LibTable.lib_arm', 'Keccaktree.Asm.LibTable.lib_rv',
           'Keccaktree.Dispatch.hash_x86', 'Keccaktree.Dispatch.hash_x86_reachable', 'Keccaktree.Dispatch.hash_arm', 'Keccaktree.Dispatch.hash_rv'):
