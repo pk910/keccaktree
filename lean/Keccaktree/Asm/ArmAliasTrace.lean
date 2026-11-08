@@ -178,6 +178,23 @@ theorem entryA_mem : MemInput EntryA := by
 
 theorem entryA_pc : PcFree EntryA := fun _ _ _ _ p hE => hE.with_pc p
 
+/-- For a tail-calling kernel's hand-over clause of `AccessThmArm`: the node count of a hand-over entry
+is determined by its output pointer `x0`. -/
+theorem done_eq_of_x0 (off done d0 count : Nat) (input : Int → BitVec 64) (X Y : State (BitVec 64))
+    (hE : EntryA (off + done) count input X) (hY : Y.getGD 0 = gprWord ⟨rOutput, 32 * ((off + d0 : Nat) : Int)⟩)
+    (hXY : X.getGD 0 = Y.getGD 0) (h1 : 64 * (off + done) ≤ 2 ^ 54) (h2 : 64 * (off + d0) ≤ 2 ^ 54) : done = d0 := by
+  have hb : (2 : Nat) ^ 54 = 18014398509481984 := rfl
+  have w1 : (⟨rOutput, 32 * ((off + done : Nat) : Int)⟩ : Addr).wf := by
+    show 0 ≤ 32 * ((off + done : Nat) : Int) ∧ 32 * ((off + done : Nat) : Int) < 2 ^ 55
+    rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
+  have w2 : (⟨rOutput, 32 * ((off + d0 : Nat) : Int)⟩ : Addr).wf := by
+    show 0 ≤ 32 * ((off + d0 : Nat) : Int) ∧ 32 * ((off + d0 : Nat) : Int) < 2 ^ 55
+    rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
+  have e := congrArg wordGpr (hE.x0.symm.trans (hXY.trans hY))
+  rw [wordGpr_gprWord _ w1, wordGpr_gprWord _ w2] at e
+  simp only [Addr.mk.injEq, true_and] at e
+  omega
+
 /-- **An AArch64 kernel of the in-place library**: the arguments of `LibArm.mkKernelArm` and the
 kernel's access theorem. -/
 def mkKernelArmAl (name : String) (rank : Nat) (targets : List String) (rodata : Array (BitVec 64))
