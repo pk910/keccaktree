@@ -45,42 +45,87 @@ Branch `all-diff` (after merging lean-verification 0fbdb01), remote `/root/kt-di
     `EntryX86` holds in place. That entry reads its message from the storage
     (`input' = Tf.mem rInput`), which equals the message above `Bf`.
 
-### What a kernel must provide: `AccessRun rodata prog (steps off count) B0 Bf (dupState T)`
-* **Evidence (concrete, every kernel):** `Tools/InplaceAudit.lean` (`inplaceaudit`) runs every x86 kernel
-  model on counts 0 .. 64+2N in place, with `out == in` at offset 0. It checks `accessCheck` along the
-  separate-region run and runs the aliased machine `runAl` directly, checking that every digest the
-  kernel writes lands in the storage. Result: see "Audit" below.
-* **Proof for every count (recipe; not yet done for x86_x1):** `AccessRun` decomposes along the
-  segments like the digest proof. Per segment, the concrete reads and writes are the relocated reads
-  and writes of the base symbolic trace:
-  - input cells shift by `8m` words and output cells by `4m` (`m` = node offset of the iteration);
-  - the needed transfer lemma is `reads/writes (eval (reloc Σ)) i ⊆ shift (reads/writes Σ i)` when the
-    symbolic step does not fail. It goes per instruction through `memAddr?_map_some`/`memAddr?_reloc`,
-    with the slice certificate's `dec` (decoded addresses below the bound) giving `relocOk`.
+### All-count proof of the access condition (DONE for x86_x1)
+* `Asm/AliasTrace.lean`:
+  - `decOk_of_exec`: a step that does not fail decodes every address its footprints use.
+  - **`cells_map`** / **`cells_reloc`**: a concrete step's read and write cells are those of the
+    symbolic step, shifted by the relocation (`shiftCell`).
+  - **`path_access`**: along a relocated symbolic path, the access condition follows from the base
+    cells (`traceCells`, `accessCells`).
+  - **`SliceCert.access`**: the hook for one certified slice.
+  - Summaries `summ` (lowest input word read, highest output word written, smallest read-after-write
+    distance, input writes) and `summ_access`: the condition at relocation `ρ` reduces to linear
+    inequalities in `ρ.wshift`.
+  - **`chain_access`**: a whole generated segment (`ChainOk` list of certificates), from the per-slice
+    summaries (`SummOk`).
+* `Alias.lean`: `accessRun_add` (sequencing), `accessRun_step` (a concrete step with no input or output
+  cells).
+* **`Kernels/X86X1/InPlaceAll.lean`**:
+  - `body_access`: the body hashes node `m`, reading input words ≥ 0 relative (absolute ≥ `8m`) and
+    writing output words ≤ 3 relative (absolute < `4m+4`).
+  - `loop_access`, `exit_access`, `access_all`: the bound runs from `4·off` to `4·(off+c)`.
+  - **`x86_x1_inplace`**: every count, on the aliased machine.
+  - **`kernelAl`**, **`lib_inplace_x86_x1`**: the in-place library on `[x86_x1]`, through
+    `Library.lib_correct` with `X86.isaAl`.
+  - Axioms: propext, Classical.choice, Quot.sound + 721 bv_decide certificates; no sorry.
+* Where it was checked: `/root/kt-diff/ws`, a copy of `/root/kt-x86/lean`, whose core differs from
+  `lean-verification` 8d8f560 only in `Iter.lean`/`Tools.lean` (`E.fold` generalised by agent rv).
+  The x86_x1 `Gen*` dirs were rebuilt there. On the current core the same files build once the kernel's
+  `Gen*` dirs are rebuilt (they only use the `SliceCert` API).
+* Library design change: the aliased machine now shows the one buffer in both regions (`mirror`). The
+  digests are then `LibX86.Digest` (output view), so `Library.lean` applies unchanged to
+  `X86.isaAl` (`execAl_map`, `err_execAl`). The calling convention is `EntryAl`:
+  - one buffer (`Mirror`);
+  - `LibX86.Entry` of `dupState T` with the buffer as message;
+  - agreement with `input` from word `8·off` on.
 
-  The per-segment condition is then decidable on the base trace:
-  - every input read `(1, q)` satisfies `q + 8m ≥ B_entry(m)`; for the body, `B_entry = 4m`, so
-    `q ≥ -4m` and `q ≥ 0` suffices;
-  - for every input read `(1, q)` after an output write `(2, q')` in the same segment,
-    `4m ≥ q' - q + 1`;
-  - the segment writes no input cells.
+  At a hand-over the message switches to the buffer contents, which agree with `input` above the
+  final bound.
+* Not covered yet: entry with *dirty* control (flags/masks left by a tail call) on the aliased machine.
+  `EntryAl` takes the control of a fresh call; `kernelAl` needs no hand-over (x86_x1 tail-calls
+  nothing). For kernels that tail-call:
+  - an `execAl` version of `EntryCtl.exec_ovr` (`writes` ignores control fields, so it follows from
+    `exec_ovr`);
+  - the run lemmas `run_ovr_prefix`/`run_ovr_static` for `X86.isaAl`.
 
-  Only finitely many `m` can fail the second condition (the first iterations). For x86_x1 there is no
-  read after a write in the body (the digest is stored after the last load), so the condition holds
-  for every `m`.
-* **Library level:** `Library.lib_correct` composes `KernelThm`s over `Isa.run`. The in-place library
-  theorem needs the same induction over `OutcomeAl` with `runAl`, plus the input function changing at
-  each hand-over (`input' = storage`, equal to the message above `Bf ≤ 8·(off+done)`). This is a copy of
-  `Library.lean` with these two changes; not done.
+## (3) Recipe for the kernel agents (x86 now; ARM/RISC-V after the transfer lemmas below)
+1. `python3 gen_inplace.py <Kernel> <Seg>... --eval` (from `lean/`, in a workspace where the kernel's
+   `Gen*/Seg.lean` are built) writes `Keccaktree/Kernels/<Kernel>/InPlace/<Seg>.lean`:
+   - `certs`, `chain`, `len`;
+   - `sums`, computed by `#eval` and checked by `decide +kernel`; a few seconds per slice.
 
-### Status
-* Done: aliased semantics, the full generic simulation, the kernel-level lifting theorem, the checker
-  with its soundness proof, and the concrete audit for all x86 kernels.
-* Open:
-  - the transfer lemma and the per-kernel all-count `AccessRun` (x86_x1 pilot);
-  - the in-place library composition;
-  - ARM/RISC-V versions (`reads` + `exec_local` per ISA, ~250 lines each following the x86 file:
-    `reads` definition, `_loc` combinators, generated case list).
+   Your generated proof files are only read, never modified.
+2. In the kernel's in-place file (template: `Kernels/X86X1/InPlaceAll.lean`), per segment at relocation
+   `rho m`:
+
+       chain_access (rho m) hρ hw InPlace.<Seg>.certs S b bf InPlace.<Seg>.chain <cut> <Ok>
+         (by rw [InPlace.<Seg>.sums, rho_wshift_in, rho_wshift_out]; simp [SummOk, nextB] <;> omega)
+
+   with `b` = the current bound (`4·(first node of the batch)` for a batch at node `m`) and `bf` = the
+   bound after the segment. One-slice segments without input/output cells use `seg1_access`. Concrete
+   steps between segments use `accessRun_step`; composition uses `accessRun_add`. The structure mirrors
+   the kernel's every-count proof (same `Head`/`iter`/`loop` states).
+3. Batches of `N` nodes whose last digest stores come after some input loads of the same batch
+   (`gap` ≠ `none` in a summary): `SummOk` then needs `4m + 1 ≤ gap + 8m`, i.e. `m ≥ (1 - gap)/4`.
+   Earlier iterations (first batches) must be shown with the actual small `m`. With `m` free in the
+   segment lemma, `omega` handles it when the inequality holds for all `m ≥ 0`.
+4. `x86_x1_inplace` → `inplace_lift` (`LibAlias.lean`) needs only the kernel's `NormThm` and the
+   access proof. A kernel instance for the in-place library follows `kernelAl` (and needs the
+   dirty-control lemma above if the kernel tail-calls).
+
+## (4) AArch64 and RISC-V
+* `Asm/AliasGen.lean`: the aliased machine, the access condition and **the simulation (`sim_step`,
+  `sim_run`) for any `FootIsa`**. A `FootIsa` is an instruction set with read/write footprints, write
+  cells independent of memory, and memory locality.
+* `Asm/ArmAlias.lean`: AArch64 `reads`/`writes`, **`Arm.exec_local`** (all 36 constructors),
+  `Arm.footIsa`.
+* `Asm/RiscvAlias.lean`: RISC-V `reads` (with `RiscvFoot.writes`), **`Riscv.exec_local`** (all 24
+  constructors), `Riscv.footIsa vlmax`.
+* Still open for ARM/RISC-V:
+  - the symbolic transfer (`cells_map`/`cells_reloc` + `path_access`, as in `AliasTrace.lean`, using
+    `ArmReloc`/`RiscvReloc`);
+  - an `Isa` instance of their aliased machines (as `X86.isaAl`);
+  - a lifting theorem from `LibArm`/`LibRv` `NormThm*` (as `inplace_lift`).
 
 ### Audit
 `inplaceaudit <Kernel>` on `/root/kt-diff` (memory compacted every 256 steps):
