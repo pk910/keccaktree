@@ -46,73 +46,148 @@ theorem pw_GenBaf : ∀ C ∈ InPlace.GenBaf.certs, pathW rodata prog 112 C.idx 
   intro C hC
   simp only [InPlace.GenBaf.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl | rfl | rfl | rfl
-  exacts [GenBaf.pathW0, GenBaf.pathW1, GenBaf.pathW2, GenBaf.pathW3]
+  · exact GenBaf.pathW0
+  · exact GenBaf.pathW1
+  · exact GenBaf.pathW2
+  · exact GenBaf.pathW3
 
 theorem pw_GenBat : ∀ C ∈ InPlace.GenBat.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenBat.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl | rfl | rfl | rfl
-  exacts [GenBat.pathW0, GenBat.pathW1, GenBat.pathW2, GenBat.pathW3]
+  · exact GenBat.pathW0
+  · exact GenBat.pathW1
+  · exact GenBat.pathW2
+  · exact GenBat.pathW3
 
 theorem pw_GenBb : ∀ C ∈ InPlace.GenBb.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenBb.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  exacts [GenBb.pathW0, GenBb.pathW1, GenBb.pathW2, GenBb.pathW3, GenBb.pathW4, GenBb.pathW5, GenBb.pathW6, GenBb.pathW7, GenBb.pathW8, GenBb.pathW9, GenBb.pathW10, GenBb.pathW11, GenBb.pathW12, GenBb.pathW13, GenBb.pathW14, GenBb.pathW15, GenBb.pathW16, GenBb.pathW17, GenBb.pathW18, GenBb.pathW19, GenBb.pathW20, GenBb.pathW21]
+  · exact GenBb.pathW0
+  · exact GenBb.pathW1
+  · exact GenBb.pathW2
+  · exact GenBb.pathW3
+  · exact GenBb.pathW4
+  · exact GenBb.pathW5
+  · exact GenBb.pathW6
+  · exact GenBb.pathW7
+  · exact GenBb.pathW8
+  · exact GenBb.pathW9
+  · exact GenBb.pathW10
+  · exact GenBb.pathW11
+  · exact GenBb.pathW12
+  · exact GenBb.pathW13
+  · exact GenBb.pathW14
+  · exact GenBb.pathW15
+  · exact GenBb.pathW16
+  · exact GenBb.pathW17
+  · exact GenBb.pathW18
+  · exact GenBb.pathW19
+  · exact GenBb.pathW20
+  · exact GenBb.pathW21
 
 theorem pw_GenPff : ∀ C ∈ InPlace.GenPff.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenPff.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl
-  exacts [GenPff.pathW0]
+  · exact GenPff.pathW0
 
 theorem pw_GenX0 : ∀ C ∈ InPlace.GenX0.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX0.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  exacts [GenX0.pathW0, GenX0.pathW1, GenX0.pathW2, GenX0.pathW3, GenX0.pathW4, GenX0.pathW5, GenX0.pathW6, GenX0.pathW7, GenX0.pathW8, GenX0.pathW9, GenX0.pathW10, GenX0.pathW11, GenX0.pathW12, GenX0.pathW13, GenX0.pathW14, GenX0.pathW15, GenX0.pathW16, GenX0.pathW17, GenX0.pathW18, GenX0.pathW19, GenX0.pathW20, GenX0.pathW21, GenX0.pathW22, GenX0.pathW23, GenX0.pathW24]
+  · exact GenX0.pathW0
+  · exact GenX0.pathW1
+  · exact GenX0.pathW2
+  · exact GenX0.pathW3
+  · exact GenX0.pathW4
+  · exact GenX0.pathW5
+  · exact GenX0.pathW6
+  · exact GenX0.pathW7
+  · exact GenX0.pathW8
+  · exact GenX0.pathW9
+  · exact GenX0.pathW10
+  · exact GenX0.pathW11
+  · exact GenX0.pathW12
+  · exact GenX0.pathW13
+  · exact GenX0.pathW14
+  · exact GenX0.pathW15
+  · exact GenX0.pathW16
+  · exact GenX0.pathW17
+  · exact GenX0.pathW18
+  · exact GenX0.pathW19
+  · exact GenX0.pathW20
+  · exact GenX0.pathW21
+  · exact GenX0.pathW22
+  · exact GenX0.pathW23
+  · exact GenX0.pathW24
 
 theorem pw_GenX1 : ∀ C ∈ InPlace.GenX1.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX1.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  exacts [GenX1.pathW0, GenX1.pathW1, GenX1.pathW2, GenX1.pathW3, GenX1.pathW4, GenX1.pathW5, GenX1.pathW6, GenX1.pathW7, GenX1.pathW8, GenX1.pathW9, GenX1.pathW10, GenX1.pathW11, GenX1.pathW12, GenX1.pathW13, GenX1.pathW14, GenX1.pathW15, GenX1.pathW16, GenX1.pathW17, GenX1.pathW18, GenX1.pathW19, GenX1.pathW20, GenX1.pathW21, GenX1.pathW22, GenX1.pathW23, GenX1.pathW24]
+  · exact GenX1.pathW0
+  · exact GenX1.pathW1
+  · exact GenX1.pathW2
+  · exact GenX1.pathW3
+  · exact GenX1.pathW4
+  · exact GenX1.pathW5
+  · exact GenX1.pathW6
+  · exact GenX1.pathW7
+  · exact GenX1.pathW8
+  · exact GenX1.pathW9
+  · exact GenX1.pathW10
+  · exact GenX1.pathW11
+  · exact GenX1.pathW12
+  · exact GenX1.pathW13
+  · exact GenX1.pathW14
+  · exact GenX1.pathW15
+  · exact GenX1.pathW16
+  · exact GenX1.pathW17
+  · exact GenX1.pathW18
+  · exact GenX1.pathW19
+  · exact GenX1.pathW20
+  · exact GenX1.pathW21
+  · exact GenX1.pathW22
+  · exact GenX1.pathW23
+  · exact GenX1.pathW24
 
 theorem pw_GenX2 : ∀ C ∈ InPlace.GenX2.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX2.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl
-  exacts [GenX2.pathW0]
+  · exact GenX2.pathW0
 
 theorem pw_GenX3 : ∀ C ∈ InPlace.GenX3.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX3.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl
-  exacts [GenX3.pathW0]
+  · exact GenX3.pathW0
 
 theorem pw_GenX4 : ∀ C ∈ InPlace.GenX4.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX4.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl
-  exacts [GenX4.pathW0]
+  · exact GenX4.pathW0
 
 theorem pw_GenX5 : ∀ C ∈ InPlace.GenX5.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX5.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl
-  exacts [GenX5.pathW0]
+  · exact GenX5.pathW0
 
 theorem pw_GenX6 : ∀ C ∈ InPlace.GenX6.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX6.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl
-  exacts [GenX6.pathW0]
+  · exact GenX6.pathW0
 
 theorem pw_GenX7 : ∀ C ∈ InPlace.GenX7.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by
   intro C hC
   simp only [InPlace.GenX7.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC
   rcases hC with rfl
-  exacts [GenX7.pathW0]
+  · exact GenX7.pathW0
 
 abbrev DoneAK (v : Nat) := DoneA (setWord rodata 112 v) prog
 

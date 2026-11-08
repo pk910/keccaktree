@@ -238,7 +238,7 @@ def thresh_al(t, d, names, segs, nslices):
         pw += (f'theorem pw_{G} : ∀ C ∈ InPlace.{G}.certs, pathW rodata prog 112 C.idx (cutOf C.ctl C.sc) = true := by\n'
                f'  intro C hC\n  simp only [InPlace.{G}.certs, List.mem_cons, List.mem_nil_iff, or_false] at hC\n'
                f'  rcases hC with {" | ".join(["rfl"] * k)}\n'
-               f'  exacts [{", ".join(f"{G}.pathW{i}" for i in range(k))}]\n\n')
+               + ''.join(f'  · exact {G}.pathW{i}\n' for i in range(k)) + '\n')
     t = t.replace('abbrev DoneAK (v : Nat)', pw + 'abbrev DoneAK (v : Nat)')
     return t + '\n'
 
