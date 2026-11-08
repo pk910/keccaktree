@@ -9,7 +9,7 @@ set_option linter.unusedVariables false
 /-!
 # RISC-V in place: footprints of relocated runs, the aliased machine, the in-place library
 
-As `ArmAliasTrace.lean`: `cells_map`, `cells_reloc` (`ld`/`vlseg`, `sd`/`vsseg`), **`Riscv.alIsa vlmax`**,
+As `ArmAliasTrace.lean`: `cells_map`, `cells_reloc` (`ld`/`vlseg`/`lbu`/`vle8`, `sd`/`vsseg`/`sb`/`vse8`), **`Riscv.alIsa vlmax`**,
 **`mkKernelRvAl`**, **`lib_inplace_rv`**.  The vector loads and stores move `nf·vl` words, so their
 footprint depends on `vl`: it is control-independent exactly when the instruction may run with the
 dirty set (`fpOk := ctlOk`, no vector instruction with `vl` dirty) — what the kernels' `vl`
@@ -36,12 +36,21 @@ theorem reads_ovr (D : Dom) (c : Ctl) (s : State α) (i : Instr) (h : ctlOk D i 
   case vlseg d base nf =>
     have hv : D.vl = false := by simpa [ctlOk, isVec] using h
     simp only [reads, ovr_vl_clean D c s hv] <;> rfl
+  case vle8 d base =>
+    have hv : D.vl = false := by simpa [ctlOk, isVec] using h
+    simp only [reads, ovr_vl_clean D c s hv] <;> rfl
+  case vse8 src base =>
+    have hv : D.vl = false := by simpa [ctlOk, isVec] using h
+    simp only [reads, ovr_vl_clean D c s hv] <;> rfl
   all_goals rfl
 
 theorem writes_ovr (D : Dom) (c : Ctl) (s : State α) (i : Instr) (h : ctlOk D i = true) :
     writes (ovr D c s) i = writes s i := by
   cases i
   case vsseg src base nf =>
+    have hv : D.vl = false := by simpa [ctlOk, isVec] using h
+    simp only [writes, ovr_vl_clean D c s hv] <;> rfl
+  case vse8 src base =>
     have hv : D.vl = false := by simpa [ctlOk, isVec] using h
     simp only [writes, ovr_vl_clean D c s hv] <;> rfl
   all_goals rfl
@@ -67,6 +76,24 @@ theorem cells_map {f : α → β} (hf : IsHom f) (vlmax : Nat) (rodata : Array (
     have hv : (mapState f X).vl = X.vl := rfl
     refine ⟨?_, ?_⟩ <;> simp only [reads, writes, ha, addr_map_some hf _ _ _ _ ha, hv]
   case vsseg src base nf =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    have hv : (mapState f X).vl = X.vl := rfl
+    refine ⟨?_, ?_⟩ <;> simp only [reads, writes, ha, addr_map_some hf _ _ _ _ ha, hv]
+  case lbu d base off =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    simp [reads, writes, ha, addr_map_some hf _ _ _ _ ha]
+  case sb src base off =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    simp [reads, writes, ha, addr_map_some hf _ _ _ _ ha]
+  case vle8 d base =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    have hv : (mapState f X).vl = X.vl := rfl
+    refine ⟨?_, ?_⟩ <;> simp only [reads, writes, ha, addr_map_some hf _ _ _ _ ha, hv]
+  case vse8 src base =>
     simp only [exec, hT, ↓reduceIte] at hne
     obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
     have hv : (mapState f X).vl = X.vl := rfl
@@ -103,6 +130,32 @@ theorem cells_reloc (ρ : Reloc) (hρ : ρ.ok) (vlmax : Nat) (rodata : Array (Bi
     have hr := addr_reloc ρ hρ X base 0 a ha (hok _ (by simp [decodes]))
     have hv : (relocState ρ X).vl = X.vl := rfl
     refine ⟨?_, ?_⟩ <;> simp only [reads, writes, ha, hr, hv, X86.storeCells_addr ρ hρ, List.map_nil]
+  case lbu d base off =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    have hr := addr_reloc ρ hρ X base off a ha (hok _ (by simp [decodes]))
+    simp [reads, writes, ha, hr, wordOf_reloc ρ hρ, X86.storeCells_addr ρ hρ]
+  case sb src base off =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    have hr := addr_reloc ρ hρ X base off a ha (hok _ (by simp [decodes]))
+    simp [reads, writes, ha, hr, wordOf_reloc ρ hρ, X86.storeCells_addr ρ hρ]
+  case vle8 d base =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    have hr := addr_reloc ρ hρ X base 0 a ha (hok _ (by simp [decodes]))
+    have hv : (relocState ρ X).vl = X.vl := rfl
+    by_cases hk : byteOf a = 0 <;>
+      refine ⟨?_, ?_⟩ <;> simp only [reads, writes, ha, hr, hv, wordOf_reloc ρ hρ, byteOf_reloc ρ hρ, hk, ↓reduceIte,
+        X86.storeCells_addr ρ hρ, List.map_nil]
+  case vse8 src base =>
+    simp only [exec, hT, ↓reduceIte] at hne
+    obtain ⟨a, ha⟩ := addr_some_of_withAddr _ _ _ _ hne
+    have hr := addr_reloc ρ hρ X base 0 a ha (hok _ (by simp [decodes]))
+    have hv : (relocState ρ X).vl = X.vl := rfl
+    by_cases hk : byteOf a = 0 <;>
+      refine ⟨?_, ?_⟩ <;> simp only [reads, writes, ha, hr, hv, wordOf_reloc ρ hρ, byteOf_reloc ρ hρ, hk, ↓reduceIte,
+        X86.storeCells_addr ρ hρ, List.map_nil]
   all_goals exact ⟨rfl, rfl⟩
 
 /-- **RISC-V (VLEN = 64·`vlmax`) as an instruction set for the in-place development.** -/

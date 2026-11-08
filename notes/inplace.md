@@ -294,3 +294,25 @@ The in-place Asm files are not imported by any every-count proof; they are finis
 The ARM in-place builds in `/root/kt-inplace/arm2` were on the old `Iter` and were stopped (before that:
 sha3_x2 checked; Sha3X3.InPlaceAll and NeonX2.InPlaceAll built there); every committed ARM in-place
 file is the generator output, to be built once in the integration tree after its ARM rebuild.
+
+## RISC-V on the frozen model (all-rvu 42f493b)
+
+* `Asm/RiscvAlias.lean`: `Riscv.reads` lists every instruction explicitly (no catch-all).  The byte
+  copies of misaligned buffers: `lbu`/`sb` the word holding the byte (`sb` read-modify-write), `vle8` the
+  `vl/8` words (misaligned `vl/8 + 1` from `wordOf`), `vse8` misaligned the `vl/8 + 1` words it rewrites
+  (its edge words keep their other bytes; also covers `vl = 0`).  `exec_local` for them
+  (`loadBytes_loc`, `storeBytes_loc`, `setGroup_wm`, `rebase_agree`); `RiscvAliasTrace`: `reads_ovr` /
+  `writes_ovr` (`vle8`/`vse8` are vector: `ctlOk`), `cells_map`, `cells_reloc` (`wordOf_reloc`,
+  `byteOf_reloc` of `RiscvReloc`).  Checked in a dev copy of kt-rvu (old `Iter`; generator test).
+* `Kernels/RiscvAccSt.lean`: `StA` = `RiscvBytes.St` + the access condition; one lemma per `St` form
+  (`ld`/`sd` through a non-input pointer keep the bound, `sd_out` raises it past the word), `accessRun_bf`.
+* rv64_x1 (rvu's `AllU`, any alignment; in place the aligned case): `Kernels/Rv64X1/InPlaceAll.lean`,
+  hand-written on `AllU`'s lemmas: `in_acc` (head, `GenSI` loads at `8j ≥ 4j`), `core_acc` (`GenSC`),
+  `out_acc` (head, 4 × `sd_out`: `4j → 4j + 4`), `back_acc`, `iter_acc`, `loop_acc`, `exit_acc`,
+  `access_all`, `access_thm`, `kernelAl`, `lib_inplace_rv64_x1`.  Summaries: `gen_inplace.py Rv64X1
+  GenSE GenSI GenSJ GenSC GenSX --eval --split` (only `GenSI` loads input; no segment stores output).
+  Test build in the dev copy: passes, axioms propext, Classical.choice, Quot.sound.
+* zbb_x1: `gen_inplace_rv1.py zbb_x1 ZbbX1 -1931` (the shift of `gen_all_rvu.py`).
+* Not done: the RVV kernels (rvv, rvv_zvkb at VLEN 64..512; `RvvCommon` frame, `gen_all_rvv.py`).
+* Final builds: in kt-int on the frozen tree (summaries by `gen_inplace.py --eval --split` there, then the
+  `S<k>` modules one at a time, the segment modules, `InPlaceAll`).
