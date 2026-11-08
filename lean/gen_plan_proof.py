@@ -836,8 +836,7 @@ theorem seg_frame {hyps}
     (segAt{K} S0).mem r q = S0.mem r q := by
   have s0 := (cert0).step ρ hρ hw S0 hc hs
 {chain}""" + ''.join(f"""  have m{c + 1} : (segAt{c + 1} S0).mem r q = {at(c)}.mem r q := by
-    show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _
-    rw [s{c}.2.1]
+    {(f"rw [show segAt{c + 1} S0 = {ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)} from rfl, s{c}.2.1]" if ISA == 'X86' else f"show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _" + chr(10) + f"    rw [s{c}.2.1]")}
     apply (cert{c}).frame {FOOT_EXPR} ρ {at(c)} {'hc' if c == 0 else f's{c - 1}.2.2.2'} r q
     intro hm
     have := List.all_eq_true.mp writes{c} _ hm
