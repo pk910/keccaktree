@@ -44,6 +44,7 @@ def run(*args, ctl=()):
 # round-constant matches at general registers and stack cells are dropped for the kernels that read the round
 # constants from memory only (AVX2, x86_x1); the AVX-512 kernels keep theirs.  DROP_RC=0/1 overrides.
 DROP_RC = None
+RC_BV = False
 
 
 def matches(kernel, count, steps, lanes, rnd_of, region_filter=None, regs_only=False):
@@ -399,7 +400,10 @@ set_option maxRecDepth 100000 in
 /-- Lane kind {kind} (rotated by {rot}) {"of round " + str(rin_node) if rin_node is not None else "(carried)"}, for any node `n` whose quantities are at `v*`. -/
 theorem lane{c}_g{g_} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (n : Fin {count}) {params}{hyps} :
     E.eval env ({sig}) = {out_quantity('n', rin_node, kind)}.rotateLeft {rot} := by
-''' + (f'''  simp only [E.eval]
+''' + (f'''  simp only [E.eval{", " + ", ".join(hnames.split()) if hnames else ""}]
+  all_goals first | decide +kernel | (simp only [Spec.RC] at *; bv_decide)
+
+''' if 75 <= kind < 99 and RC_BV else f'''  simp only [E.eval]
   all_goals decide +kernel
 
 ''' if 75 <= kind < 99 else f'''  simp +decide only [E.eval, ternlogW, List.range, List.range.loop, List.foldl, ↓reduceIte]
@@ -1161,6 +1165,10 @@ def main():
     global DROP_RC
     DROP_RC = (os.environ['DROP_RC'] == '1') if 'DROP_RC' in os.environ else \
         (ISA == 'X86' and kernel.startswith(('avx2_', 'x86_x1')))
+    # x86b (AVX-512 kernels, which keep their RC hypotheses): an RC lane may need its hypotheses and bv_decide;
+    # every other kernel keeps the plain `decide` form its proved slices were generated with.  RC_BV=0/1 overrides.
+    global RC_BV
+    RC_BV = (os.environ['RC_BV'] == '1') if 'RC_BV' in os.environ else (ISA == 'X86' and not DROP_RC)
     ns = os.environ.get('NS', nsdir)
     PLAN = json.load(open(os.environ['PLAN']))
     only_node = int(os.environ.get('ONLY_NODE', '-1'))
@@ -1229,6 +1237,29 @@ def main():
         allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K])
     for c in range(0, K + 1):
         allocs[c] = [h for h in allocs[c] if h[0] in nodes]
+    if ISA == 'X86' and os.environ.get('PRUNE_RC', '1') == '1' and os.environ.get('DATA') != '0':
+        # a round-constant match (kinds 75..98, input independent, so prone to coincidences) is kept only
+        # if the location's tree after the slice is built from constants and hypothesis-backed locations:
+        # drops leftover registers that merely hold an RC-valued word at the cut (e.g. a dead register at an
+        # exit's start, a padding node hashed from uninitialised stack, a pointer word equal to a rotated RC)
+        for c in range(K):
+            if c not in slices and c + 1 not in slices:
+                continue
+            backed = {var_id(v) for (_, _, v, _, _) in allocs[c]}
+            cells = [var_id(v) for (_, _, v, _, _) in allocs[c + 1] if var_id(v) >= 288]
+            _, _, _, trees = slice_lits(kernel, count, bounds[c], bounds[c + 1], ctl=CTLS[c], cells=cells)
+            keep, dropped = [], 0
+            for h in allocs[c + 1]:
+                if 75 <= h[1] < 99:
+                    t = trees.get(var_id(h[2]), '')
+                    leaves = {int(x) for x in re.findall(r'\.var (\d+)', t)}
+                    if '.ptr' in t or not leaves <= backed:
+                        dropped += 1
+                        continue
+                keep.append(h)
+            if dropped:
+                print(f'cut {c + 1}: dropped {dropped} unbacked round-constant matches', file=sys.stderr)
+            allocs[c + 1] = keep
     ALLOC_END = allocs[K]
     chyps = {c: const_hyps([n for n in nodes if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}
     if os.environ.get('DATA') == '0':
