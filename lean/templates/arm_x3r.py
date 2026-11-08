@@ -213,12 +213,12 @@ theorem iter_{kind} (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVe
     have hne : i ≠ 258 := by have := List.all_eq_true.mp hL' i hi; simpa using this
     exact hUenv i hne
 """
-        ctl = """      refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
-      · show U.g = _; rw [hUg, fb.1]; decide +kernel
-      · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
-      · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
-      · show U.pc = _; rw [hUpc]; decide +kernel
-      · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
+        ctl = """    refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
+    · show U.g = _; rw [hUg, fb.1]; decide +kernel
+    · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
+    · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
+    · show U.pc = _; rw [hUpc]; decide +kernel
+    · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
 """
         if kind == 'loop':
             t += f"""  refine ⟨?_, hUok, ?_, hbi, hpre', fun n hn => hdig' n (by omega)⟩
@@ -368,10 +368,10 @@ theorem epilogue (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 6
       · show T.k = _; rw [← hT, ← hSx]; show Sx'.k = _; rw [fx.2.1]; decide +kernel
       · show T.vl = _; rw [← hT, ← hSx]; show Sx'.vl = _; rw [fx.2.2.2.2.2.2.1]; decide +kernel
       · show T.depth = _; rw [← hT, ← hSx]; show Sx'.depth = _; rw [fx.2.2.2.2.2.2.2.2]; decide +kernel
-      · show T.getGD 2 = _; rw [← hT, hx2]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
-      · show T.getGD 31 = _; rw [← hT, hsp]
-      · show T.getGD 1 = _; rw [← hT, hx1]
-      · show T.getGD 0 = _; rw [← hT, hx0]
+      · show T.getGD 2 = _; rw [← hT]; show Sx.getGD 2 = _; rw [hx2]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
+      · show T.getGD 31 = _; rw [← hT]; exact hsp
+      · show T.getGD 1 = _; rw [← hT]; exact hx1
+      · show T.getGD 0 = _; rw [← hT]; exact hx0
       · intro q; show T.mem rInput q = _; rw [← hT, hmem]; exact hin q
 
 '''
@@ -480,7 +480,7 @@ theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
   · have hpcV3 : V3.pc = {TAIL} := by
       rw [← hV3]; show (if Arm.condHolds V2 .eq then {TAIL} else V2.pc + 1) = _
       rw [heq, decide_eq_true (by omega)]; rfl
-    have hsteps : steps c = 4 + 1 := by simp only [steps, hc3, hc4, ↓reduceIte]
+    have hsteps : steps c = 4 + 1 := by subst hc4; rfl
     rw [hsteps, Isa.run_add, h4]
     exact entry_tail off c input S V3 hE (Or.inr hc4) hV3S hpcV3
   have hpcV3 : V3.pc = 4 := by
@@ -565,7 +565,7 @@ theorem norm_thm : LibArm.NormThmArm rodata prog 0 (fun _ c => steps c) ["{TSYM}
   refine ⟨hh, he, hp, ?_⟩
   rcases ho with ho | ⟨ht, hd, hE'⟩
   · exact Or.inl ho
-  · exact Or.inr ⟨_, 3 * nb c, ht, List.mem_singleton.mpr rfl, by rcases nb_eq c with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> omega, hd, Arm.entryA_of_entry hE', by omega⟩
+  · exact Or.inr ⟨_, 3 * nb c, ht, List.mem_singleton.mpr rfl, by rcases nb_eq c with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> omega, hd, Arm.entryA_of_entry hE', by rcases nb_eq c with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> omega⟩
 
 /-- `{SYM}` as a kernel of the library (rank 1: tail calls to `{TSYM}`; any flags at entry). -/
 def kernel : Library.KernelThm Arm.isa LibTable.EntryArm Digest :=

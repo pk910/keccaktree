@@ -313,10 +313,10 @@ theorem epilogue (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 6
       · show T.k = _; rw [← hT, ← hSx]; show Sx'.k = _; rw [fx.2.1]; decide +kernel
       · show T.vl = _; rw [← hT, ← hSx]; show Sx'.vl = _; rw [fx.2.2.2.2.2.2.1]; decide +kernel
       · show T.depth = _; rw [← hT, ← hSx]; show Sx'.depth = _; rw [fx.2.2.2.2.2.2.2.2]; decide +kernel
-      · show T.getGD 2 = _; rw [← hT, hx2]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
-      · show T.getGD 31 = _; rw [← hT, hsp]
-      · show T.getGD 1 = _; rw [← hT, hx1]
-      · show T.getGD 0 = _; rw [← hT, hx0]
+      · show T.getGD 2 = _; rw [← hT]; show Sx.getGD 2 = _; rw [hx2]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
+      · show T.getGD 31 = _; rw [← hT]; exact hsp
+      · show T.getGD 1 = _; rw [← hT]; exact hx1
+      · show T.getGD 0 = _; rw [← hT]; exact hx0
       · intro q; show T.mem rInput q = _; rw [← hT, hmem]; exact hin q
 
 '''

@@ -9,8 +9,8 @@ Branch `all-arm` (worktree `src/wt-arm`, off `lean-verification` f3a7dc5), remot
 | scalar_x1 | `ScalarX1.All.scalar_x1_all`, `lib_scalar_x1` PROVED | propext, Classical.choice, Quot.sound + 610 bv_decide certs, no sorry | 3 segments (E1, body, epilogue) |
 | sha3_x2 | `Sha3X2.All.all`, `norm_thm`, `kernel` (mkKernelArm), `lib` PROVED | propext, Classical.choice, Quot.sound + 1187 bv_decide certs, no sorry | 8 segments (E1, head, 3 csel variants, even/odd batch, epilogue) |
 | neon_x2 | `NeonX2.All.all`, `kernel`, `lib` PROVED | propext, Classical.choice, Quot.sound + 1185 bv_decide certs, no sorry | same template as sha3_x2 |
-| sha3_x3 / neon_x3 | planned | | tail call to scalar_x1 |
-| sha3_x3r | planned | | tail call to sha3_x2, `cmp x2, #4` paths |
+| sha3_x3 / neon_x3 | building | | tail call to scalar_x1 (same template as sha3_x3r minus the 4-node case) |
+| sha3_x3r | `Sha3X3r.All.all`, `norm_thm`, `kernel` PROVED | propext, Classical.choice, Quot.sound + 1323 bv_decide certs, no sorry | tail call to sha3_x2 with 0/1/2/4 nodes (`cmp x2, #4` paths), body on the common round cuts |
 
 ## Findings
 * **Translator bug (fixed, 3b5de45)**: `asm2lean.py` split the AArch64 operands on commas outside brackets, so the

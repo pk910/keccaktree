@@ -66,13 +66,13 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 /-- Node `0` of `GenSB`'s output invariant at node `m` is the digest of node `m + 0`. -/
 theorem dig0 (input : Int → BitVec 64) (S : State (BitVec 64)) (m : Nat)
-    (h : GenSB.Inv25 (fun i => envOf S ((rho m).var i)) (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25)) :
+    (h : GenSB.Inv24 (fun i => envOf S ((rho m).var i)) (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24)) :
     Digest input S (m + 0) := by
   have key : ∀ w : Nat, envOf S ((rho m).var (memVar rOutput (Int.ofNat (4 * 0 + w)))) = S.mem rOutput (Int.ofNat (4 * (m + 0) + w)) := by
     intro w; rw [rho_var_out, envOf_mem]; congr 1; simp only [Int.ofNat_eq_coe]; omega
   obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩ := h
   have hw : ∀ w : Nat, w < 4 → S.mem rOutput (Int.ofNat (4 * (m + 0) + w)) =
-      L (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25 ⟨0, by decide⟩) w := by
+      L (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24 ⟨0, by decide⟩) w := by
     intro w hw
     rw [← key w]
     rcases w with _ | _ | _ | _ | w
@@ -86,7 +86,7 @@ theorem dig0 (input : Int → BitVec 64) (S : State (BitVec 64)) (m : Nat)
         Nat.reduceDiv, Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, rotl0] at this; exact this
     · omega
   intro w i hw' hi
-  have hr : GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25 ⟨0, by decide⟩ =
+  have hr : GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24 ⟨0, by decide⟩ =
       Spec.rounds 24 (absorbNode (nodeWords input (m + 0))) := GenSB.aat_0 _
   rw [hw w hw', hr, absorbNode_keccak, squeezeByte_eq]
   have e1 : (8 * w + i) / 8 = w := by omega
@@ -98,13 +98,13 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 /-- Node `1` of `GenSB`'s output invariant at node `m` is the digest of node `m + 1`. -/
 theorem dig1 (input : Int → BitVec 64) (S : State (BitVec 64)) (m : Nat)
-    (h : GenSB.Inv25 (fun i => envOf S ((rho m).var i)) (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25)) :
+    (h : GenSB.Inv24 (fun i => envOf S ((rho m).var i)) (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24)) :
     Digest input S (m + 1) := by
   have key : ∀ w : Nat, envOf S ((rho m).var (memVar rOutput (Int.ofNat (4 * 1 + w)))) = S.mem rOutput (Int.ofNat (4 * (m + 1) + w)) := by
     intro w; rw [rho_var_out, envOf_mem]; congr 1; simp only [Int.ofNat_eq_coe]; omega
   obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩ := h
   have hw : ∀ w : Nat, w < 4 → S.mem rOutput (Int.ofNat (4 * (m + 1) + w)) =
-      L (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25 ⟨1, by decide⟩) w := by
+      L (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24 ⟨1, by decide⟩) w := by
     intro w hw
     rw [← key w]
     rcases w with _ | _ | _ | _ | w
@@ -118,7 +118,7 @@ theorem dig1 (input : Int → BitVec 64) (S : State (BitVec 64)) (m : Nat)
         Nat.reduceDiv, Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, rotl0] at this; exact this
     · omega
   intro w i hw' hi
-  have hr : GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25 ⟨1, by decide⟩ =
+  have hr : GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24 ⟨1, by decide⟩ =
       Spec.rounds 24 (absorbNode (nodeWords input (m + 1))) := GenSB.aat_1 _
   rw [hw w hw', hr, absorbNode_keccak, squeezeByte_eq]
   have e1 : (8 * w + i) / 8 = w := by omega
@@ -130,13 +130,13 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 /-- Node `2` of `GenSB`'s output invariant at node `m` is the digest of node `m + 2`. -/
 theorem dig2 (input : Int → BitVec 64) (S : State (BitVec 64)) (m : Nat)
-    (h : GenSB.Inv25 (fun i => envOf S ((rho m).var i)) (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25)) :
+    (h : GenSB.Inv24 (fun i => envOf S ((rho m).var i)) (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24)) :
     Digest input S (m + 2) := by
   have key : ∀ w : Nat, envOf S ((rho m).var (memVar rOutput (Int.ofNat (4 * 2 + w)))) = S.mem rOutput (Int.ofNat (4 * (m + 2) + w)) := by
     intro w; rw [rho_var_out, envOf_mem]; congr 1; simp only [Int.ofNat_eq_coe]; omega
   obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩ := h
   have hw : ∀ w : Nat, w < 4 → S.mem rOutput (Int.ofNat (4 * (m + 2) + w)) =
-      L (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25 ⟨2, by decide⟩) w := by
+      L (GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24 ⟨2, by decide⟩) w := by
     intro w hw
     rw [← key w]
     rcases w with _ | _ | _ | _ | w
@@ -150,7 +150,7 @@ theorem dig2 (input : Int → BitVec 64) (S : State (BitVec 64)) (m : Nat)
         Nat.reduceDiv, Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, rotl0] at this; exact this
     · omega
   intro w i hw' hi
-  have hr : GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 25 ⟨2, by decide⟩ =
+  have hr : GenSB.AAt (fun j => absorbNode (nodeWords input (m + j.val))) 24 ⟨2, by decide⟩ =
       Spec.rounds 24 (absorbNode (nodeWords input (m + 2))) := GenSB.aat_2 _
   rw [hw w hw', hr, absorbNode_keccak, squeezeByte_eq]
   have e1 : (8 * w + i) / 8 = w := by omega
@@ -208,10 +208,10 @@ theorem iter_loop (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 
   have dat := GenSB.seg_data (rho (off + 3 * k)) hρ hw _ hcut hok' _ (inv0 input (norm S GenSB.sc0) (off + 3 * k) hin)
   have mv := GenSB.seg_moves (rho (off + 3 * k)) hρ hw _ hcut hok' 258 258 (by simp)
   have fl : Arm.isa.run rodata prog GenSB.segLen S =
-      (GenSB.segAt25 (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
+      (GenSB.segAt24 (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
     GenSB.seg_flags (rho (off + 3 * k)) hρ hw _ hcut hok' S.zf S.cf S.nf S.vf
   rw [Reloc.var_lt _ 258 (by decide)] at mv
-  generalize hSb' : GenSB.segAt25 (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
+  generalize hSb' : GenSB.segAt24 (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
   obtain ⟨_, hokb, hcutb⟩ := sr
   have fb := cut_fields _ _ _ _ hcutb
   generalize hSb : Sb'.withFlags S.zf S.cf S.nf S.vf = Sb at fl
@@ -302,15 +302,15 @@ theorem iter_loop (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 
     exact hUenv i hne
   refine ⟨?_, hUok, ?_, hbi, hpre', fun n hn => hdig' n (by omega)⟩
   · rw [show off + 3 * (k + 1) = (off + 3 * k) + 3 by omega, ← rho_add]
-    apply cut_transfer (rho (off + 3 * k)) _ hρ (Reloc.add_ok _ _ hρ (rho_ok 3)) GenSB.ctl25 GenSB.ctl0 GenSB.sc25 GenSB.sc0 Sb'
+    apply cut_transfer (rho (off + 3 * k)) _ hρ (Reloc.add_ok _ _ hρ (rho_ok 3)) GenSB.ctl24 GenSB.ctl0 GenSB.sc24 GenSB.sc0 Sb'
       (norm U GenSB.sc0) hcutb (hL_dec _ _ (by decide +kernel)) (hL GenSB.sc0 _ (by decide +kernel))
       (hval_succ _ _ hρ (rho_ok 3) _ _ _ _ (by decide +kernel))
-      refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
-      · show U.g = _; rw [hUg, fb.1]; decide +kernel
-      · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
-      · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
-      · show U.pc = _; rw [hUpc]; decide +kernel
-      · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
+    refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
+    · show U.g = _; rw [hUg, fb.1]; decide +kernel
+    · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
+    · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
+    · show U.pc = _; rw [hUpc]; decide +kernel
+    · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
   · rw [hUcnt]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
 
 set_option maxRecDepth 100000 in
@@ -331,10 +331,10 @@ theorem iter_eq (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64
   have dat := GenSB.seg_data (rho (off + 3 * k)) hρ hw _ hcut hok' _ (inv0 input (norm S GenSB.sc0) (off + 3 * k) hin)
   have mv := GenSB.seg_moves (rho (off + 3 * k)) hρ hw _ hcut hok' 258 258 (by simp)
   have fl : Arm.isa.run rodata prog GenSB.segLen S =
-      (GenSB.segAt25 (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
+      (GenSB.segAt24 (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
     GenSB.seg_flags (rho (off + 3 * k)) hρ hw _ hcut hok' S.zf S.cf S.nf S.vf
   rw [Reloc.var_lt _ 258 (by decide)] at mv
-  generalize hSb' : GenSB.segAt25 (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
+  generalize hSb' : GenSB.segAt24 (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
   obtain ⟨_, hokb, hcutb⟩ := sr
   have fb := cut_fields _ _ _ _ hcutb
   generalize hSb : Sb'.withFlags S.zf S.cf S.nf S.vf = Sb at fl
@@ -412,14 +412,14 @@ theorem iter_eq (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64
     exact hUenv i hne
   have hk3 : nb c = k + 1 := by rcases nb_eq c with ⟨h, h'⟩ | ⟨h, h'⟩ <;> omega
   refine ⟨?_, hUok, ?_, hbi, hpre', fun n hn => hdig' n (by omega)⟩
-  · apply cut_transfer (rho (off + 3 * k)) _ hρ hρ GenSB.ctl25 GenSX.ctl0 GenSB.sc25 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
+  · apply cut_transfer (rho (off + 3 * k)) _ hρ hρ GenSB.ctl24 GenSX.ctl0 GenSB.sc24 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
       (hL_dec _ _ (by decide +kernel)) (hL GenSX.sc0 _ (by decide +kernel)) (hval_same _ _ _ _ _ (by decide +kernel))
-      refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
-      · show U.g = _; rw [hUg, fb.1]; decide +kernel
-      · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
-      · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
-      · show U.pc = _; rw [hUpc]; decide +kernel
-      · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
+    refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
+    · show U.g = _; rw [hUg, fb.1]; decide +kernel
+    · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
+    · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
+    · show U.pc = _; rw [hUpc]; decide +kernel
+    · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
   · rw [hUcnt, hk3]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
 
 set_option maxRecDepth 100000 in
@@ -440,10 +440,10 @@ theorem iter_end (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 6
   have dat := GenSB.seg_data (rho (off + 3 * k)) hρ hw _ hcut hok' _ (inv0 input (norm S GenSB.sc0) (off + 3 * k) hin)
   have mv := GenSB.seg_moves (rho (off + 3 * k)) hρ hw _ hcut hok' 258 258 (by simp)
   have fl : Arm.isa.run rodata prog GenSB.segLen S =
-      (GenSB.segAt25 (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
+      (GenSB.segAt24 (norm S GenSB.sc0)).withFlags S.zf S.cf S.nf S.vf :=
     GenSB.seg_flags (rho (off + 3 * k)) hρ hw _ hcut hok' S.zf S.cf S.nf S.vf
   rw [Reloc.var_lt _ 258 (by decide)] at mv
-  generalize hSb' : GenSB.segAt25 (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
+  generalize hSb' : GenSB.segAt24 (norm S GenSB.sc0) = Sb' at sr fr dat mv fl
   obtain ⟨_, hokb, hcutb⟩ := sr
   have fb := cut_fields _ _ _ _ hcutb
   generalize hSb : Sb'.withFlags S.zf S.cf S.nf S.vf = Sb at fl
@@ -534,14 +534,14 @@ theorem iter_end (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 6
     exact hUenv i hne
   have hk3 : nb c = k + 1 := by rcases nb_eq c with ⟨h, h'⟩ | ⟨h, h'⟩ <;> omega
   refine ⟨?_, hUok, ?_, hbi, hpre', fun n hn => hdig' n (by omega)⟩
-  · apply cut_transfer (rho (off + 3 * k)) _ hρ hρ GenSB.ctl25 GenSX.ctl0 GenSB.sc25 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
+  · apply cut_transfer (rho (off + 3 * k)) _ hρ hρ GenSB.ctl24 GenSX.ctl0 GenSB.sc24 GenSX.sc0 Sb' (norm U GenSX.sc0) hcutb
       (hL_dec _ _ (by decide +kernel)) (hL GenSX.sc0 _ (by decide +kernel)) (hval_same _ _ _ _ _ (by decide +kernel))
-      refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
-      · show U.g = _; rw [hUg, fb.1]; decide +kernel
-      · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
-      · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
-      · show U.pc = _; rw [hUpc]; decide +kernel
-      · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
+    refine ⟨?_, ?_, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
+    · show U.g = _; rw [hUg, fb.1]; decide +kernel
+    · show U.k = _; rw [hUc.1, fb.2.1]; decide +kernel
+    · show U.vl = _; rw [hUc.2.1, fb.2.2.2.2.2.2.1]; decide +kernel
+    · show U.pc = _; rw [hUpc]; decide +kernel
+    · show U.depth = _; rw [hUc.2.2, fb.2.2.2.2.2.2.2.2]; decide +kernel
   · rw [hUcnt, hk3]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
 
 /-- The length of the batches of a call: the last one is two steps shorter when four nodes are left. -/
@@ -671,10 +671,10 @@ theorem epilogue (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 6
       · show T.k = _; rw [← hT, ← hSx]; show Sx'.k = _; rw [fx.2.1]; decide +kernel
       · show T.vl = _; rw [← hT, ← hSx]; show Sx'.vl = _; rw [fx.2.2.2.2.2.2.1]; decide +kernel
       · show T.depth = _; rw [← hT, ← hSx]; show Sx'.depth = _; rw [fx.2.2.2.2.2.2.2.2]; decide +kernel
-      · show T.getGD 2 = _; rw [← hT, hx2]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
-      · show T.getGD 31 = _; rw [← hT, hsp]
-      · show T.getGD 1 = _; rw [← hT, hx1]
-      · show T.getGD 0 = _; rw [← hT, hx0]
+      · show T.getGD 2 = _; rw [← hT]; show Sx.getGD 2 = _; rw [hx2]; exact congrArg (fun z : Int => gprWord ⟨0, z⟩) (by omega)
+      · show T.getGD 31 = _; rw [← hT]; exact hsp
+      · show T.getGD 1 = _; rw [← hT]; exact hx1
+      · show T.getGD 0 = _; rw [← hT]; exact hx0
       · intro q; show T.mem rInput q = _; rw [← hT, hmem]; exact hin q
 
 theorem prog_0 : prog.getD 0 .nop = .cmp 2 3 := by decide +kernel
@@ -782,7 +782,7 @@ theorem all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64))
   · have hpcV3 : V3.pc = 4645 := by
       rw [← hV3]; show (if Arm.condHolds V2 .eq then 4645 else V2.pc + 1) = _
       rw [heq, decide_eq_true (by omega)]; rfl
-    have hsteps : steps c = 4 + 1 := by simp only [steps, hc3, hc4, ↓reduceIte]
+    have hsteps : steps c = 4 + 1 := by subst hc4; rfl
     rw [hsteps, Isa.run_add, h4]
     exact entry_tail off c input S V3 hE (Or.inr hc4) hV3S hpcV3
   have hpcV3 : V3.pc = 4 := by
@@ -866,7 +866,7 @@ theorem norm_thm : LibArm.NormThmArm rodata prog 0 (fun _ c => steps c) ["keccak
   refine ⟨hh, he, hp, ?_⟩
   rcases ho with ho | ⟨ht, hd, hE'⟩
   · exact Or.inl ho
-  · exact Or.inr ⟨_, 3 * nb c, ht, List.mem_singleton.mpr rfl, by rcases nb_eq c with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> omega, hd, Arm.entryA_of_entry hE', by omega⟩
+  · exact Or.inr ⟨_, 3 * nb c, ht, List.mem_singleton.mpr rfl, by rcases nb_eq c with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> omega, hd, Arm.entryA_of_entry hE', by rcases nb_eq c with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> omega⟩
 
 /-- `keccaktree_keccak256_sha3_x3r` as a kernel of the library (rank 1: tail calls to `keccaktree_keccak256_sha3_x2`; any flags at entry). -/
 def kernel : Library.KernelThm Arm.isa LibTable.EntryArm Digest :=
