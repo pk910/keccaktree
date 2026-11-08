@@ -137,11 +137,13 @@ def ctlTreeOk (B : Int) : E → Bool
 /-- A pointer plus a closed number, folded into the pointer (a counter pointer stepped by `add`:
 the next cut holds the folded pointer).  The number is signed (`toInt`: RISC-V moves the stack
 pointer down with `addi sp, sp, -n`) and may be any closed expression (RVV advances its pointers by
-`vl << 6`, `vl` a control constant). -/
+`vl << 6`, `vl` a control constant).  A number held as a pointer of region 0 (an x86 count loaded
+into a control register) folds to its constant word. -/
 def E.fold : E → E
   | .add (.ptr a) e => match e.closed with
     | some k => .ptr ⟨a.region, a.off + k.toInt⟩
     | none => .add (.ptr a) e
+  | .ptr a => if a.region = 0 then .const (gprWord a) else .ptr a
   | e => e
 
 theorem gprWord_add_const (a : Addr) (k : BitVec 64) :
@@ -166,6 +168,13 @@ theorem E.eval_reloc_fold (ρ : Reloc) (hρ : ρ.ok) (env : Nat → BitVec 64) (
       rw [E.closed_eval env _ k hk', gprWord_add_const]
       show gprWord ⟨a.region, a.off + k.toInt + ρ.δ a.region⟩ = gprWord ⟨a.region, a.off + ρ.δ a.region + k.toInt⟩
       exact congrArg (fun z : Int => gprWord ⟨a.region, z⟩) (by omega)
+    · rfl
+  · -- a number as a pointer of region 0: the constant word (relocation leaves numbers)
+    rename_i a
+    split
+    · rename_i h
+      simp only [E.reloc, E.eval]
+      rw [Reloc.addr_region0 ρ hρ a h]
     · rfl
   · rfl
 

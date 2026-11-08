@@ -468,6 +468,10 @@ def checkSlice (prog : Array T.Instr) (rodata : Array (BitVec 64)) (entry count 
       if bad ≤ 10 then IO.println s!"MISMATCH mem {reg} {q}: sym={hex sym} con={hex con}"
   IO.println s!"checked {256 + cellsU.length} locations, {bad} mismatches; g equal: {res.g == sb.g}, k equal: {res.k == sb.k}"
 
+/-- The stack (region 3) filled with pseudo-random words (seeded). -/
+def poisonStack (seed : Nat) (s : State (BitVec 64)) : State (BitVec 64) :=
+  { s with mem := fun r q => if r = rStack then randInput seed (2 * (q.natAbs : Int) + (if q < 0 then 1 else 0)) else s.mem r q }
+
 /-- The full match list at one point (after `n` instructions). -/
 def matchesAt (prog : Array T.Instr) (rodata : Array (BitVec 64)) (entry count n lanes : Nat)
     (windows : List (Region × Int × Int)) : IO Unit := do
@@ -478,6 +482,11 @@ def matchesAt (prog : Array T.Instr) (rodata : Array (BitVec 64)) (entry count n
   let locs := locations lanes windows
   let mut s1 := Run.init T rodata in1 count entry
   let mut s2 := Run.init T rodata in2 count entry
+  -- `KT_POISON=1`: the stack starts with different pseudo-random words in the two runs, so a lane computed
+  -- from uninitialised stack (a padding node of a masked/padded batch) never coincides with a quantity
+  if (← IO.getEnv "KT_POISON") == some "1" then
+    s1 := { s1 with s := poisonStack 1001 s1.s }
+    s2 := { s2 with s := poisonStack 1002 s2.s }
   for _ in [0:n] do
     s1 := s1.step T prog
     s2 := s2.step T prog
