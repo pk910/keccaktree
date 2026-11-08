@@ -545,14 +545,14 @@ theorem access_thm : AccessThm rodata prog 736 steps := by
     have f1 := f0.cmpi 2 (1) (((0 : Nat)) : Int) (by decide +kernel : prog.getD 736 .nop = .cmpi 2 (1)) (by simp [setVal]) (by fr_lo) (by fr_hi)
     have hr := f1.fr.jcct_taken .be "keccaktree_keccak256_x86_x1" (by decide +kernel : prog.getD 737 .nop = .jcct .be "keccaktree_keccak256_x86_x1") (by fr_cond)
     exact DoneA.access (DoneA.halt (f1.acc_jcct .be "keccaktree_keccak256_x86_x1" (by decide +kernel : prog.getD 737 .nop = .jcct .be "keccaktree_keccak256_x86_x1") (by fr_cond) _) (by rw [hr])
-      (by rw [hr]; exact Hand.tail0 _ hb (handover_fr hE f1.fr (by decide) _ ⟨rfl, rfl, rfl, rfl, f1.fr.err, rfl, rfl⟩)
-        (by omega))) _ (by unfold steps; omega)
+      (by rw [hr]; exact Hand.tail0 _ hb (handover_fr hE f1.fr (by decide) _ ⟨rfl, rfl, rfl, rfl, f1.fr.err, rfl, rfl⟩) (by omega)))
+      _ (by unfold steps; omega)
   · -- c = 1
     have f1 := f0.cmpi 2 (1) (((1 : Nat)) : Int) (by decide +kernel : prog.getD 736 .nop = .cmpi 2 (1)) (by simp [setVal]) (by fr_lo) (by fr_hi)
     have hr := f1.fr.jcct_taken .be "keccaktree_keccak256_x86_x1" (by decide +kernel : prog.getD 737 .nop = .jcct .be "keccaktree_keccak256_x86_x1") (by fr_cond)
     exact DoneA.access (DoneA.halt (f1.acc_jcct .be "keccaktree_keccak256_x86_x1" (by decide +kernel : prog.getD 737 .nop = .jcct .be "keccaktree_keccak256_x86_x1") (by fr_cond) _) (by rw [hr])
-      (by rw [hr]; exact Hand.tail0 _ hb (handover_fr hE f1.fr (by decide) _ ⟨rfl, rfl, rfl, rfl, f1.fr.err, rfl, rfl⟩)
-        (by omega))) _ (by unfold steps; omega)
+      (by rw [hr]; exact Hand.tail0 _ hb (handover_fr hE f1.fr (by decide) _ ⟨rfl, rfl, rfl, rfl, f1.fr.err, rfl, rfl⟩) (by omega)))
+      _ (by unfold steps; omega)
   · -- 2 ≤ c
     have f1 := f0.cmpi 2 (1) (c : Int) (by decide +kernel : prog.getD 736 .nop = .cmpi 2 (1)) (by simp [setVal]) (by fr_lo) (by fr_hi)
     have f2 := f1.jcct_not .be "keccaktree_keccak256_x86_x1" (by decide +kernel : prog.getD 737 .nop = .jcct .be "keccaktree_keccak256_x86_x1") (by fr_cond)

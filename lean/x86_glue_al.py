@@ -23,10 +23,11 @@ the same control-flow skeleton, with the access condition in place of the outcom
 The proof files of the kernel (`All.lean`, `Lib.lean`, segments) are only read.
 """
 import json, os, re, sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# KT_ROOT: the lean/ directory of the workspace to read (default: this script's directory)
+HERE = os.environ.get('KT_ROOT') or os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 import x86_all as X
 
-HERE = os.path.dirname(os.path.abspath(__file__))
 BIG = 10 ** 6
 SYM = lambda k: f'keccaktree_keccak256_{k}'
 
@@ -243,6 +244,12 @@ def thresh_al(t, d, names, segs, nslices):
 
 
 def main():
+    # `--out <dir>`: write InPlaceAll(V).lean into <dir> instead of the kernel's directory
+    outdir = None
+    if '--out' in sys.argv:
+        i = sys.argv.index('--out')
+        outdir = sys.argv[i + 1]
+        del sys.argv[i:i + 2]
     kernel = sys.argv[1]
     THRESH = bool(os.environ.get('THRESH'))
     A = json.load(open(os.path.join(HERE, f'plans/{kernel}_all.json')))
@@ -725,8 +732,8 @@ theorem access_thm : AccessThm rodata prog {ENT} steps := by
             sym = name if name.startswith('keccaktree_') else SYM(name)
             oo(f'have hr := {f}.fr.jcct_taken .{cnd} "{sym}" {hi} (by fr_cond)')
             oo(f'exact DoneA.access (DoneA.halt ({f}.acc_jcct .{cnd} "{sym}" {hi} (by fr_cond) _) (by rw [hr])')
-            oo(f'  (by rw [hr]; exact Hand.tail0 _ hb (handover_fr hE {f}.fr (by decide) _ ⟨rfl, rfl, rfl, rfl, {f}.fr.err, rfl, rfl⟩)')
-            oo(f'    (by omega))) _ (by unfold steps; omega)')
+            oo(f'  (by rw [hr]; exact Hand.tail0 _ hb (handover_fr hE {f}.fr (by decide) _ ⟨rfl, rfl, rfl, rfl, {f}.fr.err, rfl, rfl⟩) (by omega)))')
+            oo(f'  _ (by unfold steps; omega)')
             return out
         assert kind == 'exit' and ch.pc == A['P0'], (cv, kind, ch.pc)
         pv = 'P' + ('t' if flags[0] else 'f') + ('t' if flags[1] else 'f')
@@ -778,8 +785,9 @@ def kernelAl (v : Nat) (hv64 : v < 2 ^ 64) : Library.KernelThm X86.isaAl EntryAl
 
 end Keccaktree.Kernels.{d}.InPlaceAllV
 """
-        open(os.path.join(kdir, 'InPlaceAllV.lean'), 'w').write(text)
-        print('written', os.path.join(kdir, 'InPlaceAllV.lean'), len(text.splitlines()), 'lines')
+        dst = os.path.join(outdir or kdir, 'InPlaceAllV.lean')
+        open(dst, 'w').write(text)
+        print('written', dst, len(text.splitlines()), 'lines')
         return
     lib = open(os.path.join(kdir, 'Lib.lean')).read()
     mk = re.search(r'def kernel : Library\.KernelThm X86\.isa EntryX86 Digest :=\n  (mk\w+) (.*?)All\.norm_thm\n', lib, re.S)
@@ -795,8 +803,9 @@ def kernelAl : Library.KernelThm X86.isaAl EntryAlX86 LibX86.Digest :=
 
 end Keccaktree.Kernels.{d}.InPlaceAll
 """)
-    open(os.path.join(kdir, 'InPlaceAll.lean'), 'w').write('\n'.join(L))
-    print('written', os.path.join(kdir, 'InPlaceAll.lean'), len('\n'.join(L).splitlines()), 'lines')
+    dst = os.path.join(outdir or kdir, 'InPlaceAll.lean')
+    open(dst, 'w').write('\n'.join(L))
+    print('written', dst, len('\n'.join(L).splitlines()), 'lines')
 
 
 if __name__ == '__main__':
