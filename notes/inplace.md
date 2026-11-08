@@ -81,12 +81,30 @@ Branch `all-diff` (after merging lean-verification 0fbdb01), remote `/root/kt-di
 
   At a hand-over the message switches to the buffer contents, which agree with `input` above the
   final bound.
-* Not covered yet: entry with *dirty* control (flags/masks left by a tail call) on the aliased machine.
-  `EntryAl` takes the control of a fresh call; `kernelAl` needs no hand-over (x86_x1 tail-calls
-  nothing). For kernels that tail-call:
-  - an `execAl` version of `EntryCtl.exec_ovr` (`writes` ignores control fields, so it follows from
-    `exec_ovr`);
-  - the run lemmas `run_ovr_prefix`/`run_ovr_static` for `X86.isaAl`.
+* **Entry with dirty control (DONE, agent `inplace2`)**: `Asm/EntryCtlAl.lean`:
+  - `writes_ovr` (the stored cells do not depend on flags/masks/vl), `execAl_ovr_of`, **`execAl_ovr`**
+    (`exec_ovr` on the aliased machine);
+  - **`run_ovr_static_al`**, `prefix_step_al`, **`run_ovr_prefix_al`**, **`run_normCtl_al`**: the run
+    lemmas of `EntryCtl.lean` for `X86.isaAl`; `normCtl_ovr`, `dupState_ovr`, `dupState_normCtl`.
+  - `Asm/LibAlias.lean`: **`EntryAlX86`** (in-place calling convention with *any* flags/masks/vl:
+    `Mirror T ∧ Entry off count (T.mem rInput) (normCtl (dupState T)) ∧ message from word 8·off ∧ bound`),
+    **`AccessThm`** (what a kernel's in-place proof provides, see below), `digest_input`,
+    **`inplace_outcome`** (NormThm + AccessThm ⇒ `Library.Outcome EntryAlX86` of the aliased run, hand-over
+    in place), `outcome_ovr_al`, **`mkKernelAl`** (as `LibX86.mkKernel`: same `prefixOk`/static checks),
+    **`lib_inplace_x86`** (any table of the x86 shape over `X86.isaAl`, per threshold configuration).
+  - `Kernels/X86X1/InPlaceAll.lean`: `access_thm`, `kernelAl := mkKernelAl … Lib.norm_thm access_thm`,
+    **`lib_inplace_x86_x1`** now from `EntryAlX86` (any control state). Axioms: propext, Classical.choice,
+    Quot.sound + bv_decide certificates; no sorry.
+  - `AccessThm rodata prog entry steps`: for every normalised entry (`LibX86.Entry`, bound, `pc = entry`)
+    `∃ Bf, AccessRun rodata prog (steps off count) (4·off) Bf S` and, if the run ends in a tail call whose
+    hand-over is `Entry (off+done) …`, `Bf ≤ 8·(off+done)` (the next kernel's message words are still in
+    the buffer; a kernel whose batches stored digests up to node `off+done` has `Bf = 4·(off+done)`).
+    For kernels that never tail-call the second part follows from `NormThm` (`tail = none`), see
+    `X86X1.InPlaceAll.access_thm`.
+  - AVX-512 kernels (masked moves) cannot use the static check: like `mkKernelAnn` (agent x86b) they need
+    an annotated version on the aliased machine — `execAl_ovr` is the per-step lemma; the run lemma is
+    the same induction as `run_ovr_ann_gen` (`AliasIsa.lean`) instantiated with x86's `ctlOk/ctlAfter`
+    and the call/return successor relation used by `mkKernelAnn`.
 
 ## (3) Recipe for the kernel agents (x86 now; ARM/RISC-V after the transfer lemmas below)
 1. `python3 gen_inplace.py <Kernel> <Seg>... --eval` (from `lean/`, in a workspace where the kernel's
