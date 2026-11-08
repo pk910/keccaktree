@@ -1062,7 +1062,7 @@ def main():
         allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K])
     for c in range(0, K + 1):
         allocs[c] = [h for h in allocs[c] if h[0] in nodes]
-    if os.environ.get('PRUNE_RC', '1') == '1' and os.environ.get('DATA') != '0':
+    if ISA == 'X86' and os.environ.get('PRUNE_RC', '1') == '1' and os.environ.get('DATA') != '0':
         # a round-constant match (kinds 75..98, input independent, so prone to coincidences) is kept only
         # if the location's tree after the slice is built from constants and hypothesis-backed locations:
         # drops leftover registers that merely hold an RC-valued word at the cut (e.g. a dead register at an
