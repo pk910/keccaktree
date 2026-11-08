@@ -1,4 +1,4 @@
-import Keccaktree.Asm.Alias
+import Keccaktree.Asm.AliasGen
 import Keccaktree.Asm.Arm
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
@@ -174,5 +174,21 @@ theorem exec_local (rodata : Array (BitVec 64)) (m' : Region → Int → α) (i 
     simp only [exec, hT, ↓reduceIte] at hne ⊢ <;> rw [show writes s _ = [] from rfl, rebase_nil] <;> wm_close'
   | data =>
     simp only [exec, hT, ↓reduceIte] at hne ⊢ <;> rw [show writes s _ = [] from rfl, rebase_nil] <;> wm_close'
+
+theorem writes_wm (s : State (BitVec 64)) (m' : Region → Int → BitVec 64) (i : Instr) :
+    writes ({ s with mem := m' } : State (BitVec 64)) i = writes s i := by
+  cases i <;> rfl
+
+/-- **The AArch64 instruction set with footprints**: the aliased machine, the access condition and
+the in-place simulation of `AliasGen.lean` apply. -/
+def footIsa : FootIsa where
+  Instr := Instr
+  nop := .nop
+  exec := exec
+  reads := reads
+  writes := writes
+  writes_wm := writes_wm
+  exec_local := fun rodata m' i s hh hne hag => exec_local rodata m' i s hh hne hag
+  exec_halted := fun rodata i s h => by simp [exec, h]
 
 end Keccaktree.Asm.Arm
