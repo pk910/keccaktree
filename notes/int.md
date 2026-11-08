@@ -114,3 +114,19 @@ The in-place modules need the every-count Gen oleans, so phase B builds them (an
 `axioms/InPlaceArm.lean`, 12 theorems; `InPlaceRv.lean`) before pruning the ARM oleans; the prune is skipped
 (queue stops) unless both the ARM and the in-place axioms outputs are complete and clean.
 Phase B P changes (budget 20 GB): RISC-V scalar bodies and all 2-node RVV bodies P=1 (neon_x2 at P=2 peaked 21 GB).
+
+## BASE FREEZE (2026-11-08, coordinator / user instruction)
+Final shared base = `integrate` at the commit carrying this note:
+* `Asm/Iter.lean` 28ac8a7 and `Asm/Tools.lean` 771e2cc from all-x86 (e263eb1; Tools is imported only by
+  `Tools/Main.lean`, i.e. kttool, never by a proof module); merged with rvu's Tools additions (clean);
+* the RISC-V model from all-rvu 42f493b (merge 970020d, clean incl. gen_plan_proof.py);
+* Library / LibX86 / LibArm / LibRv / LibTable as on integrate.
+No shared file (Asm/*.lean, Library, Lib* tables, ISA models, Kernels/*Common*.lean) changes after this.
+kt-int is the single final build: every artifact built once against this base.  Consequences:
+* the phase-A ARM outputs (built on f9527b5) and all-rv's / kt-rvu's RISC-V outputs (f9527b5) are stale:
+  ARM and RISC-V are built once in kt-int; x86 kernels (proved on 28ac8a7) are hard-linked from
+  /root/kt-x86, /root/kt-x86b after a `lake build --no-build` check (never rebuilt);
+* stopped units kt-int-chain, kt-int-build (12:51 UTC) by name; phase A had reached Sha3X3/GenSB.
+* deferred: rv64_x1 in place (RiscvAlias.reads has a `_ => []` fallback and misses rvu's lbu/vle8 reads;
+  exec_local/RiscvAliasTrace need the new constructors; its summaries are of the removed GenSB) — inplace2.
+* x86b's `X86AnnAl.lean` (all-inplace 16e5e81) imports x86b's `X86Ann`: merge after x86b.
