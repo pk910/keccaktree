@@ -122,3 +122,18 @@ Structure (`Kernels/RvvCommonU.lean`, generic in the kernel, VLEN and `vl`):
   five configurations and `RvLibUV` are building in `queue3` (see final report).
 * Remote scratch (never committed): `/root/kt-rvu-scratch/`, `Rv64X1/GenSCStub.lean`, `AllUT.lean`,
   `AllT.lean`, `ZbbX1/{GenSCStub,AllUT,AllT}.lean`, `RvLibUT.lean` (stub-based early checks).
+
+## Base freeze (coordinator, 2026-11-08): what remains, to be built once in kt-int
+The RISC-V model is frozen at 42f493b.  kt-rvu builds were stopped; everything below is built once in the
+integration workspace against the final base.  Built in kt-rvu (on the pre-freeze Iter): all of
+Rv64X1/ZbbX1 (AllU, All), RvLibU, RvvV2/RvvZvkbV2 (All, AllUM), RvvV4/RvvZvkbV4 (All), RvLib2, RvLib4,
+RvLibUV2 — all to be rebuilt in kt-int anyway (new Iter).
+Still unbuilt anywhere: RvvV8/RvvZvkbV8 aligned (`GenB<w>`, All; then RvLib8, RvLib); the misaligned bodies
+and instances for VLEN 256/512 (`RvvV4|RvvZvkbV4|RvvV8|RvvZvkbV8/GenM<w>`, `AllUM.lean` — not committed,
+they are generated); RvLibUV4, RvLibUV8, RvLibUV (committed, import the generated AllUM).
+Commands (lean dir):
+  ./gen_segments_rvvu.sh rvv_v2 RvvV2 Rvv 2 5776        (and rvv_zvkb_v2 RvvZvkbV2 RvvZvkb 2 3169; V4, V8 alike)
+  build the GenM<w> slices + Seg (build_segs.sh <Ns> <P> GenM1 … GenM<V>)
+  LEN=5759 python3 gen_all_rvvu.py rvv_v4 RvvV4 Rvv 4 368 .2.2.1      (rvv; LEN=3152 … 225 .2.2.2 for rvv_zvkb)
+  lake build Keccaktree.Kernels.<Ns>.AllUM, then Keccaktree.Kernels.RvLibUV
+(`gen_all_rvvu.py` reproduces the committed RvvV2/RvvZvkbV2 AllUM.lean exactly.)
