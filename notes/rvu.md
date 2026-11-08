@@ -101,3 +101,17 @@ misaligned and aligned, VLEN 128/256/512).  The proof plan, reusing the scalar m
   misaligned batch; `RvvCommon`: a `Mid` with `a7 ≠ 0` and byte-level output/preservation.
 Cost: a second, smaller set of segments per `w`; the cores are shared only if the aligned bodies are
 restructured at the same time.
+
+## Status
+* Milestone 1 (model, translator, M9, difftests): done, 93fa04f.
+* Milestone 2 (rv64_x1 any alignment, library instance): done, 0703a16.  Milestone 3 (zbb_x1, scalar
+  misaligned library `RvLibU`): done, 61ffe8f.  `#print axioms` of `rv64_x1_allU`, `zbb_x1_allU`,
+  `rv64_x1_all`, `kernelU(_ch)`, `RvLibU.libU(_ch)`, `copy_loop`: propext, Classical.choice, Quot.sound
+  + bv_decide certificates; no sorryAx.
+* RVV aligned proofs: the model change (M9, new instructions, regenerated `Program.lean`) forces a
+  rebuild; regenerated with the unchanged pipeline (`/root/kt-rvu-gen-rvv.sh`, queue
+  `/root/kt-rvu-queue2.sh`): the generated `All.lean` files are byte-identical to the committed ones;
+  VLEN 128 (`RvvV2`, `RvvZvkbV2`, `RvLib2`) rebuilt green; VLEN 256/512 queued (see final report).
+* Milestone 4 (RVV at misaligned buffers): not done — plan above; groundwork `RiscvBytesV.lean`.
+* Remote scratch (never committed): `/root/kt-rvu-scratch/`, `Rv64X1/GenSCStub.lean`, `AllUT.lean`,
+  `AllT.lean`, `ZbbX1/{GenSCStub,AllUT,AllT}.lean`, `RvLibUT.lean` (stub-based early checks).
