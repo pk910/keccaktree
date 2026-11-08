@@ -1,12 +1,12 @@
 import Keccaktree.Asm.AliasGen
-import Keccaktree.Asm.Arm
+import Keccaktree.Asm.ArmFootprint
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
 /-!
 # AArch64 footprints and memory locality (in-place hashing)
 
-`Arm.writes`/`Arm.reads`: the cells an AArch64 step stores to and loads (`str`/`stp`, `ldr`/`ldp`;
+`Arm.reads`: the cells an AArch64 step loads (`Arm.writes`, the cells it stores to: `ArmFootprint.lean`) (`str`/`stp`, `ldr`/`ldp`;
 the literal loads read no memory); `exec_frame` and `exec_local` as for x86 (`Alias.lean`).
 -/
 namespace Keccaktree.Asm.Arm
@@ -15,15 +15,6 @@ open Keccaktree.Asm.X86 (State rebase Agree rebase_nil)
 open LaneOps
 
 variable {α : Type} [LaneOps α]
-
-def writes (s : State α) : Instr → List (Region × Int)
-  | .str r base off => match addr s base off with
-    | some a => storeCells a (regWords s r).length
-    | none => []
-  | .stp r1 r2 base off wb => match addr s base (if wb = 2 then 0 else off) with
-    | some a => storeCells a (regWords s r1 ++ regWords s r2).length
-    | none => []
-  | _ => []
 
 def reads (s : State α) : Instr → List (Region × Int)
   | .ldr r base off => match addr s base off with

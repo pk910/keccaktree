@@ -312,49 +312,36 @@ theorem x86_x1_inplace (off c : Nat) (input : Int → BitVec 64) (T : State (Bit
 
 /-! ## The in-place library on `[x86_x1]` -/
 
-/-- **The in-place calling convention** `keccaktree_hash(buf + 32·off, buf + 64·off, count)` after
-`off` nodes are done: one buffer (both views agree), the separate-region view at its entry (control of
-a fresh call), the message from word `8·off` on. -/
-def EntryAl (name : String) (off count : Nat) (input : Int → BitVec 64) (T : State (BitVec 64)) : Prop :=
-  Mirror T ∧ LibX86.Entry off count (fun q => T.mem rInput q) (dupState T) ∧
-  (∀ q : Int, 8 * (off : Int) ≤ q → T.mem rInput q = input q) ∧ 64 * (off + count) ≤ 2 ^ 54
+/-- The access theorem of `x86_x1` (`LibAlias.AccessThm`): the bound runs from `4·off` to
+`4·(off + c)`; the kernel hands nothing over. -/
+theorem access_thm : AccessThm rodata prog 0 (fun _ c => 21 + 4269 * c) := by
+  intro off c input S hE hb hpc
+  have hE' : Entry off c input S :=
+    ⟨⟨hE.ctrl.1, hE.ctrl.2.1, hE.ctrl.2.2.1, hE.ctrl.2.2.2.1, hE.ctrl.2.2.2.2.1, hE.ctrl.2.2.2.2.2.1,
+      hE.ctrl.2.2.2.2.2.2.1, hpc, hE.ctrl.2.2.2.2.2.2.2⟩, hE.ok, hE.rdx, hE.rsp, hE.rsi, hE.rdi, hE.inp⟩
+  refine ⟨4 * ((off + c : Nat) : Int), access_all off c input S hE' hb, ?_⟩
+  intro next done _ ht _
+  obtain ⟨-, -, -, hout⟩ := Lib.norm_thm off c input S hE hb hpc
+  rcases hout with ⟨ht', -⟩ | ⟨nx, dn, -, hmem, -⟩
+  · rw [ht'] at ht; cases ht
+  · simp at hmem
 
-theorem digest_input (input input' : Int → BitVec 64) (S : State (BitVec 64)) (n : Nat)
-    (h : ∀ w : Nat, input' (Int.ofNat (8 * n + w)) = input (Int.ofNat (8 * n + w)))
-    (hd : LibX86.Digest input' S n) : LibX86.Digest input S n := by
-  have hw : LibX86.nodeWords input' n = LibX86.nodeWords input n := by
-    funext w; exact h w
-  intro w i hw' hi
-  have := hd w i hw' hi
-  rw [hw] at this; exact this
-
-/-- `keccaktree_keccak256_x86_x1` as a kernel of the in-place library. -/
-def kernelAl : Library.KernelThm X86.isaAl EntryAl LibX86.Digest where
-  name := "keccaktree_keccak256_x86_x1"
-  rank := 0
-  targets := []
-  rodata := rodata
-  prog := prog
-  entry := 0
-  steps := fun _ c => 21 + 4269 * c
-  thm := fun off count input T h => by
-    obtain ⟨hm, hE, hin, hb⟩ := h
-    have hO := x86_x1_inplace off count (fun q => T.mem rInput q) { T with pc := 0 } hm (hE.with_pc 0) hb rfl
-    rw [← runAl_eq]
-    obtain ⟨hh, he, -, hpre, -, hout⟩ := hO
-    refine ⟨hh, he, fun q hq => hpre q hq, ?_⟩
-    rcases hout with ⟨ht, hd⟩ | ⟨next, done, -, hmem, -⟩
-    · refine Or.inl ⟨ht, fun n hn => digest_input _ _ _ _ (fun w => ?_) (hd n hn)⟩
-      exact hin _ (by simp only [Int.ofNat_eq_coe]; omega)
-    · simp at hmem
+/-- `keccaktree_keccak256_x86_x1` as a kernel of the in-place library: entered by a call or a tail
+call (any flags, masks and vector length), through `LibAlias.mkKernelAl` (the same program checks as
+`Lib.kernel`: the 8-instruction entry prefix writes ZF/CF before any read, no instruction touches the
+other control components). -/
+def kernelAl : Library.KernelThm X86.isaAl EntryAlX86 LibX86.Digest :=
+  mkKernelAl "keccaktree_keccak256_x86_x1" 0 [] rodata prog 0 (fun _ c => 21 + 4269 * c) 8 (by decide +kernel)
+    (by decide +kernel) (fun _ _ => by omega) Lib.norm_thm access_thm
 
 theorem ranks_al : Library.RanksOk [kernelAl] := Library.ranksOk_of_shape _ (by decide +kernel)
 
-/-- **The in-place library theorem on the table `[x86_x1]`**: from the in-place calling convention,
-the library run on the one buffer halts without a model fault with every node's digest in place. -/
+/-- **The in-place library theorem on the table `[x86_x1]`**: from the in-place calling convention
+(any control state), the library run on the one buffer halts without a model fault with every
+node's digest in place. -/
 theorem lib_inplace_x86_x1 (off count : Nat) (input : Int → BitVec 64) (T : State (BitVec 64))
-    (hT : EntryAl "keccaktree_keccak256_x86_x1" off count input T) : Library.LibOk [kernelAl] kernelAl off count input T :=
-  Library.lib_correct [kernelAl] 0 (by simp [kernelAl]) ranks_al LibX86.digest_local _ kernelAl (by simp) off count input T
+    (hT : EntryAlX86 "keccaktree_keccak256_x86_x1" off count input T) : Library.LibOk [kernelAl] kernelAl off count input T :=
+  Library.lib_correct [kernelAl] 0 (by simp [kernelAl, mkKernelAl]) ranks_al LibX86.digest_local _ kernelAl (by simp) off count input T
     (Nat.le_refl _) hT
 
 end Keccaktree.Kernels.X86X1.InPlaceAll

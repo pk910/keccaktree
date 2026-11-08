@@ -1,4 +1,4 @@
-import Keccaktree.Asm.Alias
+import Keccaktree.Asm.AliasBase
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false

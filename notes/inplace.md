@@ -81,51 +81,151 @@ Branch `all-diff` (after merging lean-verification 0fbdb01), remote `/root/kt-di
 
   At a hand-over the message switches to the buffer contents, which agree with `input` above the
   final bound.
-* Not covered yet: entry with *dirty* control (flags/masks left by a tail call) on the aliased machine.
-  `EntryAl` takes the control of a fresh call; `kernelAl` needs no hand-over (x86_x1 tail-calls
-  nothing). For kernels that tail-call:
-  - an `execAl` version of `EntryCtl.exec_ovr` (`writes` ignores control fields, so it follows from
-    `exec_ovr`);
-  - the run lemmas `run_ovr_prefix`/`run_ovr_static` for `X86.isaAl`.
+* **Entry with dirty control (DONE, agent `inplace2`)**: `Asm/EntryCtlAl.lean`:
+  - `writes_ovr` (the stored cells do not depend on flags/masks/vl), `execAl_ovr_of`, **`execAl_ovr`**
+    (`exec_ovr` on the aliased machine);
+  - **`run_ovr_static_al`**, `prefix_step_al`, **`run_ovr_prefix_al`**, **`run_normCtl_al`**: the run
+    lemmas of `EntryCtl.lean` for `X86.isaAl`; `normCtl_ovr`, `dupState_ovr`, `dupState_normCtl`.
+  - `Asm/LibAlias.lean`: **`EntryAlX86`** (in-place calling convention with *any* flags/masks/vl:
+    `Mirror T ∧ Entry off count (T.mem rInput) (normCtl (dupState T)) ∧ message from word 8·off ∧ bound`),
+    **`AccessThm`** (what a kernel's in-place proof provides, see below), `digest_input`,
+    **`inplace_outcome`** (NormThm + AccessThm ⇒ `Library.Outcome EntryAlX86` of the aliased run, hand-over
+    in place), `outcome_ovr_al`, **`mkKernelAl`** (as `LibX86.mkKernel`: same `prefixOk`/static checks),
+    **`lib_inplace_x86`** (any table of the x86 shape over `X86.isaAl`, per threshold configuration).
+  - `Kernels/X86X1/InPlaceAll.lean`: `access_thm`, `kernelAl := mkKernelAl … Lib.norm_thm access_thm`,
+    **`lib_inplace_x86_x1`** now from `EntryAlX86` (any control state). Axioms: propext, Classical.choice,
+    Quot.sound + bv_decide certificates; no sorry.
+  - `AccessThm rodata prog entry steps`: for every normalised entry (`LibX86.Entry`, bound, `pc = entry`)
+    `∃ Bf, AccessRun rodata prog (steps off count) (4·off) Bf S` and, if the run ends in a tail call whose
+    hand-over is `Entry (off+done) …`, `Bf ≤ 8·(off+done)` (the next kernel's message words are still in
+    the buffer; a kernel whose batches stored digests up to node `off+done` has `Bf = 4·(off+done)`).
+    For kernels that never tail-call the second part follows from `NormThm` (`tail = none`), see
+    `X86X1.InPlaceAll.access_thm`.
+  - AVX-512 kernels (masked moves) cannot use the static check: like `mkKernelAnn` (agent x86b) they need
+    an annotated version on the aliased machine — `execAl_ovr` is the per-step lemma; the run lemma is
+    the same induction as `run_ovr_ann_gen` (`AliasIsa.lean`) instantiated with x86's `ctlOk/ctlAfter`
+    and the call/return successor relation used by `mkKernelAnn`.
 
-## (3) Recipe for the kernel agents (x86 now; ARM/RISC-V after the transfer lemmas below)
-1. `python3 gen_inplace.py <Kernel> <Seg>... --eval` (from `lean/`, in a workspace where the kernel's
-   `Gen*/Seg.lean` are built) writes `Keccaktree/Kernels/<Kernel>/InPlace/<Seg>.lean`:
-   - `certs`, `chain`, `len`;
-   - `sums`, computed by `#eval` and checked by `decide +kernel`; a few seconds per slice.
+## (3) Generic layer (agent `inplace2`): any instruction set, any kernel
 
-   Your generated proof files are only read, never modified.
-2. In the kernel's in-place file (template: `Kernels/X86X1/InPlaceAll.lean`), per segment at relocation
-   `rho m`:
+### Files
+| file | content |
+|---|---|
+| `Asm/AliasBase.lean` | split of `Alias.lean` without the x86 step: `rebase`, `Agree`, locality of the state operations, `joinMem`, `Sim`, `Clean`, `Mirror`, `dupState`, `sim_dup`, `clean_dup` |
+| `Asm/AliasCells.lean` | split of `AliasTrace.lean`: `shiftCell`, `storeCells_addr`, `accessCells`, `Summ`/`summ`/`summ_access`, `nextB`/`SummOk`, `view_map` |
+| `Asm/Alias.lean`, `Asm/AliasTrace.lean` | the x86 parts (unchanged content) |
+| `Asm/AliasIsa.lean` | **`AlIsa`** (an `Isa`, its `Relocatable`, `reads`/`writes`, `fpOk`, `exec_local`, `cells_map`, `cells_reloc`); `isaAl` (aliased machine as an `Isa`), `AccessRun`, `sim_run`, `accessRun_add/step/mono`, **`accessRun_ovr`** (the access condition ignores control components), `traceCells`, `path_access`, `sliceAccess`, `ChainOk`, **`chain_access`**, `seg1_access`; `normCtl_ovr`, `dupState_ovr` |
+| `Asm/LibAliasGen.lean` | **`EntryN E0`**, **`EntryAlG E0`**, **`AccessThmG`**, **`CtlThm`**, `MemInput`, `PcFree`, `digest_input`, `outcome_al`, **`mkKernelAlG`**, `ctlThm_of`, `ctlThm_of_pred` |
+| `Asm/ArmAliasTrace.lean` | `Arm.cells_map`, `Arm.cells_reloc`, **`Arm.alIsa`**; `Arm.AccessRun`, `Arm.accessRun_add/step`, `Arm.ovr_all_flags`, **`Arm.accessRun_ann`** (segments recorded with fixed flags); `LibArmAl`: `EntryArmAl`, `AccessThmArm`, **`mkKernelArmAl`**, **`lib_inplace_arm`** |
+| `Asm/RiscvAliasTrace.lean` | `Riscv.cells_map`, `Riscv.cells_reloc`, **`Riscv.alIsa vlmax`** (`fpOk := ctlOk`: vector footprints depend on `vl`), `Riscv.AccessRun`, `accessRun_add/step`, **`accessRun_vlmax`**; `LibRvAl`: `EntryRvAl`, `AccessThmRv`, **`mkKernelRvAl`**, **`lib_inplace_rv`** |
+| `Asm/X86AliasIsa.lean` | **`X86.alIsa`**, `isaAl_eq : X86.alIsa.isaAl = X86.isaAl` (rfl), `accessRun_iff`, `accessThm_g`, **`mkKernelAlOf`** |
+| `Asm/ArmFootprint.lean` | adopted verbatim from `all-arm` (the one `Arm.writes`; `ArmAlias.lean` no longer defines it — a merge of all-arm sees identical additions) |
 
-       chain_access (rho m) hρ hw InPlace.<Seg>.certs S b bf InPlace.<Seg>.chain <cut> <Ok>
-         (by rw [InPlace.<Seg>.sums, rho_wshift_in, rho_wshift_out]; simp [SummOk, nextB] <;> omega)
+### How a kernel enters the in-place library (no aliased run lemma needed)
+`mkKernelAlG I E0 K ha hctl`: from the separate-region kernel `K : KernelThm I.isa (EntryN E0) Digest`
+(what `mkKernel`/`mkKernelArm`/`mkKernelRv`/`mkKernelAnn` produce), the access theorem `ha` (normalised
+entry) and `hctl` (the run from any control state is, at every step count, the normalised run with some
+components overridden — from the same annotation as `K`): the aliased run from `T` (any control state)
+follows the separate-region run from `dupState T` (`sim_run`); that run satisfies the access condition
+of the normalised run (`accessRun_ovr`) and has `K`'s outcome. Per ISA:
+* x86, static programs: `LibAlias.mkKernelAl` (same args as `mkKernel` + `AccessThm`).
+* x86, annotated programs (AVX-512, agent x86b's `mkKernelAnn`): `LibAlias.mkKernelAlOf (mkKernelAnn …) ha
+  (ctlThm_of_pred X86.alIsa Entry … (annIv …) (annIv_entry …) DepthInv hP (fun _ => rfl) (run_ovr_annJ …))`.
+* AArch64: `LibArmAl.mkKernelArmAl` (args of `mkKernelArm` + `AccessThmArm`).
+* RISC-V: `LibRvAl.mkKernelRvAl vlmax` (args of `mkKernelRv` + `AccessThmRv vlmax`).
 
-   with `b` = the current bound (`4·(first node of the batch)` for a batch at node `m`) and `bf` = the
-   bound after the segment. One-slice segments without input/output cells use `seg1_access`. Concrete
-   steps between segments use `accessRun_step`; composition uses `accessRun_add`. The structure mirrors
-   the kernel's every-count proof (same `Head`/`iter`/`loop` states).
-3. Batches of `N` nodes whose last digest stores come after some input loads of the same batch
-   (`gap` ≠ `none` in a summary): `SummOk` then needs `4m + 1 ≤ gap + 8m`, i.e. `m ≥ (1 - gap)/4`.
-   Earlier iterations (first batches) must be shown with the actual small `m`. With `m` free in the
-   segment lemma, `omega` handles it when the inequality holds for all `m ≥ 0`.
-4. `x86_x1_inplace` → `inplace_lift` (`LibAlias.lean`) needs only the kernel's `NormThm` and the
-   access proof. A kernel instance for the in-place library follows `kernelAl` (and needs the
-   dirty-control lemma above if the kernel tail-calls).
+## (4) Recipe: a kernel's in-place theorem from its every-count proof (mechanical)
+Inputs: the kernel's every-count file (`Kernels/<K>/All.lean`: `Head`, `ExitAt`, `iter`, `loop`, the
+segment lemmas `Gen*.seg_run/seg_frame/seg_moves`) and its built segments `Gen*/Seg.lean`.
+1. `python3 gen_inplace.py <K> <Seg>... --eval` (from `lean/`, in the workspace where `Gen*/Seg.lean`
+   are built; run it under `systemd-run`, it runs `lake env lean`). The instruction set is read off the
+   certificates' type. Output `Kernels/<K>/InPlace/<Seg>.lean`: `certs`, `chain`, `len`, one
+   `sum<k>` per slice (`decide +kernel`; peak memory of one slice: scalar_x1 body 25 slices 216 s,
+   4.5 GB; all slices in one `decide` needed > 12 GB) and `sums` (by rewriting). Your generated
+   proof files are only read.
+2. `Kernels/<K>/InPlaceAll.lean`, following the template of the same ISA:
+   x86 `Kernels/X86X1/InPlaceAll.lean`, AArch64 `Kernels/ScalarX1/InPlaceAll.lean`, RISC-V
+   `Kernels/Rv64X1/InPlaceAll.lean`. One lemma per lemma of `All.lean`, same states and case splits:
+   - segment with input/output cells at relocation `rho m` (a batch at node `m`, bound `b = 4m`,
+     after the segment `bf = 4m + 4N` for `N` nodes, or the intermediate bound):
 
-## (4) AArch64 and RISC-V
-* `Asm/AliasGen.lean`: the aliased machine, the access condition and **the simulation (`sim_step`,
-  `sim_run`) for any `FootIsa`**. A `FootIsa` is an instruction set with read/write footprints, write
-  cells independent of memory, and memory locality.
-* `Asm/ArmAlias.lean`: AArch64 `reads`/`writes`, **`Arm.exec_local`** (all 36 constructors),
-  `Arm.footIsa`.
-* `Asm/RiscvAlias.lean`: RISC-V `reads` (with `RiscvFoot.writes`), **`Riscv.exec_local`** (all 24
-  constructors), `Riscv.footIsa vlmax`.
-* Still open for ARM/RISC-V:
-  - the symbolic transfer (`cells_map`/`cells_reloc` + `path_access`, as in `AliasTrace.lean`, using
-    `ArmReloc`/`RiscvReloc`);
-  - an `Isa` instance of their aliased machines (as `X86.isaAl`);
-  - a lifting theorem from `LibArm`/`LibRv` `NormThm*` (as `inplace_lift`).
+         rw [← InPlace.<Seg>.len]
+         apply <I>.chain_access (rho m) hρ hw InPlace.<Seg>.certs _ _ _ InPlace.<Seg>.chain <cut> <Ok>
+         rw [InPlace.<Seg>.sums, rho_wshift_in, rho_wshift_out]; simp only [SummOk, nextB]
+         simp [SummOk, nextB] <;> omega
+
+     (`<I>` = `X86.`-namespace `chain_access` for x86, `Arm.alIsa.chain_access`,
+     `(Riscv.alIsa V).chain_access`);
+   - one-slice segment without input/output cells: `<I>.seg1_access C.cert0 … InPlace.<Seg>.sum0 b`;
+   - concrete steps between segments: `accessRun_step` (x86) / `Arm.accessRun_step` /
+     `Riscv.accessRun_step`: `hr`/`hw` by `rw [hpc, prog_N] at hc; simp [reads/writes] at hc` (no cells),
+     or, for stack loads/stores, compute the cell (`addr_sp`/`sp_cells` in the RISC-V template);
+   - composition: `accessRun_add` with the run equations of `All.lean` (`seg_run`, `run_back`, …);
+   - AArch64: segments are recorded with fixed flags (`norm S sc`); `Arm.accessRun_ann … (flag
+     annotation of the kernel) … (Arm.ovr_all_flags S _ _ _ _)` moves the condition to the actual state
+     (needs `ann pc = Dom.all` at the segment start, decided);
+   - the loop: induction as `loop`, with `iter` (from `All.lean`) for the next `Head`.
+   - `access_all`: bound `4·off` → `4·(off+done)`; for a tail-calling kernel, `done` = the nodes its
+     batches finished before the hand-over (the bound stays at `4·(off+done)` while the remaining
+     nodes are not touched).
+3. `access_thm : AccessThm… rodata prog entry steps` from `access_all`; the hand-over clause
+   (`Bf ≤ 8·(off+done)`): for kernels that never tail-call it follows from `norm_thm` (`tail = none`,
+   see the templates); for tail-calling kernels, from the hand-over `Entry` (its output pointer is
+   `32·(off+done)`: `LibAlias.done_eq_of_rdi`; the clause also gets `done ≤ count`) and `Bf = 4·(off+done) ≤ 8·(off+done)`.
+4. `kernelAl := mkKernelAl… … norm_thm access_thm` and the table: in the order of `LibTable.x86Shape`
+   (resp. `armShape`, `rvShape`), `LibAlias.lib_inplace_x86 (fun cfg => T cfg) hT`,
+   `LibArmAl.lib_inplace_arm T hT`, `LibRvAl.lib_inplace_rv V T hT`.
+5. Batches of `N` nodes whose digest stores come after some input loads of the same batch (`gap` ≠
+   `none` in a summary): `SummOk` needs `4m + (hiW+1) ≤ gap + 8m`, i.e. a condition on `m`; with `m`
+   free, `omega` decides it when it holds for all `m ≥ 0`, otherwise the first iteration(s) need the
+   actual `m`.
+
+### Status of the pilots (agent `inplace2`)
+* **x86_x1**: `lib_inplace_x86_x1` from `EntryAlX86` (any flags/masks/vl) through `mkKernelAl`.
+* **scalar_x1 (AArch64)**: `Kernels/ScalarX1/InPlaceAll.lean`: `body_access`, `loop_access`,
+  `exit_access`, `access_all`, `access_thm`, `kernelAl`, **`lib_inplace_scalar_x1`**. Needs all-arm's
+  `ScalarX1/All.lean` and segments (+ `Asm/{Flags,ArmFlags,ArmSteps,Nodes,ArmEntry}.lean`): checked in
+  `/root/kt-inplace/arm` (a copy of `/root/kt-arm/lean`). Axioms: propext, Classical.choice, Quot.sound
+  + bv_decide certificates; no sorry.
+* **Other AArch64 kernels** (agent arm's all-count proofs, branch all-arm 336067c, are generated from
+  templates): `lean/gen_inplace_arm.py <kernel>` renders `Kernels/<Ns>/InPlaceAll.lean` mirroring the
+  generated `All.lean` (x2: sha3_x2, neon_x2 — `batch_a/b/c`; x3: sha3_x3, neon_x3 — `batch_access`, the
+  tail call, hand-over node from `LibArmAl.done_eq_of_x0`). It uses its own flag annotation `annIP`
+  (flags dirty everywhere except at the flag readers, decided by `Arm.flagAnnOk`), since the kernels'
+  `ArmFlags` annotations keep the flags clean inside the loop. Workspace `/root/kt-inplace/arm2` (copy of
+  `/root/kt-arm/lean` at 336067c; the arm agent deleted the `.lake/build/ir` C files to save disk, which
+  makes lake rebuild everything: the C outputs, which the proofs do not use, were restored from
+  `/root/kt-inplace/arm` or replaced by placeholders carrying the recorded hashes; the `.olean`/traces are
+  the arm agent's). x3r (sha3_x3r: two loop exits, `nb`, `last`) has its own template.
+  `Kernels/ArmLibInPlace.lean`: the table of the six in-place kernels, **`lib_inplace_arm_all`**.
+  Status: sha3_x2 checked (`lib_inplace_sha3_x2`, axioms propext, Classical.choice, Quot.sound + bv_decide
+  certificates). The others' summary modules are slow on this machine (CPU weight 20 under load 150:
+  ~1 h each); the chain `kt-inplace-arm2d`, `kt-inplace-arm2e` → `kt-inplace-armfinal` →
+  `kt-inplace-armlib` builds them and the table, logs `/root/kt-inplace/logs/{arm2d,arm2e,armfinal,armlib}.log`,
+  axioms in `ax_armall.log`/`armlib.log`.
+* **rv64_x1 (RISC-V)**: `Kernels/Rv64X1/InPlaceAll.lean` (`back_access`, `body_access`, `loop_access`,
+  `exit_access`, `access_all` at `vlmax = 2`, `access_thm` for every `vlmax` via `accessRun_vlmax`,
+  `kernelAl`, **`lib_inplace_rv64_x1`**), `InPlace/{GenSE,GenSB,GenSX}.lean` generated. Checked in
+  `/root/kt-inplace/rv` (this branch's core; the rv64_x1 segments rebuilt there, one body slice ~13 GB).
+  Axioms: propext, Classical.choice, Quot.sound + bv_decide certificates; no sorry. The body summaries in
+  one module peaked at ~19 GB: use `gen_inplace.py --split` for big kernels.
+
+### Open issues (agent `inplace2`)
+* **RISC-V model change (agent `rvu`, branch all-rvu: `lbu`, `sb`, `vsetvli e8`, `vle8.v`, `vse8.v`, M9
+  shift fix)**: after that merge, `RiscvAlias.reads`/`exec_local` and `RiscvAliasTrace.cells_map/
+  cells_reloc/reads_ovr/writes_ovr` need the new constructors (byte loads/stores: cells of the word
+  containing the byte; `vle8/vse8`: `nf·vl` bytes → words), and the RISC-V kernels' in-place proofs
+  follow their new segments (`GenSC`, `GenSI`, `GenSJ`, …).
+* **all-arm merge**: `Asm/ArmFootprint.lean` here is a verbatim copy of all-arm's (identical addition);
+  `ScalarX1/InPlaceAll.lean` needs all-arm's `ScalarX1/All.lean` and `Asm/{Flags,ArmFlags,ArmSteps,
+  Nodes,ArmEntry}.lean` (not on lean-verification yet).
+* **x86 AVX-512**: route `mkKernelAlOf` + `ctlThm_of_pred` with x86b's `run_ovr_annJ` (branch
+  all-x86b, not merged here) — not instantiated yet (no AVX-512 every-count proof on this branch).
+* The x86 core in the checking workspace `/root/kt-inplace/x86` is that of `/root/kt-diff/ws`
+  (`Iter.lean`/`Tools.lean` of all-x86); the in-place files do not depend on the difference.
+  RISC-V was checked in `/root/kt-inplace/rv` with this branch's core.
+* Segment sizes: one body slice of rv64_x1 needs ~13 GB (`decide`/`bv_decide` of the kernel agents'
+  segment, not of the in-place summaries).
 
 ### Audit
 `inplaceaudit <Kernel>` on `/root/kt-diff` (memory compacted every 256 steps):
