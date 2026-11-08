@@ -2,6 +2,7 @@ import Keccaktree.Asm.ArmAliasTrace
 import Keccaktree.Asm.RiscvAlias
 import Keccaktree.Asm.RiscvReloc
 import Keccaktree.Asm.LibRv
+import Keccaktree.Asm.RiscvSteps
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -117,6 +118,48 @@ theorem cells_reloc (ρ : Reloc) (hρ : ρ.ok) (vlmax : Nat) (rodata : Array (Bi
   exec_local := fun rodata m' i s hh hne hag => exec_local vlmax rodata m' i s hh hne hag
   cells_map := fun f hf rodata i X hh hne => cells_map hf vlmax rodata i X hh hne
   cells_reloc := fun ρ hρ rodata i X hh hne hok => cells_reloc ρ hρ vlmax rodata i X hh hne hok
+
+/-! ## The access condition in RISC-V terms (for the kernels' in-place proofs) -/
+
+/-- The access condition along a RISC-V run. -/
+abbrev AccessRun (vlmax : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr) :
+    Nat → Int → Int → State (BitVec 64) → Prop :=
+  (alIsa vlmax).AccessRun rodata prog
+
+theorem accessRun_add (vlmax : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr) (n m : Nat) (B B' Bf : Int)
+    (s : State (BitVec 64)) (h1 : AccessRun vlmax rodata prog n B B' s)
+    (h2 : AccessRun vlmax rodata prog m B' Bf ((isa vlmax).run rodata prog n s)) :
+    AccessRun vlmax rodata prog (n + m) B Bf s :=
+  (alIsa vlmax).accessRun_add rodata prog n m B B' Bf s h1 h2
+
+/-- One step without input or output cells. -/
+theorem accessRun_step (vlmax : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr) (m : Nat) (B Bf : Int)
+    (s : State (BitVec 64)) (hh : s.halted = false)
+    (hne : (exec vlmax rodata (prog.getD s.pc .nop) s).err = false)
+    (hr : ∀ c ∈ reads s (prog.getD s.pc .nop), c.1 ≠ X86.rInput)
+    (hw : ∀ c ∈ writes s (prog.getD s.pc .nop), c.1 ≠ X86.rInput ∧ c.1 ≠ X86.rOutput)
+    (h : AccessRun vlmax rodata prog m B Bf (exec vlmax rodata (prog.getD s.pc .nop) s)) :
+    AccessRun vlmax rodata prog (m + 1) B Bf s :=
+  (alIsa vlmax).accessRun_step rodata prog m B Bf s hh hne hr hw h
+
+/-- **A program without `vsetvli` has the same access condition for every vector length.** -/
+theorem accessRun_vlmax (v1 v2 : Nat) (rodata : Array (BitVec 64)) (prog : Array Instr)
+    (h : prog.toList.all (fun i => !i.usesVlmax) = true) :
+    ∀ (n : Nat) (B Bf : Int) (s : State (BitVec 64)), AccessRun v1 rodata prog n B Bf s → AccessRun v2 rodata prog n B Bf s
+  | 0, B, Bf, s, hA => hA
+  | n + 1, B, Bf, s, hA => by
+    cases hh : s.halted
+    · simp only [AccessRun, AlIsa.AccessRun, hh, Bool.false_eq_true, ↓reduceIte] at hA ⊢
+      obtain ⟨he, hok, hr⟩ := hA
+      have e := exec_vlmax v1 v2 rodata (prog.getD s.pc .nop) s (getD_usesVlmax prog h s.pc)
+      refine ⟨?_, hok, ?_⟩
+      · show (exec v2 rodata (prog.getD s.pc .nop) s).err = false
+        rw [← e]; exact he
+      · show (alIsa v2).AccessRun rodata prog n ((alIsa v1).bumpB B s (prog.getD s.pc .nop)) Bf
+          (exec v2 rodata (prog.getD s.pc .nop) s)
+        rw [← e]; exact accessRun_vlmax v1 v2 rodata prog h n _ _ _ hr
+    · simp only [AccessRun, AlIsa.AccessRun, hh, ↓reduceIte] at hA ⊢
+      exact hA
 
 end Keccaktree.Asm.Riscv
 

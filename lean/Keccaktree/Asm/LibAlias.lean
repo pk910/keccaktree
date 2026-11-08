@@ -94,10 +94,27 @@ def AccessThm (rodata : Array (BitVec 64)) (prog : Array Instr) (entry : Nat) (s
   ∀ (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)),
     Entry off count input S → 64 * (off + count) ≤ 2 ^ 54 → S.pc = entry →
     ∃ Bf : Int, AccessRun rodata prog (steps off count) (4 * (off : Int)) Bf S ∧
-      ∀ (next : String) (done : Nat), (X86.isa.run rodata prog (steps off count) S).tail = some next →
+      ∀ (next : String) (done : Nat), done ≤ count → (X86.isa.run rodata prog (steps off count) S).tail = some next →
         Entry (off + done) (count - done) input
           (normCtl { X86.isa.run rodata prog (steps off count) S with halted := false, tail := none }) →
         Bf ≤ 8 * ((off + done : Nat) : Int)
+
+/-- For a tail-calling kernel's hand-over clause of `AccessThm`: the node count of a hand-over entry is
+determined by its output pointer. -/
+theorem done_eq_of_rdi (off done d0 count : Nat) (input : Int → BitVec 64) (X : State (BitVec 64))
+    (hE : Entry (off + done) count input X) (hX : X.getGD 7 = gprWord ⟨rOutput, 32 * ((off + d0 : Nat) : Int)⟩)
+    (h1 : 64 * (off + done) ≤ 2 ^ 54) (h2 : 64 * (off + d0) ≤ 2 ^ 54) : done = d0 := by
+  have hb : (2 : Nat) ^ 54 = 18014398509481984 := rfl
+  have w1 : (⟨rOutput, 32 * ((off + done : Nat) : Int)⟩ : Addr).wf := by
+    show 0 ≤ 32 * ((off + done : Nat) : Int) ∧ 32 * ((off + done : Nat) : Int) < 2 ^ 55
+    rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
+  have w2 : (⟨rOutput, 32 * ((off + d0 : Nat) : Int)⟩ : Addr).wf := by
+    show 0 ≤ 32 * ((off + d0 : Nat) : Int) ∧ 32 * ((off + d0 : Nat) : Int) < 2 ^ 55
+    rw [show (2 : Int) ^ 55 = 36028797018963968 from rfl]; constructor <;> omega
+  have e := congrArg wordGpr (hE.rdi.symm.trans hX)
+  rw [wordGpr_gprWord _ w1, wordGpr_gprWord _ w2] at e
+  simp only [Addr.mk.injEq, true_and] at e
+  omega
 
 /-- **The in-place lifting, as a library outcome** (normalised entry): a kernel's all-count theorem
 (`NormThm`) and its access theorem (`AccessThm`) give the outcome of the aliased run, with the
@@ -129,7 +146,7 @@ theorem inplace_outcome (rodata : Array (BitVec 64)) (prog : Array Instr) (entry
     · refine Or.inr ⟨next, done, hS.2.2.2.2.2.2.2.2.2.2.2.2.2.1.trans ht, hmem, hdone,
         fun n hn => hdig _ (by omega) (hd n hn), ?_⟩
       obtain ⟨hEn, hbn⟩ := hnext
-      have hB := hBf next done ht hEn
+      have hB := hBf next done hdone ht hEn
       refine ⟨fun q => by show Tf.mem rOutput q = Tf.mem rInput q; rw [hmOut, hmIn], ?_, fun q hq => ?_, hbn⟩
       · refine entry_transfer _ _ _ _ _ _ hEn ?_ (fun q => rfl)
         obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, -, -, -⟩ := hS

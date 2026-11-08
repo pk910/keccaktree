@@ -171,7 +171,7 @@ segment lemmas `Gen*.seg_run/seg_frame/seg_moves`) and its built segments `Gen*/
 3. `access_thm : AccessThm… rodata prog entry steps` from `access_all`; the hand-over clause
    (`Bf ≤ 8·(off+done)`): for kernels that never tail-call it follows from `norm_thm` (`tail = none`,
    see the templates); for tail-calling kernels, from the hand-over `Entry` (its output pointer is
-   `32·(off+done)`, injective via `wordGpr_gprWord`) and `Bf = 4·(off+done) ≤ 8·(off+done)`.
+   `32·(off+done)`: `LibAlias.done_eq_of_rdi`; the clause also gets `done ≤ count`) and `Bf = 4·(off+done) ≤ 8·(off+done)`.
 4. `kernelAl := mkKernelAl… … norm_thm access_thm` and the table: in the order of `LibTable.x86Shape`
    (resp. `armShape`, `rvShape`), `LibAlias.lib_inplace_x86 (fun cfg => T cfg) hT`,
    `LibArmAl.lib_inplace_arm T hT`, `LibRvAl.lib_inplace_rv V T hT`.

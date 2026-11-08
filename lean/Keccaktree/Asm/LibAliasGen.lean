@@ -45,7 +45,7 @@ def AccessThmG (rodata : Array (BitVec 64)) (prog : Array I.isa.Instr) (entry : 
   ∀ (off count : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)),
     E0 off count input S → 64 * (off + count) ≤ 2 ^ 54 → S.pc = entry →
     ∃ Bf : Int, I.AccessRun rodata prog (steps off count) (4 * (off : Int)) Bf S ∧
-      ∀ (next : String) (done : Nat), (I.isa.run rodata prog (steps off count) S).tail = some next →
+      ∀ (next : String) (done : Nat), done ≤ count → (I.isa.run rodata prog (steps off count) S).tail = some next →
         E0 (off + done) (count - done) input
           (normCtl { I.isa.run rodata prog (steps off count) S with halted := false, tail := none }) →
         Bf ≤ 8 * ((off + done : Nat) : Int)
@@ -109,7 +109,7 @@ theorem outcome_al (hE0 : MemInput E0) (rodata : Array (BitVec 64)) (prog : Arra
     (hacc : I.AccessRun rodata prog n (4 * (off : Int)) Bf (dupState T))
     (hO : Library.Outcome (EntryN E0) Digest targets off count (fun q => T.mem rInput q) (dupState T)
       (I.isa.run rodata prog n (dupState T)))
-    (hBf : ∀ (next : String) (done : Nat), (I.isa.run rodata prog n (dupState T)).tail = some next →
+    (hBf : ∀ (next : String) (done : Nat), done ≤ count → (I.isa.run rodata prog n (dupState T)).tail = some next →
       E0 (off + done) (count - done) (fun q => T.mem rInput q)
         (normCtl { I.isa.run rodata prog n (dupState T) with halted := false, tail := none }) →
       Bf ≤ 8 * ((off + done : Nat) : Int)) :
@@ -132,7 +132,7 @@ theorem outcome_al (hE0 : MemInput E0) (rodata : Array (BitVec 64)) (prog : Arra
     · refine Or.inr ⟨next, done, hS.2.2.2.2.2.2.2.2.2.2.2.2.2.1.trans ht, hmem, hdone,
         fun n hn => hdig _ (by omega) (hd n hn), ?_⟩
       obtain ⟨hEn, hbn⟩ := hnext
-      have hB := hBf next done ht hEn
+      have hB := hBf next done hdone ht hEn
       refine ⟨fun q => by show Tf.mem rOutput q = Tf.mem rInput q; rw [hmOut, hmIn], ?_, fun q hq => ?_, hbn⟩
       · refine hE0 _ _ _ _ _ _ hEn ?_ (fun q => rfl)
         obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, -, -, -⟩ := hS
@@ -172,13 +172,13 @@ def mkKernelAlG (hE0 : MemInput E0) (hpc : PcFree E0) (K : Library.KernelThm I.i
     have hk := hctl off count _ (dupState { T with pc := K.entry }) (hpc _ _ _ _ _ hE) hb rfl hOn.2.1
     have hacc' : I.AccessRun K.rodata K.prog (K.steps off count) (4 * (off : Int)) Bf (dupState { T with pc := K.entry }) :=
       I.accessRun_ovr K.rodata K.prog _ _ _ _ _ hk hacc
-    have hBf' : ∀ (next : String) (done : Nat),
+    have hBf' : ∀ (next : String) (done : Nat), done ≤ count →
         (I.isa.run K.rodata K.prog (K.steps off count) (dupState { T with pc := K.entry })).tail = some next →
         E0 (off + done) (count - done) (fun q => T.mem rInput q)
           (normCtl { I.isa.run K.rodata K.prog (K.steps off count) (dupState { T with pc := K.entry }) with
             halted := false, tail := none }) →
         Bf ≤ 8 * ((off + done : Nat) : Int) := by
-      intro next done ht hE'
+      intro next done hdn ht hE'
       obtain ⟨D, c, hDc, -⟩ := hk _ (Nat.le_refl _)
       rw [hDc] at ht hE'
       have e : normCtl ({ ovr D c (I.isa.run K.rodata K.prog (K.steps off count) (normCtl (dupState { T with pc := K.entry })))
@@ -188,7 +188,7 @@ def mkKernelAlG (hE0 : MemInput E0) (hpc : PcFree E0) (K : Library.KernelThm I.i
         normCtl_ovr D c ({ I.isa.run K.rodata K.prog (K.steps off count) (normCtl (dupState { T with pc := K.entry }))
           with halted := false, tail := none } : State (BitVec 64))
       rw [e] at hE'
-      exact hBf next done ht hE'
+      exact hBf next done hdn ht hE'
     exact outcome_al I E0 hE0 K.rodata K.prog (K.steps off count) K.targets off count input { T with pc := K.entry }
       hm hin Bf hacc' hO hBf'
 

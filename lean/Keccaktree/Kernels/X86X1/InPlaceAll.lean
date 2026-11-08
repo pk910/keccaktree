@@ -320,7 +320,7 @@ theorem access_thm : AccessThm rodata prog 0 (fun _ c => 21 + 4269 * c) := by
     ⟨⟨hE.ctrl.1, hE.ctrl.2.1, hE.ctrl.2.2.1, hE.ctrl.2.2.2.1, hE.ctrl.2.2.2.2.1, hE.ctrl.2.2.2.2.2.1,
       hE.ctrl.2.2.2.2.2.2.1, hpc, hE.ctrl.2.2.2.2.2.2.2⟩, hE.ok, hE.rdx, hE.rsp, hE.rsi, hE.rdi, hE.inp⟩
   refine ⟨4 * ((off + c : Nat) : Int), access_all off c input S hE' hb, ?_⟩
-  intro next done ht _
+  intro next done _ ht _
   obtain ⟨-, -, -, hout⟩ := Lib.norm_thm off c input S hE hb hpc
   rcases hout with ⟨ht', -⟩ | ⟨nx, dn, -, hmem, -⟩
   · rw [ht'] at ht; cases ht

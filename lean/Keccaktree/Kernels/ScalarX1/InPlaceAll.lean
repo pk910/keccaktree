@@ -278,7 +278,7 @@ theorem access_all (off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 
 theorem access_thm : LibArmAl.AccessThmArm rodata prog 0 (fun _ c => 14 + 2437 * c) := by
   intro off c input S hE hb hpc
   refine ⟨4 * ((off + c : Nat) : Int), access_all off c input S (Arm.entry_of_entryA hE hpc) hb, ?_⟩
-  intro next done ht _
+  intro next done _ ht _
   obtain ⟨-, -, -, hout⟩ := norm_thm off c input S hE hb hpc
   rcases hout with ⟨ht', -⟩ | ⟨nx, dn, -, hmem, -⟩
   · exact absurd (ht'.symm.trans ht) (by simp)
