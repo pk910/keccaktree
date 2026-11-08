@@ -153,3 +153,31 @@ gen_plan_proof.py after the x86/x86b merges (every addition gated so each branch
   (default: X86 without DROP_RC = the AVX-512 kernels); otherwise the plain `decide` form (ARM has no RC
   lanes; rvu's RvvV4/V8 and x86's Avx2X9/X10 slices use the plain form).
 To be checked by regeneration once kttool is built on the base: ARM, RISC-V (rvu drivers), x86 and x86b samples.
+
+## x86 replay into kt-int (hard links, never rebuilt)
+* kt-x86 is NOT used (built on Iter 2a55570); its AVX2 / x86_x1 kernels are rebuilt there on the frozen base and
+  linked after each passes.
+* kt-x86b → kt-int, avx512_x8 / avx512_x8d (2026-11-08 12:58): the import closure of `Avx512X8.Lib` and
+  `Avx512X8d.Lib` in kt-int's sources is 562 modules (`/root/kt-int-closure.py`); every one has a byte-identical
+  source in kt-x86b and an .olean there.  Their `lib/lean` and `ir` outputs were hard-linked (`/root/kt-int-link.sh`,
+  2930 files; Gen sources copied).  No lake ever runs in kt-x86b.
+* `lake build --no-build` over the 562 first reported 42 targets out of date (each kernel's Program and Gen*.Invs).
+  Cause: x86b's disk cleanup deleted `.lake/build/ir/Keccaktree/Kernels/Avx512X8{,d}`; the traces record a `.c`
+  output for every module (532 of the 562).  The trace inputs are identical (checked on Program: source
+  6a345ef1780640ba, imports b4a4dcf653bccf4c / bce00ffc3e650413, Lean 4.35.0 407ce514b71d5a10, options).
+* Fix (coordinator-approved): for those 532 modules a fresh, empty placeholder `ir/<module>.c` and `ir/<module>.c.hash`
+  holding the hash recorded in the trace, in kt-int only (no links).  The .c files are the compiled-code outputs of
+  the C backend; no proof and no importing module reads them (importers read the .olean).  For every one of the 532,
+  the `.olean.hash` equals the olean hash recorded in the trace (checked); olean and trace inputs are unchanged.
+  List with the recorded c / olean hashes: `results/x86b_replay_placeholder_c.txt`.
+* Re-run: `lake build --no-build` over the 562 → `All targets up-to-date (563 jobs)`.  Later real builds in kt-int
+  never touched a linked file (link count / mtime checked).
+* kttool of the frozen base is built in a separate workspace `/root/kt-int-tool` (it imports every Program, so
+  building it in kt-int would have touched linked modules); generation runs there and the Gen dirs are copied.
+
+## lean4checker
+The Lean 4.35.0 toolchain ships it as `leanchecker` (also `leanchecker-paranoid`, `lean4lean`, `nanoda_bin`):
+`lake env leanchecker <Module>` replays every declaration of the modules whose name has that prefix into the
+environment of their imports, through the kernel, without elaboration (tested: Asm.Iter 0.8 s, a GenSE1 slice
+1.3 s, ~0.7 GB).  Caution: without a module argument (or with an unknown flag such as `--help`) it checks the whole
+project in parallel (a stray `--help` reached 41 GB before I stopped it).  Final run: per module, P ≤ 2, timing per kernel.
