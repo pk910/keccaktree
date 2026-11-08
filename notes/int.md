@@ -130,3 +130,26 @@ kt-int is the single final build: every artifact built once against this base.  
 * deferred: rv64_x1 in place (RiscvAlias.reads has a `_ => []` fallback and misses rvu's lbu/vle8 reads;
   exec_local/RiscvAliasTrace need the new constructors; its summaries are of the removed GenSB) — inplace2.
 * x86b's `X86AnnAl.lean` (all-inplace 16e5e81) imports x86b's `X86Ann`: merge after x86b.
+
+## Source merges after the base freeze (no builds)
+| merge | commit | notes |
+|---|---|---|
+| all-rvu 1819ab5 (final) | 9316c81 | delta since 42f493b: RvLibUV*.lean, generated AllUM, notes only |
+| all-x86 6b5fc3f | b03bffa | gen_plan_proof.py conflict resolved (below) |
+| all-x86b 5570ba2 | ef7280b | no textual conflict; RC lane proof form gated (RC_BV) |
+| all-inplace 16e5e81 | 092d70c | new `Asm/X86AnnAl.lean` (imports x86b's X86Ann) |
+Frozen-file check after each merge (Iter, Tools, Riscv*, RvVl, Library, LibX86/Arm/Rv/Table): blobs equal to
+e43c5ea.  Since e43c5ea only new files were added under Asm/ (X86Frame, X86Kernel, X86Thresh, X86Ann, X86AnnAl).
+Tools.lean on integrate is c2ffef0 = x86's 771e2cc + rvu's hunks (clean merge; kttool only).
+
+gen_plan_proof.py after the x86/x86b merges (every addition gated so each branch's committed output stays):
+* `matches(..., regs_only)` (rvu) with x86's `DROP_RC` gate (6b5fc3f: default AVX2 + x86_x1, DROP_RC=0/1);
+* `moves<c>`: arm's MOVE_PATHS pairs, then x86's count-location override (COUNT_LOCS, X86 only);
+* Seg.lean: `seg_file_imports()` (+ `X86Kernel` for X86); footer moves | seg_count (X86) | seg_flags (FLAG_OBL) |
+  seg_facts (X86);
+* invariants: rvu's INV0/INVK modes when the variable is set, otherwise x86's (NODES, mid-way start/end; equal to
+  'input'/'out' for plans from round 0 to 24); NO_RC_MID; x86b's PRUNE_RC (X86 only);
+* x86b's RC lane proof (`simp only [E.eval, hyps]; first | decide +kernel | bv_decide`) only with RC_BV
+  (default: X86 without DROP_RC = the AVX-512 kernels); otherwise the plain `decide` form (ARM has no RC
+  lanes; rvu's RvvV4/V8 and x86's Avx2X9/X10 slices use the plain form).
+To be checked by regeneration once kttool is built on the base: ARM, RISC-V (rvu drivers), x86 and x86b samples.
