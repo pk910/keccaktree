@@ -40,6 +40,11 @@ def run(*args, ctl=()):
     return subprocess.run([KT] + [str(a) for a in args], capture_output=True, text=True, check=True, env=env).stdout
 
 
+# round-constant matches at general registers and stack cells are dropped for the kernels that read the round
+# constants from memory only (AVX2, x86_x1); the AVX-512 kernels keep theirs.  DROP_RC=0/1 overrides.
+DROP_RC = None
+
+
 def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
     """the labelled locations after `steps` steps: node `n` is expected at round `rnd_of[n]`"""
     out = run('matches', kernel, count, steps, lanes)
@@ -51,17 +56,17 @@ def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
             if region_filter is not None: continue
             n_, node, round_, kind, rot = mg.groups()
             if int(round_) != rnd_of[int(node)]: continue
-            if ISA == 'X86' and 75 <= int(kind) < 99:
-                # x86 applies the round constants from memory (`vpxor`/`xor` with [RCP + rc]), never from a general
-                # register: a "round constant" there is a coincidence (a pointer `1 << 56`, a count 8 = RC0 rol 3)
+            if DROP_RC and 75 <= int(kind) < 99:
+                # the AVX2 kernels and x86_x1 apply the round constants from memory (`vpxor`/`xor` with [RCP + rc]),
+                # never from a general register: a "round constant" there is a coincidence (a pointer `1 << 56`,
+                # a count 8 = RC0 rol 3)
                 continue
             alloc.append((int(node), int(kind), f'(gdVar {n_})', int(rot), ln)); continue
         if not m: continue
         kind_loc, a, b, node, round_, kind, rot = m.groups()
         if int(round_) != rnd_of[int(node)]: continue
-        if ISA == 'X86' and 75 <= int(kind) < 99:
-            # as for the general registers: x86 reads the round constants from the constant image only, a stack cell
-            # or vector lane equal to a rotated round constant is a coincidence (the spilled count 8 = RC0 rol 3)
+        if DROP_RC and kind_loc == 'mem' and int(a) == 3 and 75 <= int(kind) < 99:
+            # likewise a stack cell equal to a rotated round constant (the spilled count 8 = RC0 rol 3)
             continue
         if kind_loc == 'reg':
             if region_filter is not None: continue
@@ -1027,6 +1032,9 @@ MOVES = [tuple(int(y) for y in x.split(':')) for x in os.environ.get('MOVES', ''
 def main():
     global PLAN, K, ALLOC_END
     kernel, nsdir, count, lanes = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+    global DROP_RC
+    DROP_RC = (os.environ['DROP_RC'] == '1') if 'DROP_RC' in os.environ else \
+        (ISA == 'X86' and kernel.startswith(('avx2_', 'x86_x1')))
     ns = os.environ.get('NS', nsdir)
     PLAN = json.load(open(os.environ['PLAN']))
     only_node = int(os.environ.get('ONLY_NODE', '-1'))
