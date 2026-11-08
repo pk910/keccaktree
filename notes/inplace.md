@@ -187,13 +187,19 @@ segment lemmas `Gen*.seg_run/seg_frame/seg_moves`) and its built segments `Gen*/
   `ScalarX1/All.lean` and segments (+ `Asm/{Flags,ArmFlags,ArmSteps,Nodes,ArmEntry}.lean`): checked in
   `/root/kt-inplace/arm` (a copy of `/root/kt-arm/lean`). Axioms: propext, Classical.choice, Quot.sound
   + bv_decide certificates; no sorry.
+* **Other AArch64 kernels** (agent arm's all-count proofs, branch all-arm 336067c, are generated from
+  templates): `lean/gen_inplace_arm.py <kernel>` renders `Kernels/<Ns>/InPlaceAll.lean` mirroring the
+  generated `All.lean` (x2: sha3_x2, neon_x2 — `batch_a/b/c`; x3: sha3_x3, neon_x3 — `batch_access`, the
+  tail call, hand-over node from `LibArmAl.done_eq_of_x0`). It uses its own flag annotation `annIP`
+  (flags dirty everywhere except at the flag readers, decided by `Arm.flagAnnOk`), since the kernels'
+  `ArmFlags` annotations keep the flags clean inside the loop. Workspace `/root/kt-inplace/arm2` (copy of
+  `/root/kt-arm/lean` at 336067c). sha3_x3r (two exits from the loop, `nb`, `last`) is not templated yet.
 * **rv64_x1 (RISC-V)**: `Kernels/Rv64X1/InPlaceAll.lean` (`back_access`, `body_access`, `loop_access`,
   `exit_access`, `access_all` at `vlmax = 2`, `access_thm` for every `vlmax` via `accessRun_vlmax`,
-  `kernelAl`, **`lib_inplace_rv64_x1`**). Being checked in `/root/kt-inplace/rv` (unit `kt-inplace-rv3`:
-  the rv64_x1 body segment (rebuilt on this core, one slice ~13 GB), then `/root/kt-inplace/rv2.sh`:
-  `gen_inplace.py Rv64X1 GenSE GenSB GenSX --eval`, the `InPlace/*` modules, `InPlaceAll`, axioms in
-  `/root/kt-inplace/logs/ax3.log`; log `/root/kt-inplace/logs/rv2.log`). The `InPlace/*.lean` files are
-  generated there (copy them into the branch after the run).
+  `kernelAl`, **`lib_inplace_rv64_x1`**), `InPlace/{GenSE,GenSB,GenSX}.lean` generated. Checked in
+  `/root/kt-inplace/rv` (this branch's core; the rv64_x1 segments rebuilt there, one body slice ~13 GB).
+  Axioms: propext, Classical.choice, Quot.sound + bv_decide certificates; no sorry. The body summaries in
+  one module peaked at ~19 GB: use `gen_inplace.py --split` for big kernels.
 
 ### Open issues (agent `inplace2`)
 * **RISC-V model change (agent `rvu`, branch all-rvu: `lbu`, `sb`, `vsetvli e8`, `vle8.v`, `vse8.v`, M9
