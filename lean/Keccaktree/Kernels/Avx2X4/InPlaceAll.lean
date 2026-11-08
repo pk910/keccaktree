@@ -6,10 +6,6 @@ import Keccaktree.Kernels.Avx2X4.InPlace.GenX0
 import Keccaktree.Kernels.Avx2X4.InPlace.GenX1
 import Keccaktree.Kernels.Avx2X4.InPlace.GenX2
 import Keccaktree.Kernels.Avx2X4.InPlace.GenX3
-import Keccaktree.Kernels.Avx2X4.InPlace.GenX4
-import Keccaktree.Kernels.Avx2X4.InPlace.GenX5
-import Keccaktree.Kernels.Avx2X4.InPlace.GenX6
-import Keccaktree.Kernels.Avx2X4.InPlace.GenX7
 
 import Keccaktree.Kernels.Avx2X4.Lib
 import Keccaktree.Asm.X86AccFr
@@ -127,126 +123,6 @@ theorem exitA_X3 (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVec
     input hcutK 1 4
     (by decide +kernel) ⟨rfl, rfl, rfl, rfl, hok.1, rfl, rfl⟩ hI'.inp
   rw [show m + 4 = off + (done + 0) by omega, show 1 = c - (done + 0) by omega] at he
-  exact DoneA.halt (accessRun_add rodata prog _ _ _ _ _ U a1 a2) (by rw [hr2])
-    (by rw [hr2]; exact Hand.tail _ (done + 0) (by omega) hb he (by omega))
-
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 40000000 in
-/-- Exit `X4` in place: its segment, then the tail call to `keccaktree_keccak256_avx2_x2` with 2 nodes (handing over the
-nodes after the `done + 0` done). -/
-theorem exitA_X4 (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVec 64)) (done m : Nat)
-    (hcut : relocState (rho m) (cutOf GenX4.facts.ctl0 GenX4.facts.sc0) = cutOf GenX4.facts.ctl0 U)
-    (hI : Inv off c input S0 U done) (hmd : off + done = m + 0) (hb : 64 * (off + c) ≤ 2 ^ 54)
-    (hc : done + 0 + 2 = c) :
-    DoneAK off c input U (GenX4.facts.len + 1) (4 * ((off + done : Nat) : Int)) := by
-  have hmb : 64 * m ≤ 2 ^ 54 := by omega
-  obtain ⟨hok, hcutK⟩ := GenX4.facts.run (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok
-  have a1 : AccessRun rodata prog GenX4.facts.len (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0) U :=
-    seg_acc GenX4.facts InPlace.GenX4.certs InPlace.GenX4.len InPlace.GenX4.chain (by hd_tac InPlace.GenX4.certs) (m) (rho_within m hmb) U hcut hI.ok (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0)
-        (by sum_tac InPlace.GenX4.sums)
-  have fK := cut_fields _ _ _ _ hcutK
-  have hI' := hI.seg' GenX4.facts m 0 (by omega) hmb hcut (by wok_in) (by wok_out GenX4.facts)
-  have hr := run_tail rodata prog _ hok.2.1 "keccaktree_keccak256_avx2_x2" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)
-  have a2 := acc_one (rodata := rodata) (prog := prog) _ hok.2.1
-    (Or.inl (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)) (by rw [hr]; exact hok.1) (4 * ((off + done : Nat) : Int) + 0)
-  have hr2 : X86.isa.run rodata prog (GenX4.facts.len + 1) U =
-      { X86.isa.run rodata prog GenX4.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } := by rw [Isa.run_add, hr]
-  have he := handover m GenX4.facts.ctlK GenX4.facts.scK (X86.isa.run rodata prog GenX4.facts.len U)
-    { { X86.isa.run rodata prog GenX4.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } with halted := false, tail := none }
-    input hcutK 2 0
-    (by decide +kernel) ⟨rfl, rfl, rfl, rfl, hok.1, rfl, rfl⟩ hI'.inp
-  rw [show m + 0 = off + (done + 0) by omega, show 2 = c - (done + 0) by omega] at he
-  exact DoneA.halt (accessRun_add rodata prog _ _ _ _ _ U a1 a2) (by rw [hr2])
-    (by rw [hr2]; exact Hand.tail _ (done + 0) (by omega) hb he (by omega))
-
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 40000000 in
-/-- Exit `X5` in place: its segment, then the tail call to `keccaktree_keccak256_avx2_x2` with 2 nodes (handing over the
-nodes after the `done + 0` done). -/
-theorem exitA_X5 (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVec 64)) (done m : Nat)
-    (hcut : relocState (rho m) (cutOf GenX5.facts.ctl0 GenX5.facts.sc0) = cutOf GenX5.facts.ctl0 U)
-    (hI : Inv off c input S0 U done) (hmd : off + done = m + 0) (hb : 64 * (off + c) ≤ 2 ^ 54)
-    (hc : done + 0 + 2 = c) :
-    DoneAK off c input U (GenX5.facts.len + 1) (4 * ((off + done : Nat) : Int)) := by
-  have hmb : 64 * m ≤ 2 ^ 54 := by omega
-  obtain ⟨hok, hcutK⟩ := GenX5.facts.run (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok
-  have a1 : AccessRun rodata prog GenX5.facts.len (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0) U :=
-    seg_acc GenX5.facts InPlace.GenX5.certs InPlace.GenX5.len InPlace.GenX5.chain (by hd_tac InPlace.GenX5.certs) (m) (rho_within m hmb) U hcut hI.ok (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0)
-        (by sum_tac InPlace.GenX5.sums)
-  have fK := cut_fields _ _ _ _ hcutK
-  have hI' := hI.seg' GenX5.facts m 0 (by omega) hmb hcut (by wok_in) (by wok_out GenX5.facts)
-  have hr := run_tail rodata prog _ hok.2.1 "keccaktree_keccak256_avx2_x2" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)
-  have a2 := acc_one (rodata := rodata) (prog := prog) _ hok.2.1
-    (Or.inl (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)) (by rw [hr]; exact hok.1) (4 * ((off + done : Nat) : Int) + 0)
-  have hr2 : X86.isa.run rodata prog (GenX5.facts.len + 1) U =
-      { X86.isa.run rodata prog GenX5.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } := by rw [Isa.run_add, hr]
-  have he := handover m GenX5.facts.ctlK GenX5.facts.scK (X86.isa.run rodata prog GenX5.facts.len U)
-    { { X86.isa.run rodata prog GenX5.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } with halted := false, tail := none }
-    input hcutK 2 0
-    (by decide +kernel) ⟨rfl, rfl, rfl, rfl, hok.1, rfl, rfl⟩ hI'.inp
-  rw [show m + 0 = off + (done + 0) by omega, show 2 = c - (done + 0) by omega] at he
-  exact DoneA.halt (accessRun_add rodata prog _ _ _ _ _ U a1 a2) (by rw [hr2])
-    (by rw [hr2]; exact Hand.tail _ (done + 0) (by omega) hb he (by omega))
-
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 40000000 in
-/-- Exit `X6` in place: its segment, then the tail call to `keccaktree_keccak256_avx2_x2` with 3 nodes (handing over the
-nodes after the `done + 0` done). -/
-theorem exitA_X6 (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVec 64)) (done m : Nat)
-    (hcut : relocState (rho m) (cutOf GenX6.facts.ctl0 GenX6.facts.sc0) = cutOf GenX6.facts.ctl0 U)
-    (hI : Inv off c input S0 U done) (hmd : off + done = m + 0) (hb : 64 * (off + c) ≤ 2 ^ 54)
-    (hc : done + 0 + 3 = c) :
-    DoneAK off c input U (GenX6.facts.len + 1) (4 * ((off + done : Nat) : Int)) := by
-  have hmb : 64 * m ≤ 2 ^ 54 := by omega
-  obtain ⟨hok, hcutK⟩ := GenX6.facts.run (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok
-  have a1 : AccessRun rodata prog GenX6.facts.len (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0) U :=
-    seg_acc GenX6.facts InPlace.GenX6.certs InPlace.GenX6.len InPlace.GenX6.chain (by hd_tac InPlace.GenX6.certs) (m) (rho_within m hmb) U hcut hI.ok (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0)
-        (by sum_tac InPlace.GenX6.sums)
-  have fK := cut_fields _ _ _ _ hcutK
-  have hI' := hI.seg' GenX6.facts m 0 (by omega) hmb hcut (by wok_in) (by wok_out GenX6.facts)
-  have hr := run_tail rodata prog _ hok.2.1 "keccaktree_keccak256_avx2_x2" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)
-  have a2 := acc_one (rodata := rodata) (prog := prog) _ hok.2.1
-    (Or.inl (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)) (by rw [hr]; exact hok.1) (4 * ((off + done : Nat) : Int) + 0)
-  have hr2 : X86.isa.run rodata prog (GenX6.facts.len + 1) U =
-      { X86.isa.run rodata prog GenX6.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } := by rw [Isa.run_add, hr]
-  have he := handover m GenX6.facts.ctlK GenX6.facts.scK (X86.isa.run rodata prog GenX6.facts.len U)
-    { { X86.isa.run rodata prog GenX6.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } with halted := false, tail := none }
-    input hcutK 3 0
-    (by decide +kernel) ⟨rfl, rfl, rfl, rfl, hok.1, rfl, rfl⟩ hI'.inp
-  rw [show m + 0 = off + (done + 0) by omega, show 3 = c - (done + 0) by omega] at he
-  exact DoneA.halt (accessRun_add rodata prog _ _ _ _ _ U a1 a2) (by rw [hr2])
-    (by rw [hr2]; exact Hand.tail _ (done + 0) (by omega) hb he (by omega))
-
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 40000000 in
-/-- Exit `X7` in place: its segment, then the tail call to `keccaktree_keccak256_avx2_x2` with 3 nodes (handing over the
-nodes after the `done + 0` done). -/
-theorem exitA_X7 (off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVec 64)) (done m : Nat)
-    (hcut : relocState (rho m) (cutOf GenX7.facts.ctl0 GenX7.facts.sc0) = cutOf GenX7.facts.ctl0 U)
-    (hI : Inv off c input S0 U done) (hmd : off + done = m + 0) (hb : 64 * (off + c) ≤ 2 ^ 54)
-    (hc : done + 0 + 3 = c) :
-    DoneAK off c input U (GenX7.facts.len + 1) (4 * ((off + done : Nat) : Int)) := by
-  have hmb : 64 * m ≤ 2 ^ 54 := by omega
-  obtain ⟨hok, hcutK⟩ := GenX7.facts.run (rho m) (rho_ok m) (rho_within m hmb) U hcut hI.ok
-  have a1 : AccessRun rodata prog GenX7.facts.len (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0) U :=
-    seg_acc GenX7.facts InPlace.GenX7.certs InPlace.GenX7.len InPlace.GenX7.chain (by hd_tac InPlace.GenX7.certs) (m) (rho_within m hmb) U hcut hI.ok (4 * ((off + done : Nat) : Int)) (4 * ((off + done : Nat) : Int) + 0)
-        (by sum_tac InPlace.GenX7.sums)
-  have fK := cut_fields _ _ _ _ hcutK
-  have hI' := hI.seg' GenX7.facts m 0 (by omega) hmb hcut (by wok_in) (by wok_out GenX7.facts)
-  have hr := run_tail rodata prog _ hok.2.1 "keccaktree_keccak256_avx2_x2" (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)
-  have a2 := acc_one (rodata := rodata) (prog := prog) _ hok.2.1
-    (Or.inl (by rw [fK.2.2.2.2.2.2.2.1]; decide +kernel)) (by rw [hr]; exact hok.1) (4 * ((off + done : Nat) : Int) + 0)
-  have hr2 : X86.isa.run rodata prog (GenX7.facts.len + 1) U =
-      { X86.isa.run rodata prog GenX7.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } := by rw [Isa.run_add, hr]
-  have he := handover m GenX7.facts.ctlK GenX7.facts.scK (X86.isa.run rodata prog GenX7.facts.len U)
-    { { X86.isa.run rodata prog GenX7.facts.len U with halted := true, tail := some "keccaktree_keccak256_avx2_x2" } with halted := false, tail := none }
-    input hcutK 3 0
-    (by decide +kernel) ⟨rfl, rfl, rfl, rfl, hok.1, rfl, rfl⟩ hI'.inp
-  rw [show m + 0 = off + (done + 0) by omega, show 3 = c - (done + 0) by omega] at he
   exact DoneA.halt (accessRun_add rodata prog _ _ _ _ _ U a1 a2) (by rw [hr2])
     (by rw [hr2]; exact Hand.tail _ (done + 0) (by omega) hb he (by omega))
 
