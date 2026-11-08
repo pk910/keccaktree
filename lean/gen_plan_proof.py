@@ -40,6 +40,16 @@ def run(*args, ctl=()):
     return subprocess.run([KT] + [str(a) for a in args], capture_output=True, text=True, check=True, env=env).stdout
 
 
+# round-constant matches at general registers and stack cells are dropped for the kernels that read the round
+# constants from memory only (AVX2, x86_x1); the AVX-512 kernels keep theirs.  DROP_RC=0/1 overrides.
+DROP_RC = None
+# per-kernel forms introduced after kernels were proved (their generated files stay as they were):
+# the recursion bound for Inv defs counting the constant hypotheses too, and seg_frame's `rw` of `segAt`
+# (the `show … .mem` form made Lean evaluate a slice: avx2_x6).  INV_DEPTH_ALL=0/1, SEGFRAME_RW=0/1 override.
+INV_DEPTH_ALL = False
+SEGFRAME_RW = False
+
+
 def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
     """the labelled locations after `steps` steps: node `n` is expected at round `rnd_of[n]`"""
     out = run('matches', kernel, count, steps, lanes)
@@ -51,14 +61,18 @@ def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
             if region_filter is not None: continue
             n_, node, round_, kind, rot = mg.groups()
             if int(round_) != rnd_of[int(node)]: continue
-            if ISA == 'X86' and 75 <= int(kind) < 99:
-                # x86 applies the round constants from memory (`vpxor`/`xor` with [RCP + rc]), never from a general
-                # register: a "round constant" there is a coincidence (a pointer `1 << 56`, a count 8 = RC0 rol 3)
+            if DROP_RC and 75 <= int(kind) < 99:
+                # the AVX2 kernels and x86_x1 apply the round constants from memory (`vpxor`/`xor` with [RCP + rc]),
+                # never from a general register: a "round constant" there is a coincidence (a pointer `1 << 56`,
+                # a count 8 = RC0 rol 3)
                 continue
             alloc.append((int(node), int(kind), f'(gdVar {n_})', int(rot), ln)); continue
         if not m: continue
         kind_loc, a, b, node, round_, kind, rot = m.groups()
         if int(round_) != rnd_of[int(node)]: continue
+        if DROP_RC and kind_loc == 'mem' and int(a) == 3 and 75 <= int(kind) < 99:
+            # likewise a stack cell equal to a rotated round constant (the spilled count 8 = RC0 rol 3)
+            continue
         if kind_loc == 'reg':
             if region_filter is not None: continue
             var = f'(regVar {a} {b})'
@@ -232,7 +246,7 @@ where rndSlice (c : Nat) : Nat := ''' + f'''match c with
 ''')
         for c in range(K + 1):
             doc = f'The locations at bound {c}' if c < K else 'The output locations at the end of the plan'
-            if len(allocs[c]) > 200:
+            if len(allocs[c]) > 200 or (INV_DEPTH_ALL and len(allocs[c]) + len(chyps[c]) > 250):
                 f.write('set_option maxRecDepth 100000 in\n')
             f.write(f'/-- {doc} (for states `A n` of the nodes). -/\n')
             conjs = [f'env {var} = {quantity(node, kind)}.rotateLeft {rot}' for node, kind, var, rot, _ in allocs[c]] + [h for (_, _, h) in chyps[c]]
@@ -836,8 +850,7 @@ theorem seg_frame {hyps}
     (segAt{K} S0).mem r q = S0.mem r q := by
   have s0 := (cert0).step ρ hρ hw S0 hc hs
 {chain}""" + ''.join(f"""  have m{c + 1} : (segAt{c + 1} S0).mem r q = {at(c)}.mem r q := by
-    show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _
-    rw [s{c}.2.1]
+    {(f"rw [show segAt{c + 1} S0 = {ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)} from rfl, s{c}.2.1]" if SEGFRAME_RW else f"show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _" + chr(10) + f"    rw [s{c}.2.1]")}
     apply (cert{c}).frame {FOOT_EXPR} ρ {at(c)} {'hc' if c == 0 else f's{c - 1}.2.2.2'} r q
     intro hm
     have := List.all_eq_true.mp writes{c} _ hm
@@ -1024,6 +1037,12 @@ MOVES = [tuple(int(y) for y in x.split(':')) for x in os.environ.get('MOVES', ''
 def main():
     global PLAN, K, ALLOC_END
     kernel, nsdir, count, lanes = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+    global DROP_RC, INV_DEPTH_ALL, SEGFRAME_RW
+    flag = lambda n, dflt: (os.environ[n] == '1') if n in os.environ else dflt
+    INV_DEPTH_ALL = flag('INV_DEPTH_ALL', ISA == 'X86' and kernel in ('avx2_x9', 'avx2_x10'))
+    SEGFRAME_RW = flag('SEGFRAME_RW', ISA == 'X86' and kernel in ('avx2_x6', 'avx2_x9', 'avx2_x10'))
+    DROP_RC = (os.environ['DROP_RC'] == '1') if 'DROP_RC' in os.environ else \
+        (ISA == 'X86' and kernel.startswith(('avx2_', 'x86_x1')))
     ns = os.environ.get('NS', nsdir)
     PLAN = json.load(open(os.environ['PLAN']))
     only_node = int(os.environ.get('ONLY_NODE', '-1'))

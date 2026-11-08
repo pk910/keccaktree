@@ -15,7 +15,12 @@ for g in "$@"; do
   fi
   K=$(ls Keccaktree/Kernels/$d/$g/Slice*.lean | wc -l)
   echo "== $d/$g $(date +%H:%M:%S) slices=$K P=$P"
-  $LAKE build "Keccaktree.Kernels.$d.$g.Invs" 2>&1 | grep -E "^error|Build completed" | cut -c1-300
+  inv=$($LAKE build "Keccaktree.Kernels.$d.$g.Invs" 2>&1); irc=$?
+  echo "$inv" | grep -E "^error|Build completed" | cut -c1-300
+  if [ $irc -ne 0 ]; then
+    # every slice imports Invs: P parallel copies of a failing Invs would only repeat the error
+    echo "error: $d/$g slices failed: Invs"; echo "== $d/$g done $(date +%H:%M:%S)"; continue
+  fi
   # each slice job records a failure; failed slices are retried once with the same bound, and `Seg` is built only
   # when all slices built (`lake build Seg` would otherwise rebuild every missing slice at once)
   fail=$(mktemp)
