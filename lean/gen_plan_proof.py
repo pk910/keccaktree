@@ -51,6 +51,10 @@ def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
             if region_filter is not None: continue
             n_, node, round_, kind, rot = mg.groups()
             if int(round_) != rnd_of[int(node)]: continue
+            if ISA == 'X86' and 75 <= int(kind) < 99:
+                # x86 applies the round constants from memory (`vpxor`/`xor` with [RCP + rc]), never from a general
+                # register: a "round constant" there is a coincidence (a pointer `1 << 56`, a count 8 = RC0 rol 3)
+                continue
             alloc.append((int(node), int(kind), f'(gdVar {n_})', int(rot), ln)); continue
         if not m: continue
         kind_loc, a, b, node, round_, kind, rot = m.groups()
