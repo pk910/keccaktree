@@ -181,3 +181,12 @@ The Lean 4.35.0 toolchain ships it as `leanchecker` (also `leanchecker-paranoid`
 environment of their imports, through the kernel, without elaboration (tested: Asm.Iter 0.8 s, a GenSE1 slice
 1.3 s, ~0.7 GB).  Caution: without a module argument (or with an unknown flag such as `--help`) it checks the whole
 project in parallel (a stray `--help` reached 41 GB before I stopped it).  Final run: per module, P ≤ 2, timing per kernel.
+
+## Compiled-C truncations in kt-int (disk)
+* 21:14 (coordinator): 799 `.c` files > 1 MB, older than 60 min, with `.c.hash`, truncated to 0 bytes (mtime and
+  `.c.hash` kept; 55 GB): `/root/kt-int-logs/truncated_c.txt` (original sizes).  420 of them were hard links into
+  /root/kt-x86b (`truncated_c_hardlinked.txt`), so kt-x86b's copies are empty too.  Proofs unaffected (.olean and
+  traces untouched, lake trusts the .hash files; --no-build stays up to date).  Rule: no executable is rebuilt in
+  kt-x86b / kt-x86; the final regeneration checks use /root/kt-int-tool.
+* From then on `kt-int-diskguard` (below 30 GB free, every 10 min): same truncation with `-links 1` (never a
+  hard-linked file), log `truncated_c2.txt`.  To be listed in the manifest with the placeholder lists.
