@@ -1,5 +1,6 @@
 import Keccaktree.Kernels.RvvCommon
 import Keccaktree.Kernels.RiscvBytesV
+import Keccaktree.Kernels.LibRvU
 set_option linter.unusedSectionVars false
 set_option linter.unusedSimpArgs false
 set_option linter.unusedVariables false
@@ -80,6 +81,21 @@ theorem StV.li (h : StV ((Riscv.isa V).run rodata prog n S) p L R M) (d : Nat) (
     (hi : prog.getD p .nop = .li d imm) (hd : d < 32) (hd0 : d ≠ 0) :
     StV ((Riscv.isa V).run rodata prog (n + 1) S) (p + 1) L (upd R d imm) M := by
   rw [Isa.run_add, StV.step _ h hi, exec_li_eq V rodata _ d imm h.ctl.halted]
+  exact h.next_setR d hd hd0 _
+
+/-- A register-register operation. -/
+theorem StV.op (h : StV ((Riscv.isa V).run rodata prog n S) p L R M) (d a b : Nat) (k : Riscv.Op2)
+    (hi : prog.getD p .nop = .op d a b k) (hd : d < 32) (hd0 : d ≠ 0) (ha : a < 32) (ha0 : a ≠ 0) (hb : b < 32) (hb0 : b ≠ 0) :
+    StV ((Riscv.isa V).run rodata prog (n + 1) S) (p + 1) L (upd R d (Riscv.op2 k (R a) (R b))) M := by
+  rw [Isa.run_add, StV.step _ h hi, exec_op_eq V rodata _ d a b k h.ctl.halted, getR_pos _ a ha0, getR_pos _ b hb0,
+    h.regs a ha, h.regs b hb]
+  exact h.next_setR d hd hd0 _
+
+/-- A register-immediate operation. -/
+theorem StV.opi (h : StV ((Riscv.isa V).run rodata prog n S) p L R M) (d a : Nat) (k : Riscv.OpI) (imm : BitVec 64)
+    (hi : prog.getD p .nop = .opi d a k imm) (hd : d < 32) (hd0 : d ≠ 0) (ha : a < 32) (ha0 : a ≠ 0) :
+    StV ((Riscv.isa V).run rodata prog (n + 1) S) (p + 1) L (upd R d (Riscv.opi k (R a) imm)) M := by
+  rw [Isa.run_add, StV.step _ h hi, exec_opi_eq V rodata _ d a k imm h.ctl.halted, getR_pos _ a ha0, h.regs a ha]
   exact h.next_setR d hd hd0 _
 
 /-- `slli d, s, k` on a small number. -/
@@ -553,7 +569,7 @@ hash nodes `off + j .. off + j + w - 1` and reach the loop head after `j + w` no
 theorem batchM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t len : Nat} (hp : MProg prog t)
     (hV : 0 < V) (hV8 : V ≤ 8) (w : Nat) (B : MBody V rodata prog t w len)
     (mi mo off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat) (hmi : mi < 8) (hmo : mo < 8)
-    (ha7 : 0 < mi ||| mo) (hb : 64 * (off + c) + 512 ≤ 2 ^ 54) (hM : MidU mi mo off c input S0 S j 7) (hj : j < c)
+    (ha7 : 0 < mi ||| mo) (hb : 64 * (off + c) ≤ 2 ^ 54) (hM : MidU mi mo off c input S0 S j 7) (hj : j < c)
     (hw : w = min (c - j) V) :
     MidU mi mo off c input S0 ((Riscv.isa V).run rodata prog (bSteps (c - j) len) S) (j + w)
       (if c - j - w = 0 then t + 14 else 7) := by
@@ -703,7 +719,154 @@ theorem batchM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr}
           = t' % 8 := by push_cast; omega
       rw [e0, e1, e2, absorbNode_keccak, squeezeByte_eq]
 
+/-! ## Entry, exit and the loop -/
+
+/-- The frame's instructions. -/
+structure MFrame (prog : Array Riscv.Instr) (t : Nat) : Prop where
+  p1 : prog.getD 1 .nop = .br .eq 12 0 (t + 15)
+  p2 : prog.getD 2 .nop = .opi 2 2 .addi 0xfffffffffffffe00#64
+  p3 : prog.getD 3 .nop = .li 30 0x1#64
+  p4 : prog.getD 4 .nop = .opi 30 30 .slli 0x3f#64
+  p5 : prog.getD 5 .nop = .op 17 10 11 .or
+  p6 : prog.getD 6 .nop = .opi 17 17 .andi 0x7#64
+  q14 : prog.getD (t + 14) .nop = .opi 2 2 .addi 0x200#64
+  q15 : prog.getD (t + 15) .nop = .ret
+
+theorem a7_val (mi mo : Nat) (hmi : mi < 8) (hmo : mo < 8) (x : Nat) :
+    (gprWord ⟨rOutput, (mo : Int) + 32 * (x : Int)⟩ ||| gprWord ⟨rInput, (mi : Int) + 64 * (x : Int)⟩) &&& 7#64 =
+      gprWord ⟨0, ((mi ||| mo : Nat) : Int)⟩ := by
+  rw [BitVec.and_or_distrib_right, andi7_gprWord, andi7_gprWord]
+  show BitVec.ofInt 64 (((mo : Int) + 32 * (x : Int)) % 8) ||| BitVec.ofInt 64 (((mi : Int) + 64 * (x : Int)) % 8) =
+    BitVec.ofInt 64 ((mi ||| mo : Nat) : Int)
+  rw [show ((mo : Int) + 32 * (x : Int)) % 8 = ((mo : Nat) : Int) by omega,
+    show ((mi : Int) + 64 * (x : Int)) % 8 = ((mi : Nat) : Int) by omega, BitVec.ofInt_natCast, BitVec.ofInt_natCast,
+    BitVec.ofInt_natCast]
+  rcases cases8 mi hmi with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  rcases cases8 mo hmo with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 40000000 in
+/-- **The frame set-up** on the misaligned path (`c ≥ 1`): six steps to the loop head with nothing done. -/
+theorem entryM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t : Nat} (hf : MFrame prog t)
+    (mi mo off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (hmi : mi < 8) (hmo : mo < 8)
+    (hE : LibRvU.EntryRU mi mo off c input S) (hpc : S.pc = 1) (hc : 0 < c) (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    MidU mi mo off c input S ((Riscv.isa V).run rodata prog 6 S) 0 7 := by
+  obtain ⟨⟨g, k, z, cf, nf, vf, vl, d⟩, ⟨he, hh, ht⟩, ha2, hsp, ha1, ha0, hin⟩ := hE
+  have hc0 : CtlV S := ⟨g, k, z, cf, nf, vf, d, he, hh, ht⟩
+  have s0 : StV ((Riscv.isa V).run rodata prog 0 S) 1 S.vl (fun r => S.getGD r) S.mem := ⟨hc0, hpc, rfl, fun _ _ => rfl, rfl⟩
+  have s1 := StV.brz s0 .eq 12 (t + 15) (c : Int) hf.p1 (by decide) (by decide) ha2 (num_wf _ (by omega) (by omega))
+  rw [if_neg (by simp only [brHolds, beq_iff_eq]; omega)] at s1
+  have s2 := StV.opi s1 2 2 .addi _ hf.p2 (by decide) (by decide) (by decide) (by decide)
+  have s3 := StV.li s2 30 0x1#64 hf.p3 (by decide) (by decide)
+  have s4 := StV.opi s3 30 30 .slli _ hf.p4 (by decide) (by decide) (by decide) (by decide)
+  have s5 := StV.op s4 17 10 11 .or hf.p5 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  have s6 := StV.opi s5 17 17 .andi _ hf.p6 (by decide) (by decide) (by decide) (by decide)
+  have hb54 : (2 : Nat) ^ 54 = 18014398509481984 := rfl
+  refine ⟨s6.ctl, s6.pc, ?_, ?_, ?_, ?_, ?_, ?_, fun q => by rw [s6.mem]; exact hin q, fun b _ => by rw [s6.mem],
+    fun n hn => absurd hn (Nat.not_lt_zero _)⟩
+  · rw [s6.regs 2 (by decide)]; simp [upd]; rw [hsp]
+    show gprWord ⟨rStack, 1048576⟩ + 0xfffffffffffffe00#64 = _
+    rw [gprWord_add_const]; rfl
+  · rw [s6.regs 10 (by decide)]; simp [upd]; rw [ha0]; try exact congrArg (fun o => gprWord ⟨rOutput, o⟩) (by omega)
+  · rw [s6.regs 11 (by decide)]; simp [upd]; rw [ha1]; try exact congrArg (fun o => gprWord ⟨rInput, o⟩) (by omega)
+  · rw [s6.regs 12 (by decide)]; simp [upd]; rw [ha2]; try exact congrArg (fun o => gprWord ⟨0, o⟩) (by omega)
+  · rw [s6.regs 17 (by decide)]; simp only [upd, ↓reduceIte, if_neg (show (10 : Nat) ≠ 17 by decide)]
+    simp
+    rw [ha0, ha1]
+    show (gprWord ⟨rOutput, (mo : Int) + 32 * (off : Int)⟩ ||| gprWord ⟨rInput, (mi : Int) + 64 * (off : Int)⟩) &&& 7#64 = _
+    exact a7_val mi mo hmi hmo off
+  · rw [s6.regs 30 (by decide)]; simp [upd]; decide
+
+/-- The exit: `addi sp, sp, 512; ret` halts with the memory unchanged. -/
+theorem exitM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t : Nat} (hf : MFrame prog t)
+    (mi mo off c : Nat) (input : Int → BitVec 64) (S0 U : State (BitVec 64)) (j : Nat) (hM : MidU mi mo off c input S0 U j (t + 14)) :
+    ((Riscv.isa V).run rodata prog 2 U).halted = true ∧ ((Riscv.isa V).run rodata prog 2 U).err = false ∧
+    ((Riscv.isa V).run rodata prog 2 U).tail = none ∧ ((Riscv.isa V).run rodata prog 2 U).mem = U.mem := by
+  have s0 : StV ((Riscv.isa V).run rodata prog 0 U) (t + 14) U.vl (fun r => U.getGD r) U.mem :=
+    ⟨hM.ctl, hM.pc, rfl, fun _ _ => rfl, rfl⟩
+  have s1 := StV.opi s0 2 2 .addi _ hf.q14 (by decide) (by decide) (by decide) (by decide)
+  generalize hT : (Riscv.isa V).run rodata prog (0 + 1) U = T at s1
+  have e : (Riscv.isa V).run rodata prog 2 U = { T with halted := true } := by
+    rw [show 2 = (0 + 1) + 1 from rfl, Isa.run_add, hT, run_one V rodata prog T s1.ctl.halted,
+      show prog.getD T.pc .nop = .ret by rw [s1.pc]; exact hf.q15, Riscv.exec_ret_eq V rodata T s1.ctl.halted]
+  rw [e]
+  exact ⟨rfl, s1.ctl.2.2.2.2.2.2.2.1, s1.ctl.2.2.2.2.2.2.2.2.2, s1.mem⟩
+
+/-- The steps of the batches with `r` nodes left. -/
+def stepsM (V len : Nat) (r : Nat) : Nat :=
+  if h : r = 0 then 0 else bSteps r len + stepsM V len (r - max 1 (min r V))
+termination_by r
+decreasing_by omega
+
+theorem stepsM_succ (V len r : Nat) (hr : 0 < r) (hV : 0 < V) :
+    stepsM V len r = bSteps r len + stepsM V len (r - min r V) := by
+  rw [stepsM, dif_neg (by omega), show max 1 (min r V) = min r V by omega]
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 40000000 in
+/-- **The loop**: from the loop head after `j` nodes, the remaining batches reach the exit with every
+digest. -/
+theorem loopM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t len : Nat} (hp : MProg prog t)
+    (hV : 0 < V) (hV8 : V ≤ 8) (B : ∀ w, 1 ≤ w → w ≤ V → MBody V rodata prog t w len)
+    (mi mo off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hmi : mi < 8) (hmo : mo < 8)
+    (ha7 : 0 < mi ||| mo) (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    ∀ r j (S : State (BitVec 64)), r = c - j → j < c → MidU mi mo off c input S0 S j 7 →
+      MidU mi mo off c input S0 ((Riscv.isa V).run rodata prog (stepsM V len r) S) c (t + 14) := by
+  intro r
+  induction r using Nat.strongRecOn with
+  | ind r ih =>
+    intro j S hr hj hM
+    have hw1 : 1 ≤ min (c - j) V := by omega
+    have hbt := batchM hp hV hV8 (min (c - j) V) (B _ hw1 (by omega)) mi mo off c input S0 S j hmi hmo ha7 hb hM hj rfl
+    rw [stepsM_succ V len r (by omega) hV, Isa.run_add, hr]
+    by_cases hz : c - j - min (c - j) V = 0
+    · rw [if_pos hz] at hbt
+      rw [show c - j - min (c - j) V = 0 from hz, stepsM, dif_pos rfl]
+      rw [show j + min (c - j) V = c by omega] at hbt
+      exact hbt
+    · rw [if_neg hz] at hbt
+      have := ih (c - j - min (c - j) V) (by omega) (j + min (c - j) V) _ (by omega) (by omega) hbt
+      exact this
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 40000000 in
+/-- **An RVV kernel at misaligned buffers** (`mi ||| mo ≠ 0`), from its batch bodies for every `vl`:
+`8 + stepsM V len c` steps halt without a model fault and without a tail call, keep the output bytes
+before the output buffer and leave every node's digest in the output bytes. -/
+theorem allM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t len : Nat} (hp : MProg prog t)
+    (hf : MFrame prog t) (hV : 0 < V) (hV8 : V ≤ 8) (B : ∀ w, 1 ≤ w → w ≤ V → MBody V rodata prog t w len)
+    (mi mo off c : Nat) (input : Int → BitVec 64) (S : State (BitVec 64)) (hmi : mi < 8) (hmo : mo < 8)
+    (ha7 : 0 < mi ||| mo) (hE : LibRvU.EntryRU mi mo off c input S) (hpc : S.pc = 1) (hb : 64 * (off + c) ≤ 2 ^ 54) :
+    Library.Outcome (LibRvU.EntryRvU mi mo) (DigestB mi mo) [] off c input S
+      ((Riscv.isa V).run rodata prog (8 + stepsM V len c) S) := by
+  rcases Nat.eq_zero_or_pos c with hc | hc
+  · subst hc
+    obtain ⟨⟨g, k, z, cf, nf, vf, vl, d⟩, ⟨he, hh, ht⟩, ha2, hsp, ha1, ha0, hin⟩ := hE
+    have hc0 : CtlV S := ⟨g, k, z, cf, nf, vf, d, he, hh, ht⟩
+    have s0 : StV ((Riscv.isa V).run rodata prog 0 S) 1 S.vl (fun r => S.getGD r) S.mem := ⟨hc0, hpc, rfl, fun _ _ => rfl, rfl⟩
+    have s1 := StV.brz s0 .eq 12 (t + 15) ((0 : Nat) : Int) hf.p1 (by decide) (by decide) ha2 (num_wf _ (by omega) (by omega))
+    rw [if_pos (by rfl)] at s1
+    generalize hT : (Riscv.isa V).run rodata prog (0 + 1) S = T at s1
+    have e : (Riscv.isa V).run rodata prog 2 S = { T with halted := true } := by
+      rw [show 2 = (0 + 1) + 1 from rfl, Isa.run_add, hT, run_one V rodata prog T s1.ctl.halted,
+        show prog.getD T.pc .nop = .ret by rw [s1.pc]; exact hf.q15, Riscv.exec_ret_eq V rodata T s1.ctl.halted]
+    rw [show 8 + stepsM V len 0 = 2 + 6 by rw [stepsM, dif_pos rfl], Isa.run_add, e, Isa.run_halted _ _ _ _ _ rfl]
+    refine ⟨rfl, s1.ctl.2.2.2.2.2.2.2.1, fun q _ => by show T.mem rOutput q = _; rw [s1.mem],
+      Or.inl ⟨s1.ctl.2.2.2.2.2.2.2.2.2, fun n hn => absurd hn (Nat.not_lt_zero _)⟩⟩
+  · have hM := entryM (V := V) (rodata := rodata) hf mi mo off c input S hmi hmo hE hpc hc hb
+    have hL := loopM hp hV hV8 B mi mo off c input S hmi hmo ha7 hb (c - 0) 0 _ rfl hc hM
+    have hX := exitM (V := V) (rodata := rodata) hf mi mo off c input S _ c hL
+    rw [show 8 + stepsM V len c = 6 + stepsM V len (c - 0) + 2 by simp; omega, Isa.run_add, Isa.run_add]
+    obtain ⟨hh, he, ht, hm⟩ := hX
+    refine ⟨hh, he, LibRvU.words_of_bytes mo off S _ (fun b hb' => ?_), Or.inl ⟨ht, fun n hn => ?_⟩⟩
+    · show byteAt (((Riscv.isa V).run rodata prog 2 _).mem rOutput) b = _
+      rw [hm]; exact hL.pre b hb'
+    · intro t' ht'
+      show byteAt (((Riscv.isa V).run rodata prog 2 _).mem rOutput) _ = _
+      rw [hm]; exact hL.dig n hn t' ht'
+
 end Keccaktree.Kernels.RvvCommonU
+
 
 
 
