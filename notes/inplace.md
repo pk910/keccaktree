@@ -187,7 +187,30 @@ segment lemmas `Gen*.seg_run/seg_frame/seg_moves`) and its built segments `Gen*/
   `ScalarX1/All.lean` and segments (+ `Asm/{Flags,ArmFlags,ArmSteps,Nodes,ArmEntry}.lean`): checked in
   `/root/kt-inplace/arm` (a copy of `/root/kt-arm/lean`). Axioms: propext, Classical.choice, Quot.sound
   + bv_decide certificates; no sorry.
-* **rv64_x1 (RISC-V)**: see below.
+* **rv64_x1 (RISC-V)**: `Kernels/Rv64X1/InPlaceAll.lean` (`back_access`, `body_access`, `loop_access`,
+  `exit_access`, `access_all` at `vlmax = 2`, `access_thm` for every `vlmax` via `accessRun_vlmax`,
+  `kernelAl`, **`lib_inplace_rv64_x1`**). Being checked in `/root/kt-inplace/rv` (unit `kt-inplace-rv3`:
+  the rv64_x1 body segment (rebuilt on this core, one slice ~13 GB), then `/root/kt-inplace/rv2.sh`:
+  `gen_inplace.py Rv64X1 GenSE GenSB GenSX --eval`, the `InPlace/*` modules, `InPlaceAll`, axioms in
+  `/root/kt-inplace/logs/ax3.log`; log `/root/kt-inplace/logs/rv2.log`). The `InPlace/*.lean` files are
+  generated there (copy them into the branch after the run).
+
+### Open issues (agent `inplace2`)
+* **RISC-V model change (agent `rvu`, branch all-rvu: `lbu`, `sb`, `vsetvli e8`, `vle8.v`, `vse8.v`, M9
+  shift fix)**: after that merge, `RiscvAlias.reads`/`exec_local` and `RiscvAliasTrace.cells_map/
+  cells_reloc/reads_ovr/writes_ovr` need the new constructors (byte loads/stores: cells of the word
+  containing the byte; `vle8/vse8`: `nf·vl` bytes → words), and the RISC-V kernels' in-place proofs
+  follow their new segments (`GenSC`, `GenSI`, `GenSJ`, …).
+* **all-arm merge**: `Asm/ArmFootprint.lean` here is a verbatim copy of all-arm's (identical addition);
+  `ScalarX1/InPlaceAll.lean` needs all-arm's `ScalarX1/All.lean` and `Asm/{Flags,ArmFlags,ArmSteps,
+  Nodes,ArmEntry}.lean` (not on lean-verification yet).
+* **x86 AVX-512**: route `mkKernelAlOf` + `ctlThm_of_pred` with x86b's `run_ovr_annJ` (branch
+  all-x86b, not merged here) — not instantiated yet (no AVX-512 every-count proof on this branch).
+* The x86 core in the checking workspace `/root/kt-inplace/x86` is that of `/root/kt-diff/ws`
+  (`Iter.lean`/`Tools.lean` of all-x86); the in-place files do not depend on the difference.
+  RISC-V was checked in `/root/kt-inplace/rv` with this branch's core.
+* Segment sizes: one body slice of rv64_x1 needs ~13 GB (`decide`/`bv_decide` of the kernel agents'
+  segment, not of the in-place summaries).
 
 ### Audit
 `inplaceaudit <Kernel>` on `/root/kt-diff` (memory compacted every 256 steps):
