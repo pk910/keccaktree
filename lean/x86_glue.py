@@ -543,19 +543,7 @@ theorem body_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVe
     assert all(lens[n] == LBa for n in ba_names)
     LI = 16 + LBa + lens['Bb']
     H, C = A['H'], A['C']
-    # the counts at the loop head that no call reaches (masked counts handed to another kernel before the batch,
-    # and their predecessors): a dispatch after a batch from such a count is excluded by `hE` (avx2_x6: 9, 15)
-    U = []
-    if UNREACH:
-        seen = set()
-        for c_, r_ in X.paths(kernel, A['maxc']).items():
-            v = sum(1 for pc_ in r_.get('path', []) if pc_ == H)
-            seen |= {c_ - N * j for j in range(v)}
-        U = [v for v in range(N, A['maxc'] + 1) if v not in seen]
-        print('unreachable loop-head counts:', U)
-    def hE_t(kexpr):
-        return ' ∧ '.join(f'c - {N} * {kexpr} ≠ {v}' for v in U)
-    HE_ARG = ' (by omega)' if U else ''
+
     w(f"""
 /-- Steps per loop iteration (control, body). -/
 def LI : Nat := {LI}
@@ -715,6 +703,32 @@ def XM : Nat := {XM}
             out.extend(sub)
         return out
 
+    # the counts at the loop head that no call reaches (masked counts handed to another kernel before the batch,
+    # and their predecessors): a dispatch after a batch from such a count is excluded by `hE` (avx2_x6: 9, 15).
+    # Only a suggestion: every case of the dispatch that continues to the loop head proves `hE` for the next
+    # iteration by `omega` from its literal count, and the entry does the same for the first one.
+    U = []
+    if UNREACH:
+        seen = set()
+        for c_ in range(A['maxc'] + 1):
+            ch_ = FrChain(prog, rodata, 'x', [], 0)
+            ch_.vals = {2: Val('c', c_)}; ch_.pc = entry
+            tail_ = False
+            while X.fr_step(prog, rodata, ch_.pc, {k_: v_.rep for k_, v_ in ch_.vals.items()}, bool(ch_.zf), bool(ch_.cf)) is not None:
+                if ch_.step()[0] == 'tail':
+                    tail_ = True; break
+            if tail_ or ch_.pc != A['P0']:
+                continue
+            v = c_; pcs = path_from(A['G'], v, H)
+            while pcs[-1] == H and v >= N:
+                seen.add(v)
+                v -= N
+                pcs = path_from(C, v + N, H)
+        U = [v for v in range(N, A['maxc'] + 1) if v not in seen]
+        print('unreachable loop-head counts:', U)
+    def hE_t(kexpr):
+        return ' ∧ '.join(f'c - {N} * {kexpr} ≠ {v}' for v in U)
+    HE_ARG = ' (by omega)' if U else ''
     # afterB_step: the loop control, with the continuation as a hypothesis
     L.append(f"""set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
