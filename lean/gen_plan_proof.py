@@ -41,6 +41,11 @@ def run(*args, ctl=()):
     return subprocess.run([KT] + [str(a) for a in args], capture_output=True, text=True, check=True, env=env).stdout
 
 
+# round-constant matches at general registers and stack cells are dropped for the kernels that read the round
+# constants from memory only (AVX2, x86_x1); the AVX-512 kernels keep theirs.  DROP_RC=0/1 overrides.
+DROP_RC = None
+
+
 def matches(kernel, count, steps, lanes, rnd_of, region_filter=None, regs_only=False):
     """the labelled locations after `steps` steps: node `n` is expected at round `rnd_of[n]`"""
     out = run('matches', kernel, count, steps, lanes)
@@ -52,10 +57,18 @@ def matches(kernel, count, steps, lanes, rnd_of, region_filter=None, regs_only=F
             if region_filter is not None: continue
             n_, node, round_, kind, rot = mg.groups()
             if int(round_) != rnd_of[int(node)]: continue
+            if DROP_RC and 75 <= int(kind) < 99:
+                # the AVX2 kernels and x86_x1 apply the round constants from memory (`vpxor`/`xor` with [RCP + rc]),
+                # never from a general register: a "round constant" there is a coincidence (a pointer `1 << 56`,
+                # a count 8 = RC0 rol 3)
+                continue
             alloc.append((int(node), int(kind), f'(gdVar {n_})', int(rot), ln)); continue
         if not m: continue
         kind_loc, a, b, node, round_, kind, rot = m.groups()
         if int(round_) != rnd_of[int(node)]: continue
+        if DROP_RC and kind_loc == 'mem' and int(a) == 3 and 75 <= int(kind) < 99:
+            # likewise a stack cell equal to a rotated round constant (the spilled count 8 = RC0 rol 3)
+            continue
         if kind_loc == 'reg':
             if region_filter is not None: continue
             var = f'(regVar {a} {b})'
@@ -81,7 +94,10 @@ def control_at(kernel, count, steps, lanes):
     g = re.sub(r'⟨(\d+), \((-?\d+)\)⟩', r'(Addr.mk \1 (\2))', m.group(1))
     halted = m.group(10) or 'false'
     tail = (m.group(11) or '').strip('"')
-    return g, m.group(2), m.group(3), m.group(4), m.group(5), m.group(6), int(m.group(7)), int(m.group(8)), int(m.group(9)), halted, tail
+    zf, cf = m.group(3), m.group(4)
+    if FLAGS and steps < HEAL:
+        zf, cf = FLAGS
+    return g, m.group(2), zf, cf, m.group(5), m.group(6), int(m.group(7)), int(m.group(8)), int(m.group(9)), halted, tail
 
 
 def slice_lits(kernel, count, a, b, ctl=(), cells=()):
@@ -90,6 +106,14 @@ def slice_lits(kernel, count, a, b, ctl=(), cells=()):
     out = subprocess.run([KT, 'slice', kernel, str(count), str(a), str(b)], capture_output=True, text=True, check=True, env=env).stdout
     ctl = [int(x) for x in re.findall(r'\d+', re.search(r'^CTL (.*)$', out, re.M).group(1))]
     sc = re.search(r'^SC (.*)$', out, re.M).group(1)
+    if K1 is not None and a == PLAN['entry']:
+        # mask register k1 at the segment's start (written by the batch's `kmovw k1` before any masked move)
+        sc, n = re.subn(r'#v\[(\d+), (\d+), ((?:\d+, )*\d+)\] (true|false) (true|false) ', lambda m: f'#v[{m.group(1)}, {K1}, {m.group(3)}] {m.group(4)} {m.group(5)} ', sc, count=1)
+        assert n == 1, sc[-300:]
+    if FLAGS and a < HEAL:
+        # the segment is proved for these flags at its start (they are dead until the first flag write, HEAL)
+        sc, n = re.subn(r'(#v\[[0-9, ]*\]) (true|false) (true|false) ', lambda m: f'{m.group(1)} {FLAGS[0]} {FLAGS[1]} ', sc, count=1)
+        assert n == 1, sc[-300:]
     idx = re.search(r'^IDX (.*)$', out, re.M).group(1)
     trees = {}
     for m in re.finditer(r'^VAR (\d+) (.*)$', out, re.M):
@@ -219,7 +243,7 @@ where rndSlice (c : Nat) : Nat := ''' + f'''match c with
 ''')
         for c in range(K + 1):
             doc = f'The locations at bound {c}' if c < K else 'The output locations at the end of the plan'
-            if len(allocs[c]) > 200:
+            if len(allocs[c]) > 200 or len(allocs[c]) + len(chyps[c]) > 250:
                 f.write('set_option maxRecDepth 100000 in\n')
             f.write(f'/-- {doc} (for states `A n` of the nodes). -/\n')
             conjs = [f'env {var} = {quantity(node, kind)}.rotateLeft {rot}' for node, kind, var, rot, _ in allocs[c]] + [h for (_, _, h) in chyps[c]]
@@ -430,6 +454,9 @@ theorem noptr{c} : locs{c + 1}.all (fun v => (readVar result{c} v).noPtr) = true
 
 ''')
         mv = [(MOVE_PATHS[m][c + 1], MOVE_PATHS[m][c]) for m in range(len(MOVES))]
+        if COUNT_LOCS and (258, 258) in MOVES:
+            mv = [(COUNT_LOCS[c + 1], COUNT_LOCS[c]) if (d, s_) == (258, 258) else p_
+                  for p_, (d, s_) in zip(mv, MOVES)]
         out.write('set_option maxRecDepth 100000 in\n/-- The moved/kept words of the slice. -/\n')
         out.write(f'theorem moves{c} : ({mv} : List (Nat × Nat)).all (fun p => readVar result{c} p.1 == .var p.2) = true := by decide +kernel\n\n')
     out.write(f'end Keccaktree.Kernels.{ns}\n')
@@ -484,22 +511,32 @@ theorem rounds_succ (r : Nat) (X : Spec.State) : Spec.round r (Spec.rounds r X) 
   simp only [Spec.rounds, Spec.memo_eq]
 
 ''')
+        nodes_ = [int(x) for x in os.environ.get('NODES', '').split(',') if x] or list(range(count))
         for n in range(count):
-            if PLAN['rounds'][0][n] != 0:
-                continue   # a segment starting mid-way: `A n` is not the absorbed state
-            f.write(f'''set_option maxRecDepth 100000 in
+            r0n = PLAN['rounds'][0][n]
+            if r0n != 0 and n not in nodes_:
+                continue
+            if r0n == 0:
+                f.write(f'''set_option maxRecDepth 100000 in
 theorem aat_{n} (A : Fin {count} → Spec.State) : AAt A {K} ⟨{n}, by decide⟩ = Spec.rounds {rounds_end[n]} (A ⟨{n}, by decide⟩) := by
   have h0 : AAt A 0 ⟨{n}, by decide⟩ = Spec.rounds 0 (A ⟨{n}, by decide⟩) := rfl
+''')
+            else:
+                # a segment starting mid-way: node `n` starts at round {r0n} of some absorbed state `X n`
+                f.write(f'''set_option maxRecDepth 100000 in
+theorem aat_{n} (X A : Fin {count} → Spec.State) (hA : A ⟨{n}, by decide⟩ = Spec.rounds {r0n} (X ⟨{n}, by decide⟩)) :
+    AAt A {K} ⟨{n}, by decide⟩ = Spec.rounds {rounds_end[n]} (X ⟨{n}, by decide⟩) := by
+  have h0 : AAt A 0 ⟨{n}, by decide⟩ = Spec.rounds {r0n} (X ⟨{n}, by decide⟩) := hA
 ''')
             for c in range(K):
                 r0, r1 = PLAN['rounds'][c][n], PLAN['rounds'][c + 1][n]
                 if r1 == r0 + 1:
-                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} (A ⟨{n}, by decide⟩) := by
+                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} ({'A' if r0n == 0 else 'X'} ⟨{n}, by decide⟩) := by
     show sched (AAt A {c}) {c} ⟨{n}, by decide⟩ = _
     rw [sched_act (AAt A {c}) {c} ⟨{n}, by decide⟩ (by decide), h{c}, show sched.rndSlice {c} = {r0} from rfl, rounds_succ]
 ''')
                 else:
-                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} (A ⟨{n}, by decide⟩) := by
+                    f.write(f'''  have h{c + 1} : AAt A {c + 1} ⟨{n}, by decide⟩ = Spec.rounds {r1} ({'A' if r0n == 0 else 'X'} ⟨{n}, by decide⟩) := by
     show sched (AAt A {c}) {c} ⟨{n}, by decide⟩ = _
     rw [sched_nact (AAt A {c}) {c} ⟨{n}, by decide⟩ (by decide), h{c}]
 ''')
@@ -809,25 +846,148 @@ theorem seg_frame {hyps}
     (segAt{K} S0).mem r q = S0.mem r q := by
   have s0 := (cert0).step ρ hρ hw S0 hc hs
 {chain}""" + ''.join(f"""  have m{c + 1} : (segAt{c + 1} S0).mem r q = {at(c)}.mem r q := by
-    show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _
-    rw [s{c}.2.1]
+    {(f"rw [show segAt{c + 1} S0 = {ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)} from rfl, s{c}.2.1]" if ISA == 'X86' else f"show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _" + chr(10) + f"    rw [s{c}.2.1]")}
     apply (cert{c}).frame {FOOT_EXPR} ρ {at(c)} {'hc' if c == 0 else f's{c - 1}.2.2.2'} r q
     intro hm
     have := List.all_eq_true.mp writes{c} _ hm
     exact absurd (hq.symm.trans this) (by decide)
 """ for c in range(K)) + f"""  rw [""" + ', '.join(f'm{c}' for c in range(K, 0, -1)) + f"""]
 
-""" + (seg_moves_text() if MOVES else '') + (seg_flags_text() if FLAG_OBL else '') + f"""end Keccaktree.Kernels.{ns}
+""" + (seg_moves_text() if MOVES and not (COUNT_LOCS and (258, 258) in MOVES) else '')
+       + (seg_count_text() if COUNT_LOCS and (258, 258) in MOVES else '') + (seg_flags_text() if FLAG_OBL else '')
+       + (seg_facts_text() if ISA == 'X86' else '') + f"""end Keccaktree.Kernels.{ns}
 """)
 
 
 def seg_file_imports():
     """the imports of Seg.lean after the batch module.  AArch64: its footprint module and the flags module
     line (empty without FLAG_OBL; kept so the proved AArch64 segments regenerate byte-identically); x86 and
-    RISC-V: `Iter` (the footprint comes with the slices), plus the flags module with FLAG_OBL."""
+    RISC-V: `Iter` (the footprint comes with the slices), plus `X86Kernel` for x86 (`SegFacts`) and the flags
+    module with FLAG_OBL."""
     if ISA == 'Arm':
         return f'import {SEG_IMPORT}\n{FLAG_IMPORT}\n'
-    return 'import Keccaktree.Asm.Iter\n' + (FLAG_IMPORT + '\n' if FLAG_IMPORT else '')
+    return ('import Keccaktree.Asm.Iter\n' + ('import Keccaktree.Asm.X86Kernel\n' if ISA == 'X86' else '')
+            + (FLAG_IMPORT + '\n' if FLAG_IMPORT else ''))
+
+
+def seg_facts_text():
+    """the segment as a `SegFacts` bundle (and the count register kept, when it is a moved word)"""
+    t = f"""set_option maxRecDepth 100000 in
+/-- The segment, bundled. -/
+def facts : X86K.SegFacts rodata prog where
+  ctl0 := ctl0
+  sc0 := sc0
+  ctlK := ctl{K}
+  scK := sc{K}
+  len := segLen
+  wok := ({WRITE_OK})
+  run := fun ρ hρ hw S0 hc hs => by
+    obtain ⟨h1, h2, h3⟩ := seg_run ρ hρ hw S0 hc hs
+    rw [h1]; exact ⟨h2, h3⟩
+  frame := fun ρ hρ hw S0 hc hs r q hq => by
+    rw [(seg_run ρ hρ hw S0 hc hs).1]; exact seg_frame ρ hρ hw S0 hc hs r q hq
+
+"""
+    if (258, 258) in MOVES and COUNT_LOCS and (COUNT_LOCS[0], COUNT_LOCS[K]) != (258, 258):
+        l0, lK = COUNT_LOCS[0], COUNT_LOCS[K]
+        def side(v):
+            return '258' if v == 258 else f'(ρ.var {v})'
+        rws = '  rw [Reloc.var_lt ρ 258 (by decide)] at this\n' if 258 in (l0, lK) else ''
+        t += f"""/-- The count register is carried through the segment: it is saved to / restored from the stack cell
+`{l0 if l0 != 258 else lK}` (the batch uses `rdx` for its scalar node). -/
+theorem facts_rdx (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
+    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :
+    envOf (X86.isa.run rodata prog segLen S0) {side(lK)} = envOf S0 {side(l0)} := by
+  have := seg_count ρ hρ hw S0 hc hs
+{rws}  rw [(seg_run ρ hρ hw S0 hc hs).1]; exact this
+
+"""
+    elif (258, 258) in MOVES:
+        t += f"""/-- The count register is carried through the segment. -/
+theorem facts_rdx (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
+    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :
+    envOf (X86.isa.run rodata prog segLen S0) 258 = envOf S0 258 := by
+  have := seg_moves ρ hρ hw S0 hc hs 258 258 (by simp)
+  rw [Reloc.var_lt ρ 258 (by decide)] at this
+  rw [(seg_run ρ hρ hw S0 hc hs).1]; exact this
+
+"""
+    return t
+
+
+def seg_count_text():
+    """seg_count: the count's location at the segment's end holds what its location at the start held"""
+    def at(c):
+        return 'S0' if c == 0 else '(segAt%d S0)' % c
+    L = []
+    L.append('set_option maxRecDepth 100000 in')
+    L.append('set_option maxHeartbeats 40000000 in')
+    L.append('/-- **The count**, followed through the stack cell the batch saves it to. -/')
+    L.append('theorem seg_count (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))')
+    L.append('    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :')
+    L.append('    envOf (segAt%d S0) (ρ.var %d) = envOf S0 (ρ.var %d) := by' % (K, COUNT_LOCS[K], COUNT_LOCS[0]))
+    L.append('  have s0 := (cert0).step ρ hρ hw S0 hc hs')
+    for c in range(1, K):
+        L.append('  have s%d := (cert%d).step ρ hρ hw %s s%d.2.2.2 s%d.2.2.1' % (c, c, at(c), c - 1, c - 1))
+    for c in range(K):
+        d, src = COUNT_LOCS[c + 1], COUNT_LOCS[c]
+        L.append('  have v%d : envOf (segAt%d S0) (ρ.var %d) = envOf %s (ρ.var %d) := by' % (c + 1, c + 1, d, at(c), src))
+        L.append('    have hm : readVar result%d %d = .var %d := by' % (c, d, src))
+        L.append('      have := List.all_eq_true.mp moves%d (%d, %d) (by simp)' % (c, d, src))
+        L.append('      simpa using this')
+        L.append('    show envOf (%s.execTrace rodata (cert%d).slice %s) (ρ.var %d) = _' % (ISA_EXPR, c, at(c), d))
+        L.append('    rw [s%d.2.1, (cert%d).data ρ hρ %s %d (by show (readVar result%d %d).noPtr = true; rw [hm]; rfl)]' % (c, c, at(c), d, c, d))
+        L.append('    show E.eval _ (readVar result%d %d) = _' % (c, d))
+        L.append('    rw [hm]; rfl')
+    L.append('  rw [%s]' % ', '.join('v%d' % c for c in range(K, 0, -1)))
+    L.append('')
+    return '\n'.join(L) + '\n'
+
+
+def count_locs(kernel, count, bounds):
+    """where the count (rdx) lives at each bound: 258, or the stack cell a batch saves it to
+    (`storeq [base + D], rdx` ... `loadq rdx, [base + D]`, e.g. the 5-node kernels whose scalar node uses rdx)"""
+    txt = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            f'Keccaktree/Kernels/{PROG_NS or NSDIR}/Program.lean')).read()
+    body = txt[txt.index('def prog'):]
+    prog = {}
+    for ln in body[:body.index('\n]')].splitlines():
+        m = re.match(r'^\s+(\..*?),?\s+-- (\d+)$', ln)
+        if m: prog[int(m.group(2))] = m.group(1).rstrip(',')
+    st = {pc: (int(m.group(1)), int(m.group(2))) for pc, i in prog.items()
+          for m in [re.match(r'^\.storeq \(\.base (\d+) \((-?\d+)\)\) 2$', i)] if m}
+    ld = {pc: (int(m.group(1)), int(m.group(2))) for pc, i in prog.items()
+          for m in [re.match(r'^\.loadq 2 \(\.base (\d+) \((-?\d+)\)\)$', i)] if m}
+    if not st:
+        return None
+    out = run('paths', kernel, count, 2000000, 0)
+    path = None
+    for ln in out.splitlines():
+        m = re.match(r'^PATH (\d+) \[(.*)\]$', ln)
+        if m and int(m.group(1)) == count:
+            path = [int(x) for x in m.group(2).split(', ')] if m.group(2) else []
+    assert path is not None
+    def cell_at(step, bd):
+        o = run('matches', kernel, count, step, 0)
+        gd = re.search(r'gd=\[(.*?)\]', o).group(1).split(', ')
+        w = int(gd[bd[0]].replace('#64', ''), 16)
+        reg, off = w >> 56, (w & ((1 << 56) - 1)) + bd[1]
+        assert off % 8 == 0
+        q = off // 8
+        return 288 + 8 * (2 * q if q >= 0 else 2 * (-q) - 1) + reg
+    locs, loc, cells = [], 258, {}
+    for c, b in enumerate(bounds):
+        for t in range(bounds[c - 1] if c else 0, b):
+            pc = path[t]
+            if pc in st and loc == 258:
+                # rdx holds the count: saved (later stores of rdx spill the scalar node's data, not the count)
+                if st[pc] not in cells:
+                    cells[st[pc]] = cell_at(t, st[pc])
+                loc = cells[st[pc]]
+            elif pc in ld and loc != 258 and cells.get(ld[pc]) == loc:
+                loc = 258
+        locs.append(loc)
+    return locs
 
 
 def seg_moves_text():
@@ -974,7 +1134,12 @@ def move_paths(kernel, count, bounds):
 
 
 ALLOC_END = []
+COUNT_LOCS = None
+NSDIR = None
 SEG = bool(os.environ.get('SEG'))
+FLAGS = os.environ.get('FLAGS', '').split(',') if os.environ.get('FLAGS') else None   # zf,cf override at the start
+HEAL = int(os.environ.get('HEAL', '0'))
+K1 = int(os.environ['K1']) if os.environ.get('K1') else None   # k1 override at the segment's start   # the override applies to states before this step
 END_CTL = [int(x) for x in os.environ.get('END_CTL', '').split(',') if x]
 FORBID_CTL = [int(x) for x in os.environ.get('FORBID_CTL', '').split(',') if x]
 START_CTL = [int(x) for x in os.environ.get('START_CTL', '').split(',') if x]
@@ -993,6 +1158,9 @@ MOVE_PATHS = []                   # the address bound of the relocation certific
 def main():
     global PLAN, K, ALLOC_END
     kernel, nsdir, count, lanes = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+    global DROP_RC
+    DROP_RC = (os.environ['DROP_RC'] == '1') if 'DROP_RC' in os.environ else \
+        (ISA == 'X86' and kernel.startswith(('avx2_', 'x86_x1')))
     ns = os.environ.get('NS', nsdir)
     PLAN = json.load(open(os.environ['PLAN']))
     only_node = int(os.environ.get('ONLY_NODE', '-1'))
@@ -1005,10 +1173,20 @@ def main():
     assert all(len(r) == count for r in PLAN['rounds'])
     slices = os.environ.get('SLICES')
     slices = [] if slices == 'none' else ([int(x) for x in slices.split(',')] if slices else list(range(K)))
+    global COUNT_LOCS, NSDIR
+    NSDIR = nsdir
+    if (258, 258) in MOVES and ISA == 'X86':
+        COUNT_LOCS = count_locs(kernel, count, bounds)
+        if COUNT_LOCS and all(v == 258 for v in COUNT_LOCS):
+            COUNT_LOCS = None
+        print(f'count locations: {COUNT_LOCS}', file=sys.stderr)
     CTLS.update(find_ctls(kernel, count, bounds))
     print(f'control words per slice: {[CTLS[c] for c in range(K)]}', file=sys.stderr)
     MOVE_PATHS[:] = move_paths(kernel, count, bounds)
     allocs = {}
+    # NODES (x86): the nodes the plan tracks (default all); the others are not hashed in the plan (a segment
+    # after earlier batches, e.g. the exit of a kernel's loop with the remaining nodes)
+    nodes = [int(x) for x in os.environ.get('NODES', '').split(',') if x] or list(range(count))
 
     def alloc_at(c, mode):
         # the invariant's locations at bound c: 'input' (the input words), 'out' (matches in the output region),
@@ -1027,16 +1205,32 @@ def main():
         # at a segment's ends (non-default modes) round constants are never live: a word that merely equals one
         # (a pointer, a count, the constant lane 8) is not claimed
         return al if mode in ('input', 'out') else [h for h in al if not (75 <= h[1] < 99)]
-    allocs[0] = no_rc(alloc_at(0, os.environ.get('INV0', 'input')), os.environ.get('INV0', 'input'))
+    # start / end invariants: INV0 / INVK (rvu) when set; otherwise the input words of the tracked nodes (or, for
+    # a segment starting mid-way, the matches then) and the output region (or every match, ending mid-way) (x86;
+    # = 'input' / 'out' for a plan starting at round 0 and ending at round 24)
+    if 'INV0' in os.environ:
+        allocs[0] = no_rc(alloc_at(0, os.environ['INV0']), os.environ['INV0'])
+    elif all(PLAN['rounds'][0][n] == 0 for n in nodes):
+        allocs[0] = [(n, w, mem_var(1, 8 * n + w), 0, f'input word {w} of node {n}') for n in nodes for w in range(8)]
+    else:
+        # a segment starting mid-way (e.g. after the first flag write of a batch): the locations then
+        allocs[0] = matches(kernel, count, bounds[0], lanes, PLAN['rounds'][0])
     for c in range(1, K):
         allocs[c] = matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c])
         if os.environ.get('NO_RC_MID'):
             # round constants are loaded and used within a round: a word that merely equals one at a cut (a pointer
             # or count kept as data, e.g. the misaligned input pointer) is not claimed
             allocs[c] = [h for h in allocs[c] if not (75 <= h[1] < 99)]
-    allocs[K] = no_rc(alloc_at(K, os.environ.get('INVK', 'out')), os.environ.get('INVK', 'out'))
+    if 'INVK' in os.environ:
+        allocs[K] = no_rc(alloc_at(K, os.environ['INVK']), os.environ['INVK'])
+    elif all(PLAN['rounds'][K][n] == 24 for n in nodes):
+        allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K], region_filter=2)
+    else:
+        allocs[K] = matches(kernel, count, bounds[K], lanes, PLAN['rounds'][K])
+    for c in range(0, K + 1):
+        allocs[c] = [h for h in allocs[c] if h[0] in nodes]
     ALLOC_END = allocs[K]
-    chyps = {c: const_hyps([n for n in range(count) if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}
+    chyps = {c: const_hyps([n for n in nodes if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}
     if os.environ.get('DATA') == '0':
         # a segment without data claims (frame code): no lane invariants
         allocs = {c: [] for c in range(K + 1)}
