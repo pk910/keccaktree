@@ -178,4 +178,17 @@ theorem words_of_bytes (mo off : Nat) (S S' : State (BitVec 64))
   rw [← byteAt_word _ q t ht, ← byteAt_word _ q t ht]
   exact h _ (by push_cast; omega)
 
+/-- An aligned all-count theorem (`LibRv.NormThmRv`, no tail calls) is the misaligned one at byte offsets 0. -/
+theorem normU_zero (V : Nat) (rodata : Array (BitVec 64)) (prog : Array Riscv.Instr) (entry : Nat) (steps : Nat → Nat → Nat)
+    (h : LibRv.NormThmRv V rodata prog entry steps []) : NormThmRvU V 0 0 rodata prog entry steps := by
+  intro off count input S hE hb hpc
+  have hE' : EntryR off count input S := ⟨hE.ctrl, hE.ok, hE.a2, hE.sp,
+    hE.a1.trans (congrArg (fun o => gprWord ⟨rInput, o⟩) (by push_cast; omega)),
+    hE.a0.trans (congrArg (fun o => gprWord ⟨rOutput, o⟩) (by push_cast; omega)), hE.inp⟩
+  obtain ⟨hh, he, hp, hout⟩ := h off count input S hE' hb hpc
+  refine ⟨hh, he, hp, ?_⟩
+  rcases hout with ⟨ht, hd⟩ | ⟨_, _, _, hm, _⟩
+  · exact Or.inl ⟨ht, fun n hn => (digestB_zero input _ (off + n)).mpr (hd n hn)⟩
+  · exact absurd hm List.not_mem_nil
+
 end Keccaktree.Kernels.LibRvU

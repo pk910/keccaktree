@@ -26,8 +26,8 @@ json.dump(body, open(f"plans/{k}_m{w}.json", "w"))
 PY
   rm -rf Keccaktree/Kernels/$ns/GenM$w
   PLAN=plans/${k}_m$w.json OUTDIR=Keccaktree/Kernels/$ns/GenM$w GEN=GenM$w NS=$ns.GenM$w PROG_NS=$pns ISA=Riscv \
-    ISA_EXPR="(Riscv.isa $V)" BATCH=1 SEG=1 START_CTL=286 END_CTL=258,261 FORBID_CTL=266,267,268,273 \
-    WRITE_OK="fun _ => false" MOVES=266:266,267:267,268:268,273:273 INV0=mem3 INVK=regs \
+    ISA_EXPR="(Riscv.isa $V)" BATCH=1 SEG=1 START_CTL=286 END_CTL=258,261,286 FORBID_CTL=266,267,268,273 \
+    WRITE_OK="fun _ => false" MOVES=266:266,267:267,268:268,273:273 INV0=mem3 INVK=regs NO_RC_MID=1 \
     python3 gen_plan_proof.py $k $ns $w $V > plans/gen_${k}_m$w.log 2>&1 || { echo "GenM$w FAILED"; tail -5 plans/gen_${k}_m$w.log; }
   echo "GenM$w: $(grep 'control words' plans/gen_${k}_m$w.log | cut -c1-160)"
 done

@@ -907,6 +907,10 @@ def main():
     allocs[0] = no_rc(alloc_at(0, os.environ.get('INV0', 'input')), os.environ.get('INV0', 'input'))
     for c in range(1, K):
         allocs[c] = matches(kernel, count, bounds[c], lanes, PLAN['rounds'][c])
+        if os.environ.get('NO_RC_MID'):
+            # round constants are loaded and used within a round: a word that merely equals one at a cut (a pointer
+            # or count kept as data, e.g. the misaligned input pointer) is not claimed
+            allocs[c] = [h for h in allocs[c] if not (75 <= h[1] < 99)]
     allocs[K] = no_rc(alloc_at(K, os.environ.get('INVK', 'out')), os.environ.get('INVK', 'out'))
     ALLOC_END = allocs[K]
     chyps = {c: const_hyps([n for n in range(count) if PLAN['rounds'][c][n] == 0]) for c in range(K + 1)}

@@ -390,6 +390,10 @@ theorem or_lt8 (mi mo : Nat) (hmi : mi < 8) (hmo : mo < 8) : (mi ||| mo) < 8 := 
   have := Nat.or_lt_two_pow (n := 3) (show mi < 2 ^ 3 by omega) (show mo < 2 ^ 3 by omega)
   simpa using this
 
+theorem or_pos (mi mo : Nat) (hmi : mi < 8) (hmo : mo < 8) (h : ¬ (mi = 0 ∧ mo = 0)) : 0 < mi ||| mo := by
+  rcases cases8 mi hmi with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  rcases cases8 mo hmo with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp_all
+
 theorem num_wf (x : Int) (h0 : 0 ≤ x) (h1 : x < 2 ^ 55) : (⟨0, x⟩ : Addr).wf := ⟨h0, h1⟩
 
 theorem setR0 (S : State (BitVec 64)) (x : BitVec 64) : setR S 0 x = S := by simp [setR]
@@ -718,6 +722,12 @@ theorem batchM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr}
       have e2 : (((mo : Int) + 32 * ((off + n : Nat) : Int) + (t' : Int) - ((mo : Int) + 32 * ((off + j : Nat) : Int))) % 8).toNat
           = t' % 8 := by push_cast; omega
       rw [e0, e1, e2, absorbNode_keccak, squeezeByte_eq]
+
+theorem envOf_regVar (S : State (BitVec 64)) (r l : Nat) (hr : r < 32) (hl : l < 8) :
+    envOf S (regVar r l) = Riscv.lane S r l := by
+  unfold envOf regVar
+  rw [if_pos (by omega), show (8 * r + l) / 8 = r by omega, show (8 * r + l) % 8 = l by omega]
+  rfl
 
 /-! ## Entry, exit and the loop -/
 
