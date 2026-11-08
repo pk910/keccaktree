@@ -303,7 +303,7 @@ def gen_segments(kernel, patch=None):
     # ---- exits
     ex_ctl = {}
     only_exits = [x for x in os.environ.get('ONLY_EXITS', '').split(',') if x]
-    for ex in (A['exits'] if os.environ.get('ONLY') != 'Bb' else []):
+    for ex in (A['exits'] if os.environ.get('ONLY') not in ('Bb', 'B') else []):
         if only_exits and ex['name'] not in only_exits:
             continue
         if os.environ.get('SKIP_EXITS'):
@@ -374,8 +374,10 @@ def gen_segments(kernel, patch=None):
         out = subprocess.run([KT, 'matches', kernel, str(2 * N), str(tC), '0'], capture_output=True, text=True, check=True).stdout
         kmask = int(re.search(r'^CONTROL .* k=\[(.*?)\]', out, re.M).group(1).split(',')[1])
     pl = find_plan(kernel, 2 * N, patch=patch)
-    if os.environ.get('ONLY') == 'Bb':
+    if os.environ.get('ONLY') in ('Bb', 'B'):
+        # body (and prologue) only: the exits' start control words from the earlier generation
         ex_ctl = {k_: v['ctl0'] for k_, v in A['segments'].items() if k_.startswith('X')}
+        info.update({k_: v for k_, v in A['segments'].items() if k_.startswith('X')})
     need_x = set(v for ctl in ex_ctl.values() for v in ctl) - countregs
     b_end = set(need_x)
     only_bb = os.environ.get('ONLY') == 'Bb'

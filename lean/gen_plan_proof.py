@@ -439,6 +439,9 @@ theorem noptr{c} : locs{c + 1}.all (fun v => (readVar result{c} v).noPtr) = true
 
 ''')
         mv = [(d, (s_ if c == 0 else d)) for (d, s_) in MOVES]
+        if COUNT_LOCS and (258, 258) in MOVES:
+            mv = [(COUNT_LOCS[c + 1], COUNT_LOCS[c]) if (d, s_) == (258, 258) else p_
+                  for p_, (d, s_) in zip(mv, MOVES)]
         out.write('set_option maxRecDepth 100000 in\n/-- The moved/kept words of the slice. -/\n')
         out.write(f'theorem moves{c} : ({mv} : List (Nat × Nat)).all (fun p => readVar result{c} p.1 == .var p.2) = true := by decide +kernel\n\n')
     out.write(f'end Keccaktree.Kernels.{ns}\n')
@@ -838,7 +841,8 @@ theorem seg_frame {hyps}
     exact absurd (hq.symm.trans this) (by decide)
 """ for c in range(K)) + f"""  rw [""" + ', '.join(f'm{c}' for c in range(K, 0, -1)) + f"""]
 
-""" + (seg_moves_text() if MOVES else '') + seg_facts_text() + f"""end Keccaktree.Kernels.{ns}
+""" + (seg_moves_text() if MOVES and not (COUNT_LOCS and (258, 258) in MOVES) else '')
+       + (seg_count_text() if COUNT_LOCS and (258, 258) in MOVES else '') + seg_facts_text() + f"""end Keccaktree.Kernels.{ns}
 """)
 
 
@@ -860,7 +864,21 @@ def facts : X86K.SegFacts rodata prog where
     rw [(seg_run ρ hρ hw S0 hc hs).1]; exact seg_frame ρ hρ hw S0 hc hs r q hq
 
 """
-    if (258, 258) in MOVES:
+    if (258, 258) in MOVES and COUNT_LOCS and (COUNT_LOCS[0], COUNT_LOCS[K]) != (258, 258):
+        l0, lK = COUNT_LOCS[0], COUNT_LOCS[K]
+        def side(v):
+            return '258' if v == 258 else f'(ρ.var {v})'
+        rws = '  rw [Reloc.var_lt ρ 258 (by decide)] at this\n' if 258 in (l0, lK) else ''
+        t += f"""/-- The count register is carried through the segment: it is saved to / restored from the stack cell
+`{l0 if l0 != 258 else lK}` (the batch uses `rdx` for its scalar node). -/
+theorem facts_rdx (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
+    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :
+    envOf (X86.isa.run rodata prog segLen S0) {side(lK)} = envOf S0 {side(l0)} := by
+  have := seg_count ρ hρ hw S0 hc hs
+{rws}  rw [(seg_run ρ hρ hw S0 hc hs).1]; exact this
+
+"""
+    elif (258, 258) in MOVES:
         t += f"""/-- The count register is carried through the segment. -/
 theorem facts_rdx (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
     (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :
@@ -871,6 +889,81 @@ theorem facts_rdx (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (Bit
 
 """
     return t
+
+
+def seg_count_text():
+    """seg_count: the count's location at the segment's end holds what its location at the start held"""
+    def at(c):
+        return 'S0' if c == 0 else '(segAt%d S0)' % c
+    L = []
+    L.append('set_option maxRecDepth 100000 in')
+    L.append('set_option maxHeartbeats 40000000 in')
+    L.append('/-- **The count**, followed through the stack cell the batch saves it to. -/')
+    L.append('theorem seg_count (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))')
+    L.append('    (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :')
+    L.append('    envOf (segAt%d S0) (ρ.var %d) = envOf S0 (ρ.var %d) := by' % (K, COUNT_LOCS[K], COUNT_LOCS[0]))
+    L.append('  have s0 := (cert0).step ρ hρ hw S0 hc hs')
+    for c in range(1, K):
+        L.append('  have s%d := (cert%d).step ρ hρ hw %s s%d.2.2.2 s%d.2.2.1' % (c, c, at(c), c - 1, c - 1))
+    for c in range(K):
+        d, src = COUNT_LOCS[c + 1], COUNT_LOCS[c]
+        L.append('  have v%d : envOf (segAt%d S0) (ρ.var %d) = envOf %s (ρ.var %d) := by' % (c + 1, c + 1, d, at(c), src))
+        L.append('    have hm : readVar result%d %d = .var %d := by' % (c, d, src))
+        L.append('      have := List.all_eq_true.mp moves%d (%d, %d) (by simp)' % (c, d, src))
+        L.append('      simpa using this')
+        L.append('    show envOf (%s.execTrace rodata (cert%d).slice %s) (ρ.var %d) = _' % (ISA_EXPR, c, at(c), d))
+        L.append('    rw [s%d.2.1, (cert%d).data ρ hρ %s %d (by show (readVar result%d %d).noPtr = true; rw [hm]; rfl)]' % (c, c, at(c), d, c, d))
+        L.append('    show E.eval _ (readVar result%d %d) = _' % (c, d))
+        L.append('    rw [hm]; rfl')
+    L.append('  rw [%s]' % ', '.join('v%d' % c for c in range(K, 0, -1)))
+    L.append('')
+    return '\n'.join(L) + '\n'
+
+
+def count_locs(kernel, count, bounds):
+    """where the count (rdx) lives at each bound: 258, or the stack cell a batch saves it to
+    (`storeq [base + D], rdx` ... `loadq rdx, [base + D]`, e.g. the 5-node kernels whose scalar node uses rdx)"""
+    txt = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            f'Keccaktree/Kernels/{PROG_NS or NSDIR}/Program.lean')).read()
+    body = txt[txt.index('def prog'):]
+    prog = {}
+    for ln in body[:body.index('\n]')].splitlines():
+        m = re.match(r'^\s+(\..*?),?\s+-- (\d+)$', ln)
+        if m: prog[int(m.group(2))] = m.group(1).rstrip(',')
+    st = {pc: (int(m.group(1)), int(m.group(2))) for pc, i in prog.items()
+          for m in [re.match(r'^\.storeq \(\.base (\d+) \((-?\d+)\)\) 2$', i)] if m}
+    ld = {pc: (int(m.group(1)), int(m.group(2))) for pc, i in prog.items()
+          for m in [re.match(r'^\.loadq 2 \(\.base (\d+) \((-?\d+)\)\)$', i)] if m}
+    if not st:
+        return None
+    out = run('paths', kernel, count, 2000000, 0)
+    path = None
+    for ln in out.splitlines():
+        m = re.match(r'^PATH (\d+) \[(.*)\]$', ln)
+        if m and int(m.group(1)) == count:
+            path = [int(x) for x in m.group(2).split(', ')] if m.group(2) else []
+    assert path is not None
+    def cell_at(step, bd):
+        o = run('matches', kernel, count, step, 0)
+        gd = re.search(r'gd=\[(.*?)\]', o).group(1).split(', ')
+        w = int(gd[bd[0]].replace('#64', ''), 16)
+        reg, off = w >> 56, (w & ((1 << 56) - 1)) + bd[1]
+        assert off % 8 == 0
+        q = off // 8
+        return 288 + 8 * (2 * q if q >= 0 else 2 * (-q) - 1) + reg
+    locs, loc, cells = [], 258, {}
+    for c, b in enumerate(bounds):
+        for t in range(bounds[c - 1] if c else 0, b):
+            pc = path[t]
+            if pc in st and loc == 258:
+                # rdx holds the count: saved (later stores of rdx spill the scalar node's data, not the count)
+                if st[pc] not in cells:
+                    cells[st[pc]] = cell_at(t, st[pc])
+                loc = cells[st[pc]]
+            elif pc in ld and loc != 258 and cells.get(ld[pc]) == loc:
+                loc = 258
+        locs.append(loc)
+    return locs
 
 
 def seg_moves_text():
@@ -909,6 +1002,8 @@ def seg_moves_text():
 
 
 ALLOC_END = []
+COUNT_LOCS = None
+NSDIR = None
 SEG = bool(os.environ.get('SEG'))
 FLAGS = os.environ.get('FLAGS', '').split(',') if os.environ.get('FLAGS') else None   # zf,cf override at the start
 HEAL = int(os.environ.get('HEAL', '0'))
@@ -938,6 +1033,13 @@ def main():
     assert all(len(r) == count for r in PLAN['rounds'])
     slices = os.environ.get('SLICES')
     slices = [] if slices == 'none' else ([int(x) for x in slices.split(',')] if slices else list(range(K)))
+    global COUNT_LOCS, NSDIR
+    NSDIR = nsdir
+    if (258, 258) in MOVES and ISA == 'X86':
+        COUNT_LOCS = count_locs(kernel, count, bounds)
+        if COUNT_LOCS and all(v == 258 for v in COUNT_LOCS):
+            COUNT_LOCS = None
+        print(f'count locations: {COUNT_LOCS}', file=sys.stderr)
     CTLS.update(find_ctls(kernel, count, bounds))
     print(f'control words per slice: {[CTLS[c] for c in range(K)]}', file=sys.stderr)
     allocs = {}
