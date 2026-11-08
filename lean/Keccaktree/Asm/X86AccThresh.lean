@@ -79,7 +79,7 @@ theorem chain_agree {rodata r2 : Array (BitVec 64)} {prog : Array Instr} {B : In
   | cons C L ih =>
     intro S hch hc hs hW j hj
     have hc' := hc C rfl
-    have hC := C.runs_agree hr (hW C List.mem_cons_self) ρ hρ hw S hc' hs
+    have hC := SliceCert.runs_agree C hr (hW C List.mem_cons_self) ρ hρ hw S hc' hs
     by_cases hjC : j ≤ C.idx.length
     · exact hC j hjC
     · have st := C.step ρ hρ hw S hc' hs
