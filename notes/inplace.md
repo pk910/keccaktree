@@ -313,6 +313,15 @@ file is the generator output, to be built once in the integration tree after its
   GenSE GenSI GenSJ GenSC GenSX --eval --split` (only `GenSI` loads input; no segment stores output).
   Test build in the dev copy: passes, axioms propext, Classical.choice, Quot.sound.
 * zbb_x1: `gen_inplace_rv1.py zbb_x1 ZbbX1 -1931` (the shift of `gen_all_rvu.py`).
-* Not done: the RVV kernels (rvv, rvv_zvkb at VLEN 64..512; `RvvCommon` frame, `gen_all_rvv.py`).
+* RVV (rvv, rvv_zvkb at VLEN 128/256/512 = `V` 2/4/8; `gen_all_rvv.py`'s All, `RvvCommon` frame):
+  `gen_inplace_rvv.py <kernel> <Ns> <ProgNs> <V> <s> <L>` (the arguments of `gen_all_rvv.py`).  Per batch of
+  `w = min(r, V)`: the head and back edge have no memory cells (`RiscvAccSt.acc_quietWithin`: every
+  instruction reachable within `n` steps by static successors is `rvQuiet`, the run does not fault), the
+  body `GenB<w>` from its summaries (`gen_inplace.py <Ns> GenB1 .. GenB<V> --prog <ProgNs> --eval --split`;
+  `--prog`: the program's namespace when it is not the kernel's): bound `4(off+j) → 4(off+j+w)`.
+  `batchA<w>`, `batchA_any`, `loopA`, `access_all`, `access_thm`, `kernelAl` (`mkKernelRvAl`).
+  Test builds (dev copy, old `Iter`): RvvV2 and RvvZvkbV2 pass (axioms propext, Classical.choice,
+  Quot.sound).  Summaries committed for RvvV2, RvvV4, RvvZvkbV2, RvvZvkbV4; RvvV8 / RvvZvkbV8 lack
+  `GenB` oleans in the dev copy: their summaries come from the integration build.
 * Final builds: in kt-int on the frozen tree (summaries by `gen_inplace.py --eval --split` there, then the
   `S<k>` modules one at a time, the segment modules, `InPlaceAll`).

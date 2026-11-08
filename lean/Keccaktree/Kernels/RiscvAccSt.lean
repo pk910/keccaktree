@@ -155,4 +155,55 @@ theorem StA.j {B0 B : Int} (h : StA vlmax rodata prog S n p R M B0 B) (t : Nat) 
 
 end
 
+/-! ## Runs of instructions without memory cells (the RVV frames) -/
+
+/-- The instructions without memory cells (in any state). -/
+def rvQuiet : Riscv.Instr → Bool
+  | .ld .. | .sd .. | .vlseg .. | .vsseg .. | .lbu .. | .sb .. | .vle8 .. | .vse8 .. => false
+  | _ => true
+
+theorem rvQuiet_cells (s : State (BitVec 64)) (i : Riscv.Instr) (h : rvQuiet i = true) :
+    Riscv.reads s i = [] ∧ Riscv.writes s i = [] := by
+  cases i <;> first | exact ⟨rfl, rfl⟩ | (simp [rvQuiet] at h)
+
+/-- Every instruction reachable within `n` steps from the `pc`s `P` (static successors) is `rvQuiet`. -/
+def quietWithin (prog : Array Riscv.Instr) : Nat → List Nat → Bool
+  | 0, _ => true
+  | n + 1, P => P.all (fun p => rvQuiet (prog.getD p .nop)) &&
+      quietWithin prog n (P.flatMap fun p => Riscv.succs p (prog.getD p .nop))
+
+theorem accessRun_of_halted' (vlmax : Nat) (rodata : Array (BitVec 64)) (prog : Array Riscv.Instr) (n : Nat) (B : Int)
+    (T : State (BitVec 64)) (hh : T.halted = true) : Riscv.AccessRun vlmax rodata prog n B B T := by
+  cases n with
+  | zero => exact Int.le_refl B
+  | succ n => simp only [Riscv.AccessRun, AlIsa.AccessRun, hh, ↓reduceIte]; exact Int.le_refl B
+
+/-- **A run through instructions without memory cells keeps any bound** (no fault at its end). -/
+theorem acc_quietWithin (vlmax : Nat) (rodata : Array (BitVec 64)) (prog : Array Riscv.Instr) :
+    ∀ (n : Nat) (P : List Nat) (S : State (BitVec 64)) (B : Int), S.pc ∈ P → quietWithin prog n P = true →
+      ((Riscv.isa vlmax).run rodata prog n S).err = false → Riscv.AccessRun vlmax rodata prog n B B S := by
+  intro n
+  induction n with
+  | zero => intro P S B _ _ _; exact Int.le_refl B
+  | succ n ih =>
+    intro P S B hp hq he
+    simp only [quietWithin, Bool.and_eq_true, List.all_eq_true] at hq
+    cases hh : S.halted
+    · have hc := rvQuiet_cells S _ (hq.1 _ hp)
+      have hrun : (Riscv.isa vlmax).run rodata prog (n + 1) S =
+          (Riscv.isa vlmax).run rodata prog n (Riscv.exec vlmax rodata (prog.getD S.pc .nop) S) := by
+        show (if S.halted then S else (Riscv.isa vlmax).run rodata prog n
+          ((Riscv.isa vlmax).exec rodata (prog.getD S.pc (Riscv.isa vlmax).nop) S)) = _
+        rw [hh]; rfl
+      have hne : (Riscv.exec vlmax rodata (prog.getD S.pc .nop) S).err = false := by
+        cases he' : (Riscv.exec vlmax rodata (prog.getD S.pc .nop) S).err
+        · rfl
+        · have := Riscv.rv_run_err vlmax rodata prog n _ he'
+          rw [← hrun, he] at this; exact absurd this (by decide)
+      apply Riscv.accessRun_step vlmax rodata prog n B B S hh hne (by rw [hc.1]; simp) (by rw [hc.2]; simp)
+      rcases Riscv.exec_pc vlmax rodata _ S hh hne with ⟨hh', hpc'⟩ | ⟨hh', _, _⟩
+      · exact ih _ _ B (List.mem_flatMap.mpr ⟨S.pc, hp, hpc'⟩) hq.2 (by rw [← hrun]; exact he)
+      · exact accessRun_of_halted' vlmax rodata prog n B _ hh'
+    · simp only [Riscv.AccessRun, AlIsa.AccessRun, hh, ↓reduceIte]; exact Int.le_refl B
+
 end Keccaktree.Kernels.RiscvAccSt
