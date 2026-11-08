@@ -1161,3 +1161,63 @@ theorem chain_access (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) :
 
 end X86
 end Keccaktree.Asm
+
+/-! ## The aliased machine as an instruction set -/
+namespace Keccaktree.Asm
+open X86
+namespace X86
+variable {α β : Type} [LaneOps α] [LaneOps β]
+
+theorem view_map (f : α → β) (t : State α) :
+    ({ mapState f t with mem := joinMem (mapState f t).mem } : State β) = mapState f { t with mem := joinMem t.mem } := by
+  simp only [mapState, State.mk.injEq, and_true, true_and]
+  funext r q; simp only [joinMem]; split <;> rfl
+
+theorem execAl_map {f : α → β} (hf : IsHom f) (rodata : Array (BitVec 64)) (i : Instr) (t : State α)
+    (hne : (execAl rodata i t).err = false) : execAl rodata i (mapState f t) = mapState f (execAl rodata i t) := by
+  cases hh : t.halted
+  · have hh' : (mapState f t).halted = false := hh
+    rw [execAl_eq rodata i _ hh', execAl_eq rodata i _ hh] at *
+    have hne' : (exec rodata i ({ t with mem := joinMem t.mem } : State α)).err = false := hne
+    have hv : ({ t with mem := joinMem t.mem } : State α).halted = false := hh
+    rw [view_map, X86.exec_map hf rodata i _ hne']
+    have hd := decOk_of_exec rodata i _ hv hne'
+    have hw := (cells_map hf i _ hd).2
+    have key : mirror (mapState f ({ t with mem := joinMem t.mem } : State α))
+        (mapState f (exec rodata i ({ t with mem := joinMem t.mem } : State α))) i =
+        fun r q => f (mirror ({ t with mem := joinMem t.mem } : State α) (exec rodata i ({ t with mem := joinMem t.mem } : State α)) i r q) := by
+      funext r q
+      unfold mirror
+      rw [hw]
+      by_cases h1 : r = rInput ∨ r = rOutput <;>
+        by_cases h2 : (rOutput, q) ∈ writes ({ t with mem := joinMem t.mem } : State α) i <;> simp [h1, h2, mapState]
+    rw [key]
+    rfl
+  · rw [show execAl rodata i t = t by simp [execAl, hh],
+      show execAl rodata i (mapState f t) = mapState f t by simp [execAl, hh, mapState]]
+
+theorem err_execAl (rodata : Array (BitVec 64)) (i : Instr) (t : State α) (h : t.err = true) :
+    (execAl rodata i t).err = true := by
+  unfold execAl
+  split
+  · exact h
+  · exact X86.err_exec rodata i _ h
+
+/-- **The aliased x86 machine** (one buffer for input and output) as an instruction set: the library
+theorem of `Library.lean` applies to it unchanged. -/
+@[reducible] def isaAl : Isa where
+  Instr := X86.Instr
+  nop := .nop
+  exec := execAl
+  exec_map := fun f hf rodata i st hne => execAl_map hf rodata i st hne
+  err_exec := fun rodata i st h => err_execAl rodata i st h
+
+theorem runAl_eq (rodata : Array (BitVec 64)) (prog : Array Instr) :
+    ∀ (n : Nat) (t : State α), runAl rodata prog n t = isaAl.run rodata prog n t := by
+  intro n
+  induction n with
+  | zero => intro t; rfl
+  | succ n ih => intro t; simp only [runAl, Isa.run, ih]
+
+end X86
+end Keccaktree.Asm
