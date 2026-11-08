@@ -16,7 +16,21 @@ for g in "$@"; do
   K=$(ls Keccaktree/Kernels/$d/$g/Slice*.lean | wc -l)
   echo "== $d/$g $(date +%H:%M:%S) slices=$K P=$P"
   $LAKE build "Keccaktree.Kernels.$d.$g.Invs" 2>&1 | grep -E "^error|Build completed" | cut -c1-300
-  seq 0 $((K-1)) | xargs -P "$P" -I{} bash -c "$LAKE build Keccaktree.Kernels.$d.$g.Slice{} 2>&1 | grep -E '^error|Built Keccaktree.Kernels.$d.$g.Slice{} ' | cut -c1-300"
-  $LAKE build "Keccaktree.Kernels.$d.$g.Seg" 2>&1 | grep -E "^error|Build completed" | cut -c1-300
+  # each slice job records a failure; failed slices are retried once with the same bound, and `Seg` is built only
+  # when all slices built (`lake build Seg` would otherwise rebuild every missing slice at once)
+  fail=$(mktemp)
+  job="o=\$($LAKE build Keccaktree.Kernels.$d.$g.Slice{} 2>&1); rc=\$?; echo \"\$o\" | grep -E '^error|Built Keccaktree.Kernels.$d.$g.Slice{} ' | cut -c1-300; [ \$rc -eq 0 ] || echo {} >> $fail"
+  seq 0 $((K-1)) | xargs -P "$P" -I{} bash -c "$job"
+  if [ -s "$fail" ]; then
+    retry=$(sort -n "$fail" | tr "\n" " "); : > "$fail"
+    echo "== $d/$g retry slices: $retry"
+    echo $retry | tr " " "\n" | xargs -P "$P" -I{} bash -c "$job"
+  fi
+  if [ -s "$fail" ]; then
+    echo "error: $d/$g slices failed: $(sort -n "$fail" | tr "\n" " ")"
+  else
+    $LAKE build "Keccaktree.Kernels.$d.$g.Seg" 2>&1 | grep -E "^error|Build completed" | cut -c1-300
+  fi
+  rm -f "$fail"
   echo "== $d/$g done $(date +%H:%M:%S)"
 done
