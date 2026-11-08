@@ -59,6 +59,10 @@ def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
         if not m: continue
         kind_loc, a, b, node, round_, kind, rot = m.groups()
         if int(round_) != rnd_of[int(node)]: continue
+        if ISA == 'X86' and 75 <= int(kind) < 99:
+            # as for the general registers: x86 reads the round constants from the constant image only, a stack cell
+            # or vector lane equal to a rotated round constant is a coincidence (the spilled count 8 = RC0 rol 3)
+            continue
         if kind_loc == 'reg':
             if region_filter is not None: continue
             var = f'(regVar {a} {b})'
