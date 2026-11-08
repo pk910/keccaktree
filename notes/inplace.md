@@ -193,7 +193,16 @@ segment lemmas `Gen*.seg_run/seg_frame/seg_moves`) and its built segments `Gen*/
   tail call, hand-over node from `LibArmAl.done_eq_of_x0`). It uses its own flag annotation `annIP`
   (flags dirty everywhere except at the flag readers, decided by `Arm.flagAnnOk`), since the kernels'
   `ArmFlags` annotations keep the flags clean inside the loop. Workspace `/root/kt-inplace/arm2` (copy of
-  `/root/kt-arm/lean` at 336067c). sha3_x3r (two exits from the loop, `nb`, `last`) is not templated yet.
+  `/root/kt-arm/lean` at 336067c; the arm agent deleted the `.lake/build/ir` C files to save disk, which
+  makes lake rebuild everything: the C outputs, which the proofs do not use, were restored from
+  `/root/kt-inplace/arm` or replaced by placeholders carrying the recorded hashes; the `.olean`/traces are
+  the arm agent's). x3r (sha3_x3r: two loop exits, `nb`, `last`) has its own template.
+  `Kernels/ArmLibInPlace.lean`: the table of the six in-place kernels, **`lib_inplace_arm_all`**.
+  Status: sha3_x2 checked (`lib_inplace_sha3_x2`, axioms propext, Classical.choice, Quot.sound + bv_decide
+  certificates). The others' summary modules are slow on this machine (CPU weight 20 under load 150:
+  ~1 h each); the chain `kt-inplace-arm2d`, `kt-inplace-arm2e` → `kt-inplace-armfinal` →
+  `kt-inplace-armlib` builds them and the table, logs `/root/kt-inplace/logs/{arm2d,arm2e,armfinal,armlib}.log`,
+  axioms in `ax_armall.log`/`armlib.log`.
 * **rv64_x1 (RISC-V)**: `Kernels/Rv64X1/InPlaceAll.lean` (`back_access`, `body_access`, `loop_access`,
   `exit_access`, `access_all` at `vlmax = 2`, `access_thm` for every `vlmax` via `accessRun_vlmax`,
   `kernelAl`, **`lib_inplace_rv64_x1`**), `InPlace/{GenSE,GenSB,GenSX}.lean` generated. Checked in
