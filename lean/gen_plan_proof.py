@@ -232,7 +232,7 @@ where rndSlice (c : Nat) : Nat := ''' + f'''match c with
 ''')
         for c in range(K + 1):
             doc = f'The locations at bound {c}' if c < K else 'The output locations at the end of the plan'
-            if len(allocs[c]) > 200:
+            if len(allocs[c]) > 200 or len(allocs[c]) + len(chyps[c]) > 250:
                 f.write('set_option maxRecDepth 100000 in\n')
             f.write(f'/-- {doc} (for states `A n` of the nodes). -/\n')
             conjs = [f'env {var} = {quantity(node, kind)}.rotateLeft {rot}' for node, kind, var, rot, _ in allocs[c]] + [h for (_, _, h) in chyps[c]]

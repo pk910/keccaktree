@@ -18,6 +18,7 @@ import x86_all as X
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIG = 10 ** 6
 THRESH = bool(os.environ.get('THRESH'))
+UNREACH = bool(os.environ.get('UNREACH'))   # set on retry: loop-head counts no run reaches
 SYM = lambda k: f'keccaktree_keccak256_{k}'
 
 
@@ -542,6 +543,19 @@ theorem body_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVe
     assert all(lens[n] == LBa for n in ba_names)
     LI = 16 + LBa + lens['Bb']
     H, C = A['H'], A['C']
+    # the counts at the loop head that no call reaches (masked counts handed to another kernel before the batch,
+    # and their predecessors): a dispatch after a batch from such a count is excluded by `hE` (avx2_x6: 9, 15)
+    U = []
+    if UNREACH:
+        seen = set()
+        for c_, r_ in X.paths(kernel, A['maxc']).items():
+            v = sum(1 for pc_ in r_.get('path', []) if pc_ == H)
+            seen |= {c_ - N * j for j in range(v)}
+        U = [v for v in range(N, A['maxc'] + 1) if v not in seen]
+        print('unreachable loop-head counts:', U)
+    def hE_t(kexpr):
+        return ' ∧ '.join(f'c - {N} * {kexpr} ≠ {v}' for v in U)
+    HE_ARG = ' (by omega)' if U else ''
     w(f"""
 /-- Steps per loop iteration (control, body). -/
 def LI : Nat := {LI}
@@ -708,10 +722,10 @@ set_option maxHeartbeats 40000000 in
 theorem afterB_step (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54)
     (k : Nat) (T : State (BitVec 64)) (hk : {N} * (k + 1) ≤ c)
     (hcut : relocState (rho (off + {N} * k)) (cutOf GenBb.facts.ctlK GenBb.facts.scK) = cutOf GenBb.facts.ctlK T)
-    (hI : Inv off c input S0 T ({N} * (k + 1))) (hrdx : T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int)))
+    (hI : Inv off c input S0 T ({N} * (k + 1))) (hrdx : T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int))){f' (hE : {hE_t("k")})' if U else ''}
     (cont : {N} ≤ c - {N} * (k + 1) → ∀ T' : State (BitVec 64),
       relocState (rho (off + {N} * (k + 1))) (cutOf GenBb.facts.ctlK GenBb.facts.scK) = cutOf GenBb.facts.ctlK T' →
-      Inv off c input S0 T' ({N} * (k + 1 + 1)) → T'.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * ((k + 1 : Nat) : Int)) →
+      Inv off c input S0 T' ({N} * (k + 1 + 1)) → T'.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * ((k + 1 : Nat) : Int)) →{f' ({hE_t("(k + 1)")}) →' if U else ''}
       DoneK off c input S0 T' (LI * (c - {N} * (k + 1 + 1)) + XM)) :
     DoneK off c input S0 T (LI * (c - {N} * (k + 1)) + XM) := by
   have hc55 : (c : Int) < 36028797018963968 := by
@@ -734,13 +748,14 @@ have e2 : (X86.isa.run rodata prog (Gen{nm}.facts.len + GenBb.facts.len) (X86.is
   rw [← envOf_gdVar _ 2 (by decide), ← envOf_gdVar _ 2 (by decide)]; exact hr'
 have hd := cont (by omega) _ hc' hI' (by
   rw [e2, {ch.cur()}.vals (2, {e}) (by simp [setVal])]
-  congr 1 <;> (try push_cast) <;> omega)
+  congr 1 <;> (try push_cast) <;> omega){HE_ARG}
 rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI; omega)""".split('\n'):
             out.append(' ' * ind + t)
     L.extend(emit_dispatch(2, 'f0', f'((c : Int) - {N} * (k : Int))', N, f'c - {N} * (k + 1)', 0, C,
                            f'(off + {N} * k)', N, f'{N} * (k + 1)', on_H_B,
-                           msuf='m' if any(n_.endswith('m') for n_ in ba_names) else ''))
+                           msuf='m' if any(n_.endswith('m') for n_ in ba_names) else '',
+                           skip=set(v - N for v in U)))
     L.append('')
     w(f"""set_option maxRecDepth 100000 in
 set_option maxHeartbeats 40000000 in
@@ -749,17 +764,17 @@ set_option maxHeartbeats 40000000 in
 theorem afterB (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54) :
     ∀ j k (T : State (BitVec 64)), c - {N} * (k + 1) ≤ j → {N} * (k + 1) ≤ c →
       relocState (rho (off + {N} * k)) (cutOf GenBb.facts.ctlK GenBb.facts.scK) = cutOf GenBb.facts.ctlK T →
-      Inv off c input S0 T ({N} * (k + 1)) → T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int)) →
+      Inv off c input S0 T ({N} * (k + 1)) → T.getGD 2 = BitVec.ofInt 64 ((c : Int) - {N} * (k : Int)) →{f' ({hE_t("k")}) →' if U else ''}
       DoneK off c input S0 T (LI * (c - {N} * (k + 1)) + XM) := by
   intro j
   induction j with
   | zero =>
-    intro k T hj hk hcut hI hrdx
-    exact afterB_step off c input S0 hb k T hk hcut hI hrdx (fun hcont => absurd hcont (by omega))
+    intro k T hj hk hcut hI hrdx{' hE' if U else ''}
+    exact afterB_step off c input S0 hb k T hk hcut hI hrdx{' hE' if U else ''} (fun hcont => absurd hcont (by omega))
   | succ j ih =>
-    intro k T hj hk hcut hI hrdx
-    exact afterB_step off c input S0 hb k T hk hcut hI hrdx (fun hcont T' hcut' hI' hrdx' =>
-      ih (k + 1) T' (by omega) (by omega) hcut' hI' hrdx')
+    intro k T hj hk hcut hI hrdx{' hE' if U else ''}
+    exact afterB_step off c input S0 hb k T hk hcut hI hrdx{' hE' if U else ''} (fun hcont T' hcut' hI' hrdx'{" hE'" if U else ''} =>
+      ih (k + 1) T' (by omega) (by omega) hcut' hI' hrdx'{" hE'" if U else ''})
 """)
 
     # ------------------------------------------------------------------ after the prologue: the guard
@@ -806,7 +821,7 @@ have e2 : (X86.isa.run rodata prog (Gen{nm}.facts.len + GenBb.facts.len) (X86.is
   rw [← envOf_gdVar _ 2 (by decide), ← envOf_gdVar _ 2 (by decide)]; exact hr'
 have hd := afterB off c input S0 hb _ 0 _ (Nat.le_refl _) (by omega) (by simpa only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] using hc') (by simpa only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using hI') (by
   rw [e2, {ch.cur()}.vals (2, {e}) (by simp [setVal])]
-  congr 1 <;> (try push_cast) <;> omega)
+  congr 1 <;> (try push_cast) <;> omega){HE_ARG}
 rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI XM; omega)""".split('\n'):
                 out.append(' ' * ind + t)
@@ -941,4 +956,11 @@ end Keccaktree.Kernels.{d}.Lib
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except AssertionError as e:
+        if UNREACH or 'no exit for' not in str(e):
+            raise
+        print('missing exit', e, '-> retry with the unreachable loop-head counts excluded')
+        UNREACH = True
+        main()
