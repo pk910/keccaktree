@@ -273,4 +273,265 @@ theorem StV.vsseg (h : StV ((Riscv.isa V).run rodata prog n S) p L R M) (src b n
 
 end copy
 
+/-! ## The bounce batch -/
+
+/-- The stack pointer inside the frame (`sp - 512`) and its first word (the bounce buffer). -/
+def SPv : Int := 1048064
+def BUFq : Int := 131008
+
+theorem spv_wf : (⟨rStack, SPv⟩ : Addr).wf := by decide
+
+theorem ofNat_gprWord (x : Nat) (h : x < 2 ^ 55) : BitVec.ofNat 64 x = gprWord ⟨0, (x : Int)⟩ := by
+  show _ = BitVec.ofInt 64 (x : Int); rw [BitVec.ofInt_natCast]
+
+theorem wordGpr_small (x : Nat) (h : x < 2 ^ 56) : (wordGpr (BitVec.ofNat 64 x)).region = 0 := by
+  unfold wordGpr
+  have : (BitVec.ofNat 64 x >>> 56).toNat = 0 := by
+    rw [BitVec.toNat_ushiftRight, BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow]
+    rw [Nat.mod_eq_of_lt (by omega), Nat.div_eq_of_lt (by omega)]
+  simp only [this, ↓reduceIte]
+
+/-- The instructions of the RVV kernels' frame and bounce path; `t` is the `bnez a7` after the rounds
+(rvv 368, rvv_zvkb 225). -/
+structure MProg (prog : Array Riscv.Instr) (t : Nat) : Prop where
+  p7 : prog.getD 7 .nop = .mv 28 12
+  p8 : prog.getD 8 .nop = .br .eq 17 0 12
+  p9 : prog.getD 9 .nop = .li 29 0x8#64
+  p10 : prog.getD 10 .nop = .br .geu 29 28 12
+  p11 : prog.getD 11 .nop = .mv 28 29
+  p12 : prog.getD 12 .nop = .vsetvli 5 28
+  p13 : prog.getD 13 .nop = .br .ne 17 0 16
+  p16 : prog.getD 16 .nop = .opi 28 5 .slli 0x6#64
+  p17 : prog.getD 17 .nop = .vsetvlie8 0 28 8
+  p18 : prog.getD 18 .nop = .vle8 24 11
+  p19 : prog.getD 19 .nop = .vse8 24 2
+  p20 : prog.getD 20 .nop = .vsetvli 0 5
+  q0 : prog.getD t .nop = .br .ne 17 0 (t + 3)
+  q3 : prog.getD (t + 3) .nop = .vsseg 0 2 4
+  q4 : prog.getD (t + 4) .nop = .opi 28 5 .slli 0x5#64
+  q5 : prog.getD (t + 5) .nop = .vsetvlie8 0 28 4
+  q6 : prog.getD (t + 6) .nop = .vle8 24 2
+  q7 : prog.getD (t + 7) .nop = .vse8 24 10
+  q8 : prog.getD (t + 8) .nop = .opi 28 5 .slli 0x6#64
+  q9 : prog.getD (t + 9) .nop = .op 11 11 28 .add
+  q10 : prog.getD (t + 10) .nop = .opi 28 5 .slli 0x5#64
+  q11 : prog.getD (t + 11) .nop = .op 10 10 28 .add
+  q12 : prog.getD (t + 12) .nop = .op 12 12 5 .sub
+  q13 : prog.getD (t + 13) .nop = .br .ne 12 0 7
+
+/-- A misaligned batch body with `vl = w` (`GenM<w>`, proved symbolically, at relocation `rho 0`): from
+the `vlseg8e64 v0, (sp)` (`pc = 21`) to the `bnez a7` after the rounds (`pc = t`), `len` steps. -/
+structure MBody (V : Nat) (rodata : Array (BitVec 64)) (prog : Array Riscv.Instr) (t w len : Nat) where
+  ctl0 : List Nat
+  sc0 : State (BitVec 64)
+  ctlK : List Nat
+  scK : State (BitVec 64)
+  segAt : State (BitVec 64) → State (BitVec 64)
+  hctl0 : ctl0 = [258, 261, 286]
+  c258 : cutVar ctl0 sc0 258 = .ptr ⟨rStack, SPv⟩
+  c261 : cutVar ctl0 sc0 261 = .const (BitVec.ofNat 64 w)
+  c286 : cutVar ctl0 sc0 286 = .const 0x8000000000000000#64
+  hsc0 : sc0.g = Vector.replicate 32 ⟨0, 0⟩ ∧ sc0.k = Vector.replicate 8 0 ∧ sc0.zf = false ∧ sc0.cf = false ∧
+    sc0.nf = false ∧ sc0.vf = false ∧ sc0.vl = w ∧ sc0.pc = 21 ∧ sc0.depth = 0
+  k258 : 258 ∈ ctlK
+  k261 : 261 ∈ ctlK
+  k286 : 286 ∈ ctlK
+  d258 : cutVar ctlK scK 258 = .ptr ⟨rStack, SPv⟩
+  d261 : cutVar ctlK scK 261 = .const (BitVec.ofNat 64 w)
+  d286 : cutVar ctlK scK 286 = .const 0x8000000000000000#64
+  hscK : scK.g = Vector.replicate 32 ⟨0, 0⟩ ∧ scK.k = Vector.replicate 8 0 ∧ scK.zf = false ∧ scK.cf = false ∧
+    scK.nf = false ∧ scK.vf = false ∧ scK.vl = w ∧ scK.pc = t ∧ scK.depth = 0
+  run : ∀ S0 : State (BitVec 64), relocState (rho 0) (cutOf ctl0 sc0) = cutOf ctl0 S0 → SliceCert.Ok S0 →
+    (Riscv.isa V).run rodata prog len S0 = segAt S0 ∧ SliceCert.Ok (segAt S0) ∧
+    relocState (rho 0) (cutOf ctlK scK) = cutOf ctlK (segAt S0)
+  frame : ∀ S0 : State (BitVec 64), relocState (rho 0) (cutOf ctl0 sc0) = cutOf ctl0 S0 → SliceCert.Ok S0 →
+    ∀ r q, (segAt S0).mem r q = S0.mem r q
+  moves : ∀ S0 : State (BitVec 64), relocState (rho 0) (cutOf ctl0 sc0) = cutOf ctl0 S0 → SliceCert.Ok S0 →
+    ∀ i ∈ ([266, 267, 268, 273] : List Nat), envOf (segAt S0) i = envOf S0 i
+  data : ∀ S0 : State (BitVec 64), relocState (rho 0) (cutOf ctl0 sc0) = cutOf ctl0 S0 → SliceCert.Ok S0 →
+    ∀ msg : Nat → Nat → BitVec 64, (∀ l f, l < w → f < 8 → S0.mem rStack (BUFq + (8 * l + f : Nat)) = msg l f) →
+    ∀ l f, l < w → f < 4 → Riscv.lane (segAt S0) f l = L (Spec.keccakF (absorbNode (msg l))) f
+
+/-- The loop head (`p = 7`) or the exit (`p = t + 14`) after `j` of the `c` nodes, misaligned path
+(`a7 = mi ||| mo ≠ 0`). -/
+structure MidU (mi mo off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j p : Nat) : Prop where
+  ctl : CtlV S
+  pc : S.pc = p
+  sp : S.getGD 2 = gprWord ⟨rStack, SPv⟩
+  a0 : S.getGD 10 = gprWord ⟨rOutput, mo + 32 * (off + j)⟩
+  a1 : S.getGD 11 = gprWord ⟨rInput, mi + 64 * (off + j)⟩
+  a2 : S.getGD 12 = gprWord ⟨0, (c : Int) - j⟩
+  a7 : S.getGD 17 = gprWord ⟨0, ((mi ||| mo : Nat) : Int)⟩
+  t5 : S.getGD 30 = 0x8000000000000000#64
+  msg : ∀ q, S.mem rInput q = input q
+  pre : ∀ b : Int, b < mo + 32 * off → byteAt (S.mem rOutput) b = byteAt (S0.mem rOutput) b
+  dig : ∀ n, n < j → DigestB mi mo input S (off + n)
+
+/-- The steps of a bounce batch with `r` nodes left (body length `len`). -/
+def bSteps (r len : Nat) : Nat := (if r ≤ 8 then 6 else 7) + 5 + len + 12
+
+theorem or_lt8 (mi mo : Nat) (hmi : mi < 8) (hmo : mo < 8) : (mi ||| mo) < 8 := by
+  have := Nat.or_lt_two_pow (n := 3) (show mi < 2 ^ 3 by omega) (show mo < 2 ^ 3 by omega)
+  simpa using this
+
+theorem num_wf (x : Int) (h0 : 0 ≤ x) (h1 : x < 2 ^ 55) : (⟨0, x⟩ : Addr).wf := ⟨h0, h1⟩
+
+theorem setR0 (S : State (BitVec 64)) (x : BitVec 64) : setR S 0 x = S := by simp [setR]
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 40000000 in
+/-- The head of a bounce batch: `mv t3, a2; beqz a7; li t4, 8; bleu t3, t4; [mv t3, t4]` to the `vsetvli`. -/
+theorem headM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t : Nat} (hp : MProg prog t)
+    (mi mo off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitVec 64)) (j : Nat) (hmi : mi < 8) (hmo : mo < 8)
+    (ha7 : 0 < mi ||| mo) (hM : MidU mi mo off c input S0 S j 7) (hj : j < c) (hc : c < 2 ^ 54) :
+    ∃ R : Nat → BitVec 64, StV ((Riscv.isa V).run rodata prog (if c - j ≤ 8 then 4 else 5) S) 12 S.vl R S.mem ∧
+      R 28 = gprWord ⟨0, min ((c : Int) - j) 8⟩ ∧ ∀ x, x ≠ 28 → x ≠ 29 → R x = S.getGD x := by
+  have h7 := or_lt8 mi mo hmi hmo
+  have s0 : StV ((Riscv.isa V).run rodata prog 0 S) 7 S.vl (fun r => S.getGD r) S.mem :=
+    ⟨hM.ctl, hM.pc, rfl, fun _ _ => rfl, rfl⟩
+  have s1 := StV.mv s0 28 12 hp.p7 (by decide) (by decide) (by decide) (by decide)
+  have ha7wf : (⟨0, ((mi ||| mo : Nat) : Int)⟩ : Addr).wf := num_wf _ (by omega) (by omega)
+  have s2 := StV.brz s1 .eq 17 12 _ hp.p8 (by decide) (by decide) (by simp [upd]; exact hM.a7) ha7wf
+  have hbr1 : brHolds .eq ((mi ||| mo : Nat) : Int) 0 = false := by simp only [brHolds, beq_eq_false_iff_ne, ne_eq]; omega
+  rw [hbr1, if_neg (by decide)] at s2
+  have s3 := StV.li s2 29 0x8#64 hp.p9 (by decide) (by decide)
+  have hr0 : (⟨0, (c : Int) - j⟩ : Addr).wf := num_wf _ (by omega) (by omega)
+  have s4 := StV.br2 s3 .geu 29 28 12 8 ((c : Int) - j) hp.p10 (by decide) (by decide) (by decide) (by decide)
+    (by simp [upd]; decide) (by simp [upd]; exact hM.a2) ⟨by decide, by decide⟩ hr0
+  by_cases hr8 : c - j ≤ 8
+  · have hb : brHolds .geu 8 ((c : Int) - j) = true := by simp only [brHolds, decide_eq_true_eq]; omega
+    rw [hb, if_pos rfl] at s4
+    refine ⟨_, by rw [if_pos hr8]; exact s4, ?_, fun x h28 h29 => ?_⟩
+    · simp [upd]; rw [hM.a2]; congr 2; omega
+    · simp [upd, h28, h29]
+  · have hb : brHolds .geu 8 ((c : Int) - j) = false := by simp only [brHolds, decide_eq_false_iff_not]; omega
+    rw [hb, if_neg (by decide)] at s4
+    have s5 := StV.mv s4 28 29 hp.p11 (by decide) (by decide) (by decide) (by decide)
+    refine ⟨_, by rw [if_neg hr8]; exact s5, ?_, fun x h28 h29 => ?_⟩
+    · simp [upd]
+      rw [show min ((c : Int) - j) 8 = 8 by omega]; decide
+    · simp [upd, h28, h29]
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 40000000 in
+/-- From the `vsetvli` to the batch body: `vsetvli t0, t3; bnez a7; slli t3, t0, 6; vsetvli zero, t3, e8, m8;
+vle8 v24, (a1); vse8 v24, (sp); vsetvli zero, t0` — the `w` nodes' bytes in the bounce buffer. -/
+theorem preM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t : Nat} (hp : MProg prog t)
+    (hV : 0 < V) (hV8 : V ≤ 8) (S : State (BitVec 64)) (k0 L0 : Nat) (R : Nat → BitVec 64) (M : Region → Int → BitVec 64)
+    (h : StV ((Riscv.isa V).run rodata prog k0 S) 12 L0 R M) (rm : Int) (h28 : R 28 = gprWord ⟨0, rm⟩) (hrm : 1 ≤ rm)
+    (hrm8 : rm ≤ 8) (a7 : Nat) (h17 : R 17 = gprWord ⟨0, (a7 : Int)⟩) (ha7 : 0 < a7) (ha78 : a7 < 8)
+    (a : Int) (h11 : R 11 = gprWord ⟨rInput, a⟩) (ha0 : 0 ≤ a) (ha1 : a + 512 < 2 ^ 55)
+    (h2 : R 2 = gprWord ⟨rStack, SPv⟩) (w : Nat) (hw : w = min rm.toNat V) :
+    ∃ R' : Nat → BitVec 64, StV ((Riscv.isa V).run rodata prog (k0 + 7) S) 21 w R'
+      (memStoreFrom M rStack BUFq ((List.range (8 * w)).map fun (i : Nat) => wordAt (M rInput) (a + 8 * (i : Int)))) ∧
+      R' 5 = BitVec.ofNat 64 w ∧ ∀ x, x ≠ 5 → x ≠ 28 → R' x = R x := by
+  have hw1 : 1 ≤ w := by omega
+  have hwV : w ≤ V := by omega
+  have s6 := StV.vsetvli h 5 28 rm hp.p12 (by decide) (by decide) (by decide) h28 (by omega) (by omega)
+  rw [if_neg (by decide), ← hw] at s6
+  have s7 := StV.brz s6 .ne 17 16 (a7 : Int) hp.p13 (by decide) (by decide) (by simp [upd]; exact h17)
+    (num_wf _ (by omega) (by omega))
+  have hbr : brHolds .ne (a7 : Int) 0 = true := by simp only [brHolds, bne_iff_ne, ne_eq]; omega
+  rw [hbr, if_pos rfl] at s7
+  have s8 := StV.slli s7 28 5 6 w hp.p16 (by decide) (by decide) (by decide) (by decide) (by simp [upd]) (by decide)
+    (by omega)
+  have s9 := StV.vsetvli8 s8 28 8 (w * 2 ^ 6) hp.p17 (by decide) (by decide) (by simp [upd]) (by omega)
+    (by rw [Nat.mul_comm 8 V]; omega)
+  have s10 := StV.copy8 s9 24 11 2 ⟨rInput, a⟩ ⟨rStack, SPv⟩ hp.p18 hp.p19 (by decide) (by decide)
+    (by simp [upd]; exact h11) (by simp [upd]; exact h2) (show (0 : Int) ≤ a ∧ a < 2 ^ 55 from ⟨ha0, by omega⟩) spv_wf
+    (by show rInput ≠ rRodata; decide) (by decide) hV hV8 (by omega) (by omega) (by
+      have : (w * 2 ^ 6 / 8 + V - 1) / V < 9 := by
+        apply (Nat.div_lt_iff_lt_mul hV).mpr; rw [show w * 2 ^ 6 / 8 = 8 * w by omega]; omega
+      omega)
+  have s11 := StV.vsetvli s10 0 5 w hp.p20 (by decide) (by decide) (by decide) (by simp [upd]; exact ofNat_gprWord w (by omega))
+    (by omega) (by omega)
+  rw [if_pos rfl, show min ((w : Int)).toNat V = w by omega] at s11
+  have hn : w * 2 ^ 6 / 8 = 8 * w := by omega
+  rw [hn] at s11
+  refine ⟨upd (upd R 5 (BitVec.ofNat 64 w)) 28 (BitVec.ofNat 64 (w * 2 ^ 6)), ?_, by simp [upd],
+    fun x h5 h28' => by simp [upd, h5, h28']⟩
+  have e : vstoreMem M ⟨rStack, SPv⟩ ((List.range (8 * w)).map fun (j : Nat) => wordAt (M rInput) (a + 8 * (j : Int))) (8 * w) =
+      memStoreFrom M rStack BUFq ((List.range (8 * w)).map fun (i : Nat) => wordAt (M rInput) (a + 8 * (i : Int))) := by
+    unfold vstoreMem
+    rw [if_pos (by decide)]
+    rfl
+  rw [← e]
+  exact s11
+
+/-- The digest words of the batch in the bounce buffer (`vsseg4e64 v0, (sp)`). -/
+def bufOut (M : Region → Int → BitVec 64) (C : State (BitVec 64)) (w : Nat) : Region → Int → BitVec 64 :=
+  memStoreFrom M rStack BUFq ((List.range (4 * w)).map fun q => Riscv.lane C (0 + q % 4) (q / 4))
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 40000000 in
+/-- After the batch body: `bnez a7; vsseg4e64 v0, (sp); slli t3, t0, 5; vsetvli zero, t3, e8, m4;
+vle8 v24, (sp); vse8 v24, (a0); slli; add a1; slli; add a0; sub a2, a2, t0; bnez a2`. -/
+theorem tailM {V : Nat} {rodata : Array (BitVec 64)} {prog : Array Riscv.Instr} {t : Nat} (hp : MProg prog t)
+    (hV : 0 < V) (hV8 : V ≤ 8) (C : State (BitVec 64)) (w : Nat) (hc : CtlV C) (hpc : C.pc = t) (hvl : C.vl = w)
+    (hw1 : 1 ≤ w) (hwV : w ≤ V) (h2 : C.getGD 2 = gprWord ⟨rStack, SPv⟩) (h5 : C.getGD 5 = BitVec.ofNat 64 w)
+    (b : Int) (h10 : C.getGD 10 = gprWord ⟨rOutput, b⟩) (hb0 : 0 ≤ b) (hb1 : b + 512 < 2 ^ 55)
+    (a : Int) (h11 : C.getGD 11 = gprWord ⟨rInput, a⟩)
+    (r : Int) (h12 : C.getGD 12 = gprWord ⟨0, r⟩) (hr : (w : Int) ≤ r) (hr1 : r < 2 ^ 55)
+    (a7 : Nat) (h17 : C.getGD 17 = gprWord ⟨0, (a7 : Int)⟩) (ha7 : 0 < a7) (ha78 : a7 < 8) :
+    ∃ R' : Nat → BitVec 64, StV ((Riscv.isa V).run rodata prog 12 C) (if r - w = 0 then t + 14 else 7) (w * 2 ^ 5) R'
+      (vstoreMem (bufOut C.mem C w) ⟨rOutput, b⟩ ((List.range (4 * w)).map fun (j : Nat) =>
+        wordAt (bufOut C.mem C w rStack) (SPv + 8 * (j : Int))) (4 * w)) ∧
+      R' 2 = gprWord ⟨rStack, SPv⟩ ∧ R' 10 = gprWord ⟨rOutput, b + (w * 2 ^ 5 : Nat)⟩ ∧
+      R' 11 = gprWord ⟨rInput, a + (w * 2 ^ 6 : Nat)⟩ ∧ R' 12 = gprWord ⟨0, r - w⟩ ∧ R' 17 = C.getGD 17 ∧
+      R' 30 = C.getGD 30 := by
+  have s0 : StV ((Riscv.isa V).run rodata prog 0 C) t w (fun r => C.getGD r) C.mem := ⟨hc, hpc, hvl, fun _ _ => rfl, rfl⟩
+  have s1 := StV.brz s0 .ne 17 (t + 3) (a7 : Int) hp.q0 (by decide) (by decide) h17 (num_wf _ (by omega) (by omega))
+  have hbr : brHolds .ne (a7 : Int) 0 = true := by simp only [brHolds, bne_iff_ne, ne_eq]; omega
+  rw [hbr, if_pos rfl] at s1
+  -- the vector registers are those of `C` after the branch
+  have hv1 : ((Riscv.isa V).run rodata prog (0 + 1) C).v = C.v := by
+    show ((Riscv.isa V).run rodata prog 1 ((Riscv.isa V).run rodata prog 0 C)).v = C.v
+    rw [StV.step _ s0 hp.q0, show (Riscv.isa V).run rodata prog 0 C = C from rfl, exec_br_num V rodata C .ne 17 0 (t + 3) (a7 : Int) 0 hc.halted
+      ((getR_pos _ 17 (by decide)).trans h17) (getR_zero _) (num_wf _ (by omega) (by omega)) ⟨by decide, by decide⟩]
+  have s2 := StV.vsseg s1 0 2 4 ⟨rStack, SPv⟩ hp.q3 (by decide) h2 spv_wf (by decide) (by decide)
+  have hlane : ∀ f l, Riscv.lane ((Riscv.isa V).run rodata prog (0 + 1) C) f l = Riscv.lane C f l := by
+    intro f l; unfold Riscv.lane State.getV; rw [hv1]
+  have hM2 : memStoreFrom C.mem (⟨rStack, SPv⟩ : Addr).region ((⟨rStack, SPv⟩ : Addr).off / 8)
+      ((List.range (4 * w)).map fun q => Riscv.lane ((Riscv.isa V).run rodata prog (0 + 1) C) (0 + q % 4) (q / 4)) =
+      bufOut C.mem C w := by
+    unfold bufOut
+    show memStoreFrom C.mem rStack (SPv / 8) _ = memStoreFrom C.mem rStack BUFq _
+    rw [show SPv / 8 = BUFq by decide]
+    congr 1
+    apply List.map_congr_left; intro q _; exact hlane _ _
+  rw [hM2] at s2
+  have s3 := StV.slli s2 28 5 5 w hp.q4 (by decide) (by decide) (by decide) (by decide) h5 (by decide)
+    (by omega)
+  have s4 := StV.vsetvli8 s3 28 4 (w * 2 ^ 5) hp.q5 (by decide) (by decide) (by simp [upd]) (by omega)
+    (by rw [Nat.mul_comm 8 V]; omega)
+  have s5 := StV.copy8 s4 24 2 10 ⟨rStack, SPv⟩ ⟨rOutput, b⟩ hp.q6 hp.q7 (by decide) (by decide)
+    (by simp [upd]; exact h2) (by simp [upd]; exact h10) spv_wf (show (0 : Int) ≤ b ∧ b < 2 ^ 55 from ⟨hb0, by omega⟩)
+    (by decide) (by show rOutput ≠ rRodata; decide) hV hV8 (by omega) (by omega) (by
+      have : (w * 2 ^ 5 / 8 + V - 1) / V < 9 := by
+        apply (Nat.div_lt_iff_lt_mul hV).mpr; rw [show w * 2 ^ 5 / 8 = 4 * w by omega]; omega
+      omega)
+  rw [show w * 2 ^ 5 / 8 = 4 * w by omega] at s5
+  have s6 := StV.slli s5 28 5 6 w hp.q8 (by decide) (by decide) (by decide) (by decide) (by simp [upd]; exact h5) (by decide)
+    (by omega)
+  have s7 := StV.addp s6 11 11 28 ⟨rInput, a⟩ (w * 2 ^ 6) hp.q9 (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by simp [upd]; exact h11) (by simp [upd]) (by omega)
+  have s8 := StV.slli s7 28 5 5 w hp.q10 (by decide) (by decide) (by decide) (by decide) (by simp [upd]; exact h5) (by decide)
+    (by omega)
+  have s9 := StV.addp s8 10 10 28 ⟨rOutput, b⟩ (w * 2 ^ 5) hp.q11 (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by simp [upd]; exact h10) (by simp [upd]) (by omega)
+  have s10 := StV.subn s9 12 12 5 r w hp.q12 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+    (by simp [upd]; exact h12) (by simp [upd]; exact h5)
+  have s11 := StV.brz s10 .ne 12 7 (r - w) hp.q13 (by decide) (by decide) (by simp [upd]) (num_wf _ (by omega) (by omega))
+  have hpc11 : (if brHolds .ne (r - (w : Int)) 0 then 7 else t + 3 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1) =
+      if r - w = 0 then t + 14 else 7 := by
+    by_cases hz : r - (w : Int) = 0
+    · rw [if_pos hz, if_neg (by simp only [brHolds, bne_iff_ne, ne_eq]; omega)]
+    · rw [if_neg hz, if_pos (by simp only [brHolds, bne_iff_ne, ne_eq]; omega)]
+  rw [hpc11] at s11
+  refine ⟨_, s11, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  all_goals (simp [upd]; try exact h2)
+
 end Keccaktree.Kernels.RvvCommonU
+
+
+
