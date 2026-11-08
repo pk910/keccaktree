@@ -2,9 +2,9 @@
 # Segments of a 1-node RISC-V scalar kernel's all-count theorem for any buffer alignment
 # (Keccaktree/Kernels/<Ns>/AllU.lean; step positions of the count-1 runs, position 0 = the entry `bnez`):
 #   GenSE  [1, 18)        frame stores; a0/a1/a2 spilled (moves), control: sp only
-#   GenSI  [23, 48)       aligned input: LOAD_STATE from the input node (t0 = the input pointer)
-#   GenSJ  [410, 435)     misaligned input (run with the input at byte 1): LOAD_STATE from the bounce buffer
-#   GenSC  [48, core_end) the 24 rounds, registers to registers (spills only)
+#   GenSI  [23, 31)       aligned input: the 8 loads of LOAD_STATE from the input node (t0 = the input pointer)
+#   GenSJ  [410, 418)     misaligned input (run with the input at byte 1): the 8 loads from the bounce buffer
+#   GenSC  [31, core_end) the constant lanes and the 24 rounds, registers to registers (spills only)
 #   GenSX  [sx_a, sx_b)   the restores
 # The loop head, the byte copies, the digest stores and the back edge are concrete steps (AllU.lean).
 # No segment has a pointer or count spill as a control word (FORBID_CTL): they do not depend on the
@@ -21,11 +21,11 @@ K=$k CE=$CE SX_A=$SX_A SX_B=$SX_B python3 - <<'PY'
 import json, os
 k = os.environ['K']; ce, xa, xb = (int(os.environ[v]) for v in ('CE', 'SX_A', 'SX_B'))
 p = json.load(open(f"plans/{k}_c1.json"))
-cuts = [t for t in p["cuts"] if 48 < t + 1 < ce]
-core = {"kernel": k, "count": 1, "lanes": 0, "entry": 48, "end": ce, "cuts": cuts,
+cuts = [t for t in p["cuts"] if 31 < t + 1 < ce]
+core = {"kernel": k, "count": 1, "lanes": 0, "entry": 31, "end": ce, "cuts": cuts,
         "rounds": [[0]] + [[min(i + 1, 24)] for i in range(len(cuts))] + [[24]]}
 json.dump(core, open(f"plans/{k}_core.json", "w"))
-for name, a, b, r in (("e", 1, 18, 0), ("in", 23, 48, 0), ("buf", 410, 435, 0), ("ex", xa, xb, 24)):
+for name, a, b, r in (("e", 1, 18, 0), ("in", 23, 31, 0), ("buf", 410, 418, 0), ("ex", xa, xb, 24)):
     json.dump({"kernel": k, "count": 1, "lanes": 0, "entry": a, "end": b, "cuts": [], "rounds": [[r], [r]]},
               open(f"plans/{k}_{name}.json", "w"))
 PY
