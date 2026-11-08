@@ -34,7 +34,7 @@ ev = ['import Keccaktree.Asm.AliasTrace'] + ['import Keccaktree.Kernels.%s.%s.Se
 ev += ['open Keccaktree.Asm Keccaktree.Asm.X86 Keccaktree.Kernels.%s' % K]
 for sg in segs:
     lst = ', '.join('%s.cert%d' % (sg, k) for k in range(info[sg]))
-    ev.append('#eval IO.println s!"{repr ([%s].map fun C => summ (traceCells rodata prog C.idx C.cut))}"' % lst)
+    ev.append('#eval IO.println ((repr ([%s].map fun C => summ (traceCells rodata prog C.idx C.cut))).pretty 100000000)' % lst)
 evf = os.path.join(out, 'SumEval.lean')
 open(evf, 'w').write('\n'.join(ev) + '\n')
 vals = {}

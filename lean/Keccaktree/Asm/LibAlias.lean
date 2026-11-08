@@ -27,7 +27,7 @@ def OutcomeAl (targets : List String) (Bf : Int) (off count : Nat) (input : Int 
   (∀ q : Int, Bf ≤ q → Tf.mem rInput q = T.mem rInput q) ∧
   ((Tf.tail = none ∧ ∀ n, n < count → Digest input Tf (off + n)) ∨
    ∃ (next : String) (done : Nat), Tf.tail = some next ∧ next ∈ targets ∧ done ≤ count ∧
-     (∀ n, n < done → Digest input Tf (off + n)) ∧ (done = 0 → count > 0) ∧
+     (∀ n, n < done → Digest input Tf (off + n)) ∧
      EntryX86 next (off + done) (count - done) (fun q => Tf.mem rInput q)
        (dupState { Tf with halted := false, tail := none }))
 
@@ -60,9 +60,9 @@ theorem inplace_lift (rodata : Array (BitVec 64)) (prog : Array Instr) (entry : 
     rw [hmOut, hpre q hq]; simp only [dupState, ↓reduceIte]; exact (hm q).symm
   · intro q hq
     rw [hmIn, hC q hq, hIn q]; simp [dupState, show rInput ≠ rOutput by decide]
-  · rcases hout with ⟨ht, hd⟩ | ⟨next, done, ht, hmem, hdone, hd, hpos, hnext⟩
+  · rcases hout with ⟨ht, hd⟩ | ⟨next, done, ht, hmem, hdone, hd, hnext⟩
     · exact Or.inl ⟨hS.2.2.2.2.2.2.2.2.2.2.2.2.2.1.trans ht, fun n hn => hdig _ (hd n hn)⟩
-    · refine Or.inr ⟨next, done, hS.2.2.2.2.2.2.2.2.2.2.2.2.2.1.trans ht, hmem, hdone, fun n hn => hdig _ (hd n hn), hpos, ?_⟩
+    · refine Or.inr ⟨next, done, hS.2.2.2.2.2.2.2.2.2.2.2.2.2.1.trans ht, hmem, hdone, fun n hn => hdig _ (hd n hn), ?_⟩
       obtain ⟨hEn, hbn⟩ := hnext
       refine ⟨entry_transfer _ _ input _ _ _ hEn ?_ (fun q => ?_), hbn⟩
       · obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, -, -, -⟩ := hS
