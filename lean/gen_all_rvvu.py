@@ -53,9 +53,11 @@ for w in range(1, V + 1):
         goals.append(f'''  · have e := h {l} {f} (by decide) (by decide)
     rw [show BUFq + ((8 * {l} + {f} : Nat) : Int) = {q} by decide] at e
     show envOf S0 ((rho 0).var (memVar 3 {q})) = _
-    rw [rho_var_stack 0 _ (memVar_ge _ _) (memVarRegion_memVar _ _), envOf_mem, e]
+    rw [rho_var_stack 0 (memVar 3 {q}) (memVar_ge _ _) (memVarRegion_memVar _ _), envOf_mem]
+    refine e.trans ?_
     simp only [specQuantity, specQuantity0, specQuantityCol, Nat.reduceLT, ↓reduceIte, Nat.reduceSub, Nat.reduceDiv,
-      Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, rotl0, absorbNode_lane{f}]''')
+      Nat.reduceMod, Nat.reduceAdd, Nat.reduceMul, rotl0, absorbNode_lane{f}]
+    try rfl''')
     consts = ', '.join(f'absorbNode_lane{k} _' for l in range(w) for k in range(8, 25))
     invK = invs[invs.index(f'def Inv{K} '):invs.index(f'def locs{K}')]
     outs = [(int(m.group(1)), int(m.group(2))) for m in re.finditer(r'env \(regVar (\d+) (\d+)\) = \(specQuantity \(A \2\) \1\)', invK)]
