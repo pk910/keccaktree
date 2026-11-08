@@ -1100,3 +1100,64 @@ theorem summ_access (δ1 δ2 : Int) : ∀ (l : List (Cells × Cells)) (b bf : In
 
 end X86
 end Keccaktree.Asm
+
+/-! ## Chains of certified slices (segments) -/
+namespace Keccaktree.Asm
+open X86
+namespace X86
+variable {rodata : Array (BitVec 64)} {prog : Array Instr} {B : Int}
+
+/-- Consecutive slices share their cuts (as the generated segments do). -/
+def ChainOk : List (SliceCert X86.isa X86.isaReloc rodata prog B) → Prop
+  | [] => True
+  | [_] => True
+  | C :: D :: L => C.ctl' = D.ctl ∧ C.sc' = D.sc ∧ ChainOk (D :: L)
+
+/-- The bound after a slice with summary `s`. -/
+def nextB (δ2 b : Int) (s : Summ) : Int :=
+  match s.hiW with
+  | some hi => max b (hi + δ2 + 1)
+  | none => b
+
+/-- The per-slice conditions along a chain of summaries. -/
+def SummOk (δ1 δ2 : Int) : Int → Int → List Summ → Prop
+  | b, bf, [] => b ≤ bf
+  | b, bf, s :: l => (∀ lo, s.loR = some lo → b ≤ lo + δ1) ∧ (∀ g, s.gap = some g → δ2 + 1 ≤ g + δ1) ∧
+      s.inW = false ∧ SummOk δ1 δ2 (nextB δ2 b s) bf l
+
+/-- **A segment's access condition** from its slices' summaries. -/
+theorem chain_access (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) :
+    ∀ (L : List (SliceCert X86.isa X86.isaReloc rodata prog B)) (S : State (BitVec 64)) (b bf : Int),
+      ChainOk L → (∀ C ∈ L.head?, relocState ρ (cutOf C.ctl C.sc) = cutOf C.ctl S) → SliceCert.Ok S →
+      SummOk (ρ.wshift rInput) (ρ.wshift rOutput) b bf (L.map fun C => summ (traceCells rodata prog C.idx C.cut)) →
+      AccessRun rodata prog (L.map fun C => C.idx.length).sum b bf S := by
+  intro L
+  induction L with
+  | nil => intro S b bf _ _ _ h; exact h
+  | cons C L ih =>
+    intro S b bf hch hc hs hsum
+    simp only [List.map_cons, SummOk] at hsum
+    obtain ⟨hlo, hgap, hin, hrest⟩ := hsum
+    have hc' := hc C rfl
+    have st := C.step ρ hρ hw S hc' hs
+    have hacc : AccessRun rodata prog C.idx.length b (nextB (ρ.wshift rOutput) b (summ (traceCells rodata prog C.idx C.cut))) S := by
+      apply C.access ρ hρ hw S hc' hs
+      apply summ_access _ _ _ _ _ hlo hgap
+      · unfold nextB; split <;> omega
+      · intro hi h; unfold nextB; rw [h]; simp only; omega
+      · exact hin
+    simp only [List.map_cons, List.sum_cons]
+    apply accessRun_add rodata prog _ _ _ _ _ S hacc
+    rw [st.1]
+    cases L with
+    | nil => simp only [List.map_nil, List.sum_nil]; simp only [List.map_nil, SummOk] at hrest; exact hrest
+    | cons D L =>
+      obtain ⟨h1, h2, hch'⟩ := hch
+      apply ih _ _ _ hch' _ st.2.2.1 hrest
+      intro D' hD'
+      simp only [List.head?_cons, Option.mem_def, Option.some.injEq] at hD'
+      subst hD'
+      rw [← h1, ← h2]; exact st.2.2.2
+
+end X86
+end Keccaktree.Asm

@@ -786,3 +786,61 @@ theorem accessCheck_sound (rodata : Array (BitVec 64)) (prog : Array Instr) :
 
 end X86
 end Keccaktree.Asm
+
+/-! ## Composing access conditions -/
+namespace Keccaktree.Asm
+open X86
+namespace X86
+
+theorem accessRun_halted (rodata : Array (BitVec 64)) (prog : Array Instr) (m : Nat) (B Bf : Int) (s : State (BitVec 64))
+    (hh : s.halted = true) (h : AccessRun rodata prog m B Bf s) : B ≤ Bf := by
+  cases m with
+  | zero => exact h
+  | succ m => simp only [AccessRun, hh, ↓reduceIte] at h; exact h
+
+/-- **Sequencing**: the access condition of `n` steps up to an intermediate bound, then of `m` more. -/
+theorem accessRun_add (rodata : Array (BitVec 64)) (prog : Array Instr) :
+    ∀ (n m : Nat) (B B' Bf : Int) (s : State (BitVec 64)), AccessRun rodata prog n B B' s →
+      AccessRun rodata prog m B' Bf (X86.isa.run rodata prog n s) → AccessRun rodata prog (n + m) B Bf s := by
+  intro n
+  induction n with
+  | zero =>
+    intro m B B' Bf s h1 h2
+    simp only [Nat.zero_add]
+    exact accessRun_mono rodata prog m B' B Bf s h1 h2
+  | succ n ih =>
+    intro m B B' Bf s h1 h2
+    rw [show n + 1 + m = (n + m) + 1 by omega]
+    cases hh : s.halted
+    · simp only [AccessRun, hh, Bool.false_eq_true, ↓reduceIte] at h1 ⊢
+      obtain ⟨hne, hok, h1⟩ := h1
+      refine ⟨hne, hok, ih m _ B' Bf _ h1 ?_⟩
+      have : X86.isa.run rodata prog (n + 1) s = X86.isa.run rodata prog n (X86.exec rodata (prog.getD s.pc .nop) s) := by
+        show (if s.halted then s else _) = _; rw [hh]; rfl
+      rw [this] at h2; exact h2
+    · simp only [AccessRun, hh, ↓reduceIte] at h1 ⊢
+      rw [Isa.run_halted _ _ _ _ _ hh] at h2
+      exact Int.le_trans h1 (accessRun_halted rodata prog m B' Bf s hh h2)
+
+/-- One step without input or output cells. -/
+theorem accessRun_step (rodata : Array (BitVec 64)) (prog : Array Instr) (m : Nat) (B Bf : Int) (s : State (BitVec 64))
+    (hh : s.halted = false) (hne : (exec rodata (prog.getD s.pc .nop) s).err = false)
+    (hr : ∀ c ∈ reads s (prog.getD s.pc .nop), c.1 ≠ rInput)
+    (hw : ∀ c ∈ writes s (prog.getD s.pc .nop), c.1 ≠ rInput ∧ c.1 ≠ rOutput)
+    (h : AccessRun rodata prog m B Bf (exec rodata (prog.getD s.pc .nop) s)) :
+    AccessRun rodata prog (m + 1) B Bf s := by
+  simp only [AccessRun, hh, Bool.false_eq_true, ↓reduceIte]
+  refine ⟨hne, ⟨fun c hc h1 => absurd h1 (hr c hc), fun c hc => (hw c hc).1⟩, ?_⟩
+  have : bumpB B s (prog.getD s.pc .nop) = B := by
+    clear h hr hne
+    unfold bumpB
+    generalize writes s (prog.getD s.pc .nop) = l at hw
+    induction l generalizing B with
+    | nil => rfl
+    | cons c l ih =>
+      simp only [List.foldl_cons, (hw c List.mem_cons_self).2, ↓reduceIte]
+      exact ih B (fun d hd => hw d (List.mem_cons_of_mem _ hd))
+  rw [this]; exact h
+
+end X86
+end Keccaktree.Asm
