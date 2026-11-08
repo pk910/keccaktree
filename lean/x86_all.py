@@ -247,6 +247,9 @@ def find_plan(kernel, count, fuel=4000000, patch=None):
     return json.loads(out.splitlines()[0])
 
 
+BATCH_N = None   # the kernel's batch size (set by gen_segments)
+
+
 def window(plan, a, b, nodes):
     """the plan's cuts inside steps [a, b) and the rounds of `nodes` at the bounds (others: 0)"""
     cuts, rounds = plan['cuts'], plan['rounds']
@@ -261,7 +264,18 @@ def window(plan, a, b, nodes):
     # ahead, e.g. the scalar lane of avx2_x5 against its vector lanes, has unprovable lane facts)
     def uniform(t):
         row = rounds_at(t + 1)
-        return len(set(row[n] for n in nodes if 0 < row[n] < 24)) <= 1
+        if len(set(row[n] for n in nodes if 0 < row[n] < 24)) > 1:
+            return False
+        # a batch with a scalar node (avx2_x5/x6/x9/x10: positions >= 4 * (N // 4) of a batch run in the general
+        # registers, their rounds spread through the vector rounds): cut only where the whole batch is at one round
+        # (a scalar node at round r next to vector lanes at r + 1 is mid-round; its partial outputs have no match)
+        N = BATCH_N
+        if N and N % 4:
+            for g in set(n // N for n in nodes):
+                grp = [n for n in nodes if n // N == g]
+                if any(n % N >= 4 * (N // 4) for n in grp) and len(set(row[n] for n in grp)) > 1:
+                    return False
+        return True
     keep = [t for t in keep if uniform(t)]
     rs = [rounds_at(a)] + [rounds_at(t + 1) for t in keep] + [rounds[-1] if b >= plan['end'] else rounds_at(b)]
     rs = [[r[n] if n in nodes else 0 for n in range(count)] for r in rs]
@@ -269,8 +283,10 @@ def window(plan, a, b, nodes):
 
 
 def gen_segments(kernel, patch=None):
+    global BATCH_N
     A = json.load(open(os.path.join(HERE, f'plans/{kernel}_all.json')))
     N, d = A['N'], A['dir']
+    BATCH_N = N
     os.makedirs(os.path.join(HERE, 'plans'), exist_ok=True)
     runs = paths(kernel, 2 * N + 1, patch=patch)
     jobs = []

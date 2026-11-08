@@ -640,7 +640,7 @@ def XM : Nat := {XM}
             if kind == 'tail':
                 return finish(out, ind, ch, 'tail')
 
-    def emit_dispatch(ind, f0, E0, delta, yvar, ylo, pc0, prev_m, prev_base, done_expr, on_H, msuf=''):
+    def emit_dispatch(ind, f0, E0, delta, yvar, ylo, pc0, prev_m, prev_base, done_expr, on_H, msuf='', skip=()):
         """count steps from `f0` (at pc0, rdx = E0 = yvar + delta) to the loop head or an exit, for every value of
         the Nat `yvar` ≥ ylo: literal cases below the uniform bound M, then `M ≤ yvar`"""
         out = []
@@ -682,6 +682,10 @@ def XM : Nat := {XM}
             d0 = 2 if M > ylo else 0
             if M > ylo:
                 oo("· -- " + (f"{yvar} = {y}" if y != 'sym' else f"{M} ≤ {yvar}"))
+            if y in skip:
+                # a count the entry policy never hands to this point (`hreach`)
+                oo('exfalso; omega', d0)
+                continue
             sub = []
             if y == 'sym':
                 vals = {2: Val(E0, None, BIG + delta)}
@@ -769,6 +773,9 @@ theorem afterB (off c : Nat) (input : Int → BitVec 64) (S0 : State (BitVec 64)
                 return 'tail'
         return ch.pc
     Mlow = min(cv for cv in range(A['maxc'] + 1) if policy_path0(cv) == A['P0'])
+    # counts above Mlow the entry policy sends elsewhere (e.g. avx2_x8: 5, 6 tail-call x5/x6 at the entry)
+    PEXC = [cv for cv in range(Mlow, A['maxc'] + 1) if policy_path0(cv) != A['P0']]
+    hreach_t = (' (hreach : ' + ' ∧ '.join(f'c ≠ {y}' for y in PEXC) + ')') if PEXC else ''
     GA = 40
     for pv in p_names:
         GP = gen(pv)
@@ -777,7 +784,7 @@ set_option maxHeartbeats 40000000 in
 /-- **After the prologue** (`{pv}`): the loop guard, then the loop or an exit. -/
 theorem afterP_{pv} (off c : Nat) (input : Int → BitVec 64) (S0 T : State (BitVec 64)) (hb : 64 * (off + c) ≤ 2 ^ 54)
     (hcut : relocState (rho off) (cutOf {GP}.facts.ctlK {GP}.facts.scK) = cutOf {GP}.facts.ctlK T)
-    (hI : Inv off c input S0 T 0) (hrdx : T.getGD 2 = BitVec.ofInt 64 (c : Int)) (hlow : {Mlow} ≤ c) :
+    (hI : Inv off c input S0 T 0) (hrdx : T.getGD 2 = BitVec.ofInt 64 (c : Int)) (hlow : {Mlow} ≤ c){hreach_t} :
     DoneK off c input S0 T ({GA} + LI * c + XM) := by
   have hc55 : (c : Int) < 36028797018963968 := by
     have : (2 : Nat) ^ 54 = 18014398509481984 := rfl
@@ -803,7 +810,7 @@ have hd := afterB off c input S0 hb _ 0 _ (Nat.le_refl _) (by omega) (by simpa o
 rw [len_{nm}, len_Bb] at hd
 exact (Done.run rfl (Done.run rfl hd)).mono (by unfold LI XM; omega)""".split('\n'):
                 out.append(' ' * ind + t)
-        L.extend(emit_dispatch(2, 'f0', '(c : Int)', 0, 'c', Mlow, G_pc, 'off', 0, '0', on_H_P))
+        L.extend(emit_dispatch(2, 'f0', '(c : Int)', 0, 'c', Mlow, G_pc, 'off', 0, '0', on_H_P, skip=set(PEXC)))
         L.append('')
     # ------------------------------------------------------------------ the entry
     ENT = entry
@@ -871,8 +878,9 @@ theorem norm_thm : NormThm rodata prog {ENT} steps targets := by
         GP = gen(pv)
         zfp = '(by fr_eq)' if ch.i > 0 else '(hE.ctrl.2.2.1.trans (by decide +kernel))'
         cfp = '(by fr_eq)' if ch.i > 0 else '(hE.ctrl.2.2.2.1.trans (by decide +kernel))'
+        cc = 'c' if cv == 'sym' else str(cv)
         for t in f"""have hx := Fr.cut (rho_ok off) (rho_ok 0) entryCtl {GP}.facts.ctl0 entrySc {GP}.facts.sc0
-  (PreCut.entry off c input S hE hb) {f} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel) {zfp} {cfp} (by decide +kernel)
+  (PreCut.entry off {cc} input S hE hb) {f} {fixed_of(ch)} (by simp [setVal]) (by decide +kernel) (by decide +kernel) {zfp} {cfp} (by decide +kernel)
 rw [rho_add, Nat.add_zero] at hx
 obtain ⟨ok1, cut1⟩ := {GP}.facts.run (rho off) (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok
 have I1 := (I0.fr {f}).seg {GP}.facts off (by omega) hmb hx (by wok_in) (by wok_out {GP}.facts)
@@ -880,9 +888,9 @@ have e2 : (X86.isa.run rodata prog {GP}.facts.len (X86.isa.run rodata prog {ch.i
     (X86.isa.run rodata prog {ch.i or 0} S).getGD 2 := by
   rw [← envOf_gdVar _ 2 (by decide), ← envOf_gdVar _ 2 (by decide)]
   exact {GP}.facts_rdx _ (rho_ok off) (rho_within off hmb) _ hx (I0.fr {f}).ok
-have hd := afterP_{pv} off c input S _ hb cut1 I1 (by
+have hd := afterP_{pv} off {cc} input S _ hb cut1 I1 (by
   rw [e2, {f}.vals (2, {vals[2].lean if cv == 'sym' else f'((({cv} : Nat)) : Int)'}) (by simp [setVal])]
-  try rfl) (by omega)
+  try rfl) (by omega){' (by omega)' if PEXC else ''}
 rw [len_{pv}] at hd
 exact (Done.run rfl (Done.run rfl hd)) (steps off {'c' if cv == 'sym' else cv}) (by unfold steps; omega)""".split('\n'):
             oo(t)
