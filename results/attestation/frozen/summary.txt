@@ -46,6 +46,8 @@ out_InPlaceRvScalar.txt      Keccaktree.Kernels.ZbbX1.InPlaceAll.kernelAl       
 out_InPlaceRvScalar.txt      Keccaktree.Kernels.ZbbX1.InPlaceAll.lib_inplace_zbb_x1          741 certs  OK
 out_InPlaceRvvV8.txt         Keccaktree.Kernels.RvvV8.InPlaceAll.access_thm                 4660 certs  OK
 out_InPlaceRvvV8.txt         Keccaktree.Kernels.RvvV8.InPlaceAll.kernelAl                   4660 certs  OK
+out_InPlaceRvvZvkbV8.txt     Keccaktree.Kernels.RvvZvkbV8.InPlaceAll.access_thm             4660 certs  OK
+out_InPlaceRvvZvkbV8.txt     Keccaktree.Kernels.RvvZvkbV8.InPlaceAll.kernelAl               4660 certs  OK
 out_Rv2.txt                  Keccaktree.Kernels.RvvV2.All.all                               1186 certs  OK
 out_Rv2.txt                  Keccaktree.Kernels.RvvV2.All.all_ch                            1186 certs  OK
 out_Rv2.txt                  Keccaktree.Kernels.RvvV2.All.norm_thm                          1186 certs  OK
@@ -103,6 +105,9 @@ out_Rv8.txt                  Keccaktree.Kernels.RvvZvkbV8.AllUM.kernelU         
 out_Rv8.txt                  Keccaktree.Kernels.RvLib.lib8                                 10585 certs  OK
 out_Rv8.txt                  Keccaktree.Kernels.RvLib.lib8ch                               10585 certs  OK
 out_Rv8.txt                  Keccaktree.Kernels.RvLibUV.lib8U                              20017 certs  OK
+out_RvLibInPlace.txt         Keccaktree.Kernels.RvLibInPlace.lib_inplace2                   3637 certs  OK
+out_RvLibInPlace.txt         Keccaktree.Kernels.RvLibInPlace.lib_inplace4                   5953 certs  OK
+out_RvLibInPlace.txt         Keccaktree.Kernels.RvLibInPlace.lib_inplace8                  10585 certs  OK
 out_RvScalar.txt             Keccaktree.Kernels.Rv64X1.All.rv64_x1_all                       741 certs  OK
 out_RvScalar.txt             Keccaktree.Kernels.Rv64X1.All.norm_thm                          741 certs  OK
 out_RvScalar.txt             Keccaktree.Kernels.Rv64X1.All.kernel                            741 certs  OK
@@ -219,4 +224,4 @@ avx512_x9.ax.txt             Keccaktree.Kernels.Avx512X9.Lib.kernel             
 avx512_x9d.ax.txt            Keccaktree.Kernels.Avx512X9d.All.norm_thm                      6178 certs  OK
 avx512_x9d.ax.txt            Keccaktree.Kernels.Avx512X9d.Lib.kernel                        6178 certs  OK
 x86_x1.ax.txt                Keccaktree.Kernels.X86X1.Lib.kernel                             721 certs  OK
-theorems: 221   all clean: True
+theorems: 226   all clean: True
