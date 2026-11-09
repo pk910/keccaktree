@@ -48,6 +48,9 @@ DROP_RC = None
 # (the `show … .mem` form made Lean evaluate a slice: avx2_x6).  INV_DEPTH_ALL=0/1, SEGFRAME_RW=0/1 override.
 INV_DEPTH_ALL = False
 SEGFRAME_RW = False
+# the recursion bound for a slice's step theorem when its output tuple (lanes + carried constants) exceeds 240
+# (avx2_x9/x10 GenX3 slice 0: 252, past the default depth).  STEP_DEPTH_ALL=0/1 overrides.
+STEP_DEPTH_ALL = False
 
 
 def matches(kernel, count, steps, lanes, rnd_of, region_filter=None):
@@ -426,7 +429,7 @@ theorem lane{c}_{j} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) {
 
 ''')
     print(f'slice {c}: {len(outs)} outputs, {len(groups)} generic lemmas, round {r_slice} on {sorted(active)}', file=sys.stderr)
-    if len(outs) > 200 or len(alloc_in) > 200:
+    if len(outs) > 200 or len(alloc_in) > 200 or (STEP_DEPTH_ALL and len(outs) + len(chyps_out) > 240):
         out.write('set_option maxRecDepth 100000 in\n')
     out.write(f'/-- Slice {c}: the invariant at its start gives the invariant at its end, for the advanced states. -/\n')
     out.write(f'theorem step{c} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (h : Inv{c} env A) :\n')
@@ -1037,10 +1040,11 @@ MOVES = [tuple(int(y) for y in x.split(':')) for x in os.environ.get('MOVES', ''
 def main():
     global PLAN, K, ALLOC_END
     kernel, nsdir, count, lanes = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
-    global DROP_RC, INV_DEPTH_ALL, SEGFRAME_RW
+    global DROP_RC, INV_DEPTH_ALL, SEGFRAME_RW, STEP_DEPTH_ALL
     flag = lambda n, dflt: (os.environ[n] == '1') if n in os.environ else dflt
     INV_DEPTH_ALL = flag('INV_DEPTH_ALL', ISA == 'X86' and kernel in ('avx2_x9', 'avx2_x10'))
     SEGFRAME_RW = flag('SEGFRAME_RW', ISA == 'X86' and kernel in ('avx2_x6', 'avx2_x9', 'avx2_x10'))
+    STEP_DEPTH_ALL = flag('STEP_DEPTH_ALL', ISA == 'X86' and kernel in ('avx2_x9', 'avx2_x10'))
     DROP_RC = (os.environ['DROP_RC'] == '1') if 'DROP_RC' in os.environ else \
         (ISA == 'X86' and kernel.startswith(('avx2_', 'x86_x1')))
     ns = os.environ.get('NS', nsdir)
