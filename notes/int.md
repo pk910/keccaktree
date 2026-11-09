@@ -196,3 +196,13 @@ project in parallel (a stray `--help` reached 41 GB before I stopped it).  Final
 symlinks to `/mnt/kt-store/kt-int-lib/Kernels/<d>` (sshfs archive disk of another VM; storage only).  Copied with
 links=1 only, verified with `rsync -c`, then `lake build --no-build` of RvLib4, RvLibUV4, ArmLib, ArmLibInPlace
 up to date; no olean bytes changed.  Nothing writes into them; if the mount drops: `mount /mnt/kt-store`.
+
+## Regeneration notes (for the manifest)
+* avx2_x9 / avx2_x10: `GenX3/Slice0.lean` carries `set_option maxRecDepth 100000 in` on its step theorem (252-element
+  output tuple), added in kt-x86 by the coordinator; the generator does the same under STEP_DEPTH_ALL (1d8f2bb, default
+  only for avx2_x9/x10, condition outs + chyps > 240; a scan of all x86 slices triggers exactly these two files).  The
+  kt-x86 Gen files are taken as they are when linked.
+* avx512_x9 / x9d: linked from kt-x86b, Gen dirs not regenerated (mixed generator versions overnight).
+* x86_x1 InPlace summaries: committed one-decide form kept; the current gen_inplace.py writes a per-slice form with
+  identical statements (proof form only).
+* avx2_x4 InPlaceAll: regenerated (0c27870; the committed one predated the threshold-only exit filter).
