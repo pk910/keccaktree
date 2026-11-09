@@ -206,3 +206,7 @@ up to date; no olean bytes changed.  Nothing writes into them; if the mount drop
 * x86_x1 InPlace summaries: committed one-decide form kept; the current gen_inplace.py writes a per-slice form with
   identical statements (proof form only).
 * avx2_x4 InPlaceAll: regenerated (0c27870; the committed one predated the threshold-only exit filter).
+* gen_all_rvvu.py: `out_w` (w-node output lanes of the misaligned RVV batches) gets `maxHeartbeats 16000000` for w > 4
+  (4000000 timed out at `whnf` for out_5..out_8 of RvvV8.AllUM); w ≤ 4 unchanged: V2/V4 AllUM regenerate
+  byte-identically (checked), V8 AllUM differ from before only in those four lines.
+* RvvV4/RvvZvkbV4 AllUM.lean (generated, imported by the committed RvLibUV4) committed as built in kt-int; V8 after its build.

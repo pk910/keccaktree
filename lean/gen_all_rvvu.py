@@ -82,7 +82,7 @@ theorem inv0_{w} (S0 : State (BitVec 64)) (msg : Nat → Nat → BitVec 64)
 ''' + '\n'.join(goals) + f'''
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats {4000000 if w <= 4 else 16000000} in
 theorem out_{w} (C : State (BitVec 64)) (msg : Nat → Nat → BitVec 64)
     (h : GenM{w}.Inv{K} (fun i => envOf C ((rho 0).var i)) (GenM{w}.AAt (fun n => absorbNode (msg n.val)) {K})) :
     ∀ l f, l < {w} → f < 4 → Riscv.lane C f l = L (Spec.keccakF (absorbNode (msg l))) f := by
