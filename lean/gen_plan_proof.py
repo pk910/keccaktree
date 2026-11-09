@@ -45,6 +45,14 @@ def run(*args, ctl=()):
 # constants from memory only (AVX2, x86_x1); the AVX-512 kernels keep theirs.  DROP_RC=0/1 overrides.
 DROP_RC = None
 RC_BV = False
+# per-kernel forms introduced after kernels were proved (their generated files stay as they were):
+# the recursion bound for Inv defs counting the constant hypotheses too, and seg_frame's `rw` of `segAt`
+# (the `show … .mem` form made Lean evaluate a slice: avx2_x6).  INV_DEPTH_ALL=0/1, SEGFRAME_RW=0/1 override.
+INV_DEPTH_ALL = False
+SEGFRAME_RW = False
+# the recursion bound for a slice's step theorem when its output tuple (lanes + carried constants) exceeds 240
+# (avx2_x9/x10 GenX3 slice 0: 252, past the default depth).  STEP_DEPTH_ALL=0/1 overrides.
+STEP_DEPTH_ALL = False
 
 
 def matches(kernel, count, steps, lanes, rnd_of, region_filter=None, regs_only=False):
@@ -244,7 +252,7 @@ where rndSlice (c : Nat) : Nat := ''' + f'''match c with
 ''')
         for c in range(K + 1):
             doc = f'The locations at bound {c}' if c < K else 'The output locations at the end of the plan'
-            if len(allocs[c]) > 200 or len(allocs[c]) + len(chyps[c]) > 250:
+            if len(allocs[c]) > 200 or (INV_DEPTH_ALL and len(allocs[c]) + len(chyps[c]) > 250):
                 f.write('set_option maxRecDepth 100000 in\n')
             f.write(f'/-- {doc} (for states `A n` of the nodes). -/\n')
             conjs = [f'env {var} = {quantity(node, kind)}.rotateLeft {rot}' for node, kind, var, rot, _ in allocs[c]] + [h for (_, _, h) in chyps[c]]
@@ -427,7 +435,7 @@ theorem lane{c}_{j} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) {
 
 ''')
     print(f'slice {c}: {len(outs)} outputs, {len(groups)} generic lemmas, round {r_slice} on {sorted(active)}', file=sys.stderr)
-    if len(outs) > 200 or len(alloc_in) > 200:
+    if len(outs) > 200 or len(alloc_in) > 200 or (STEP_DEPTH_ALL and len(outs) + len(chyps_out) > 240):
         out.write('set_option maxRecDepth 100000 in\n')
     out.write(f'/-- Slice {c}: the invariant at its start gives the invariant at its end, for the advanced states. -/\n')
     out.write(f'theorem step{c} (env : Nat → BitVec 64) (A : Fin {count} → Spec.State) (h : Inv{c} env A) :\n')
@@ -518,7 +526,8 @@ theorem rounds_succ (r : Nat) (X : Spec.State) : Spec.round r (Spec.rounds r X) 
         nodes_ = [int(x) for x in os.environ.get('NODES', '').split(',') if x] or list(range(count))
         for n in range(count):
             r0n = PLAN['rounds'][0][n]
-            if r0n != 0 and n not in nodes_:
+            if r0n != 0 and (ISA != 'X86' or n not in nodes_):
+                # (AArch64 / RISC-V: no mid-way `aat` lemma, as their proved segments were generated)
                 continue
             if r0n == 0:
                 f.write(f'''set_option maxRecDepth 100000 in
@@ -850,7 +859,7 @@ theorem seg_frame {hyps}
     (segAt{K} S0).mem r q = S0.mem r q := by
   have s0 := (cert0).step ρ hρ hw S0 hc hs
 {chain}""" + ''.join(f"""  have m{c + 1} : (segAt{c + 1} S0).mem r q = {at(c)}.mem r q := by
-    {(f"rw [show segAt{c + 1} S0 = {ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)} from rfl, s{c}.2.1]" if ISA == 'X86' else f"show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _" + chr(10) + f"    rw [s{c}.2.1]")}
+    {(f"rw [show segAt{c + 1} S0 = {ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)} from rfl, s{c}.2.1]" if SEGFRAME_RW else f"show ({ISA_EXPR}.execTrace rodata (cert{c}).slice {at(c)}).mem r q = _" + chr(10) + f"    rw [s{c}.2.1]")}
     apply (cert{c}).frame {FOOT_EXPR} ρ {at(c)} {'hc' if c == 0 else f's{c - 1}.2.2.2'} r q
     intro hm
     have := List.all_eq_true.mp writes{c} _ hm
@@ -1162,7 +1171,11 @@ MOVE_PATHS = []                   # the address bound of the relocation certific
 def main():
     global PLAN, K, ALLOC_END
     kernel, nsdir, count, lanes = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
-    global DROP_RC
+    global DROP_RC, INV_DEPTH_ALL, SEGFRAME_RW, STEP_DEPTH_ALL
+    flag = lambda n, dflt: (os.environ[n] == '1') if n in os.environ else dflt
+    INV_DEPTH_ALL = flag('INV_DEPTH_ALL', ISA == 'X86' and kernel in ('avx2_x9', 'avx2_x10'))
+    SEGFRAME_RW = flag('SEGFRAME_RW', ISA == 'X86' and kernel in ('avx2_x6', 'avx2_x9', 'avx2_x10'))
+    STEP_DEPTH_ALL = flag('STEP_DEPTH_ALL', ISA == 'X86' and kernel in ('avx2_x9', 'avx2_x10'))
     DROP_RC = (os.environ['DROP_RC'] == '1') if 'DROP_RC' in os.environ else \
         (ISA == 'X86' and kernel.startswith(('avx2_', 'x86_x1')))
     # x86b (AVX-512 kernels, which keep their RC hypotheses): an RC lane may need its hypotheses and bv_decide;

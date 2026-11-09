@@ -153,3 +153,61 @@ gen_plan_proof.py after the x86/x86b merges (every addition gated so each branch
   (default: X86 without DROP_RC = the AVX-512 kernels); otherwise the plain `decide` form (ARM has no RC
   lanes; rvu's RvvV4/V8 and x86's Avx2X9/X10 slices use the plain form).
 To be checked by regeneration once kttool is built on the base: ARM, RISC-V (rvu drivers), x86 and x86b samples.
+
+## x86 replay into kt-int (hard links, never rebuilt)
+* kt-x86 is NOT used (built on Iter 2a55570); its AVX2 / x86_x1 kernels are rebuilt there on the frozen base and
+  linked after each passes.
+* kt-x86b → kt-int, avx512_x8 / avx512_x8d (2026-11-08 12:58): the import closure of `Avx512X8.Lib` and
+  `Avx512X8d.Lib` in kt-int's sources is 562 modules (`/root/kt-int-closure.py`); every one has a byte-identical
+  source in kt-x86b and an .olean there.  Their `lib/lean` and `ir` outputs were hard-linked (`/root/kt-int-link.sh`,
+  2930 files; Gen sources copied).  No lake ever runs in kt-x86b.
+* `lake build --no-build` over the 562 first reported 42 targets out of date (each kernel's Program and Gen*.Invs).
+  Cause: x86b's disk cleanup deleted `.lake/build/ir/Keccaktree/Kernels/Avx512X8{,d}`; the traces record a `.c`
+  output for every module (532 of the 562).  The trace inputs are identical (checked on Program: source
+  6a345ef1780640ba, imports b4a4dcf653bccf4c / bce00ffc3e650413, Lean 4.35.0 407ce514b71d5a10, options).
+* Fix (coordinator-approved): for those 532 modules a fresh, empty placeholder `ir/<module>.c` and `ir/<module>.c.hash`
+  holding the hash recorded in the trace, in kt-int only (no links).  The .c files are the compiled-code outputs of
+  the C backend; no proof and no importing module reads them (importers read the .olean).  For every one of the 532,
+  the `.olean.hash` equals the olean hash recorded in the trace (checked); olean and trace inputs are unchanged.
+  List with the recorded c / olean hashes: `results/x86b_replay_placeholder_c.txt`.
+* Re-run: `lake build --no-build` over the 562 → `All targets up-to-date (563 jobs)`.  Later real builds in kt-int
+  never touched a linked file (link count / mtime checked).
+* kttool of the frozen base is built in a separate workspace `/root/kt-int-tool` (it imports every Program, so
+  building it in kt-int would have touched linked modules); generation runs there and the Gen dirs are copied.
+
+## lean4checker
+The Lean 4.35.0 toolchain ships it as `leanchecker` (also `leanchecker-paranoid`, `lean4lean`, `nanoda_bin`):
+`lake env leanchecker <Module>` replays every declaration of the modules whose name has that prefix into the
+environment of their imports, through the kernel, without elaboration (tested: Asm.Iter 0.8 s, a GenSE1 slice
+1.3 s, ~0.7 GB).  Caution: without a module argument (or with an unknown flag such as `--help`) it checks the whole
+project in parallel (a stray `--help` reached 41 GB before I stopped it).  Final run: per module, P ≤ 2, timing per kernel.
+
+## Compiled-C truncations in kt-int (disk)
+* 21:14 (coordinator): 799 `.c` files > 1 MB, older than 60 min, with `.c.hash`, truncated to 0 bytes (mtime and
+  `.c.hash` kept; 55 GB): `/root/kt-int-logs/truncated_c.txt` (original sizes).  420 of them were hard links into
+  /root/kt-x86b (`truncated_c_hardlinked.txt`), so kt-x86b's copies are empty too.  Proofs unaffected (.olean and
+  traces untouched, lake trusts the .hash files; --no-build stays up to date).  Rule: no executable is rebuilt in
+  kt-x86b / kt-x86; the final regeneration checks use /root/kt-int-tool.
+* From then on `kt-int-diskguard` (below 30 GB free, every 10 min): same truncation with `-links 1` (never a
+  hard-linked file), log `truncated_c2.txt`.  To be listed in the manifest with the placeholder lists.
+
+## Offloaded olean trees (coordinator, 2026-11-09 09:12)
+`/root/kt-int/lean/.lake/build/lib/lean/Keccaktree/Kernels/{RvvV4,RvvZvkbV4,ScalarX1,Sha3X2,NeonX2,Sha3X3,Sha3X3r,NeonX3}` are
+symlinks to `/mnt/kt-store/kt-int-lib/Kernels/<d>` (sshfs archive disk of another VM; storage only).  Copied with
+links=1 only, verified with `rsync -c`, then `lake build --no-build` of RvLib4, RvLibUV4, ArmLib, ArmLibInPlace
+up to date; no olean bytes changed.  Nothing writes into them; if the mount drops: `mount /mnt/kt-store`.
+
+## Regeneration notes (for the manifest)
+* avx2_x9 / avx2_x10: `GenX3/Slice0.lean` carries `set_option maxRecDepth 100000 in` on its step theorem (252-element
+  output tuple), added in kt-x86 by the coordinator; the generator does the same under STEP_DEPTH_ALL (1d8f2bb, default
+  only for avx2_x9/x10, condition outs + chyps > 240; a scan of all x86 slices triggers exactly these two files).  The
+  kt-x86 Gen files are taken as they are when linked.
+* avx512_x9 / x9d: linked from kt-x86b, Gen dirs not regenerated (mixed generator versions overnight).
+* x86_x1 InPlace summaries: committed one-decide form kept; the current gen_inplace.py writes a per-slice form with
+  identical statements (proof form only).
+* avx2_x4 InPlaceAll: regenerated (0c27870; the committed one predated the threshold-only exit filter).
+* gen_all_rvvu.py (rvu 1dd65f1, replacing my short-lived heartbeat bump 8723a4d): `out_w` of the misaligned RVV
+  batches split their case analysis on f, then l, for w > 4 (one `omega` over the 4w (f, l) pairs is exponential in w:
+  RvvV8.AllUM out_5..out_8 timed out after 2124 s; with the fix the module builds in 58 s, 4.7 GB).  w ≤ 4 unchanged:
+  V2/V4 AllUM regenerate byte-identically (checked in kt-int-tool); V8 AllUM generated with the fix.
+* RvvV4/RvvZvkbV4 AllUM.lean (generated, imported by the committed RvLibUV4) committed as built in kt-int; V8 after its build.

@@ -37,6 +37,23 @@ theorem mprog : MProg prog {t} := by constructor <;> decide +kernel
 set_option maxRecDepth 100000 in
 theorem mframe : MFrame prog {t} := by constructor <;> decide +kernel
 ''')
+
+def split_cases(w, outs, cases):
+    """the case split of out_w on the lane (f, l): one disjunction of the 4w pairs for w <= 4 (the form of
+    the VLEN 128/256 files), nested splits on f then l for w > 4 (omega on the 4w-pair disjunction is
+    exponential in w)"""
+    if w <= 4:
+        return (f'  rcases (by omega : {" ∨ ".join(f"(f = {f} ∧ l = {l})" for (f, l) in outs)}) with\n'
+                f'    {" | ".join("⟨rfl, rfl⟩" for _ in outs)}\n' + '\n'.join(cases))
+    by = {fl: c for fl, c in zip(outs, cases)}
+    txt = '  rcases (by omega : f = 0 ∨ f = 1 ∨ f = 2 ∨ f = 3) with rfl | rfl | rfl | rfl\n'
+    for f in range(4):
+        txt += (f'  · rcases (by omega : {" ∨ ".join(f"l = {l}" for l in range(w))}) with '
+                f'{" | ".join("rfl" for _ in range(w))}\n')
+        for l in range(w):
+            txt += '\n'.join('  ' + ln for ln in by[(f, l)].split('\n')) + '\n'
+    return txt.rstrip('\n')
+
 lens = []
 for w in range(1, V + 1):
     seg = open(os.path.join(base, f'GenM{w}', 'Seg.lean')).read()
@@ -88,9 +105,7 @@ theorem out_{w} (C : State (BitVec 64)) (msg : Nat → Nat → BitVec 64)
     ∀ l f, l < {w} → f < 4 → Riscv.lane C f l = L (Spec.keccakF (absorbNode (msg l))) f := by
   obtain ⟨{", ".join(names)}⟩ := h
   intro l f hl hf
-  rcases (by omega : {" ∨ ".join(f"(f = {f} ∧ l = {l})" for (f, l) in outs)}) with
-    {" | ".join("⟨rfl, rfl⟩" for _ in outs)}
-''' + '\n'.join(cases) + f'''
+''' + split_cases(w, outs, cases) + f'''
 
 set_option maxRecDepth 100000 in
 theorem len_{w} : GenM{w}.segLen = LEN := by decide +kernel
