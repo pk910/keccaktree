@@ -1,9 +1,6 @@
-# Verification status (2026-11-08)
+# Verification status (2026-11-09 15:00 UTC)
 
-What is proved, what the evidence is, and what is still pending. The final step re-checks
-every kernel in **one** tree against a frozen shared base (see "Base freeze"). Until that has run,
-the results below were checked in per-ISA workspaces. Each one is a complete Lean check of that
-theorem, but against the shared proof-library files of its own workspace.
+What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
 ## The theorems
 
@@ -15,83 +12,114 @@ equals `Spec.keccak256` (FIPS 202, Ethereum padding) of its node, and nothing ou
 is written. The per-ISA tables (`lib_x86`, `ArmLib.lib_arm_all`, `RvLib.lib*`) quantify over all
 kernels, and `Dispatch` proves that `keccaktree.c`'s CPU-feature dispatch only calls kernels the CPU supports.
 
-## Every-count proofs: 20 of 24 kernels
+**In place** (`InPlaceAll.kernelAl`, `lib_inplace_*`): the same statement when the output buffer is the input
+buffer (`out = in`, the tree's level-by-level hashing): every node is read before its digest overwrites it.
 
-| ISA | kernel | every count | bv_decide certs | checked where (Iter blob) | final single-tree build |
-|---|---|---|---|---|---|
-| x86-64 | x86_x1 | proved (`X86X1.Lib.lib_x86_x1`) | 721 | kt-lib (35daf84) | rebuild queued (kx-final) |
-| x86-64 | avx2_x2 | proved | 786 | kt-x86 (2a55570) | rebuild queued (kx-final) |
-| x86-64 | avx2_x4 (every threshold, `LibV`) | proved | 2201 | kt-x86 (2a55570) | rebuild queued |
-| x86-64 | avx2_x5 | proved | 1597 | kt-x86 (2a55570) | rebuild queued |
-| x86-64 | avx2_x6 | proved | 2294 | kt-x86 (2a55570) | rebuild queued |
-| x86-64 | avx2_x8 | proved | 1720 | kt-x86 (2a55570) | rebuild queued |
-| x86-64 | avx2_x9 | **building** | | kt-x86 (frozen) | built once there |
-| x86-64 | avx2_x10 | **building** | | kt-x86 (frozen) | built once there |
-| x86-64 | avx512vl_x4 | proved (Nov 7) | 3297 | kt-x86b (28ac8a7 = frozen) | segment oleans deleted, rebuild in kt-int |
-| x86-64 | avx512vl_x4d | proved (Nov 8) | 3297 | kt-x86b (frozen) | rebuild in kt-int |
-| x86-64 | avx512_x8 | proved | 4455 | kt-x86b (frozen) | **final**: replayed by hard link |
-| x86-64 | avx512_x8d | proved | 4455 | kt-x86b (frozen) | **final**: replayed by hard link |
-| x86-64 | avx512_x9 | **building** (body, prologue, exits 1–3 built) | | kt-x86b (frozen) | built once there |
-| x86-64 | avx512_x9d | pending (after x9) | | kt-x86b (frozen) | built once there |
-| AArch64 | scalar_x1, sha3_x2, neon_x2, sha3_x3, sha3_x3r, neon_x3 | proved (`ArmLib.lib_arm_all`) | 6631 | kt-arm (35daf84) | rebuild in kt-int |
-| RISC-V | rv64_x1, zbb_x1, rvv, rvv_zvkb, VLEN 128 / 256 | proved (`RvLib.lib2`, `lib4`, any vl choice: `lib2ch`, `lib4ch`) | 3637 / 5953 | kt-rvu (f9527b5) | rebuild in kt-int |
-| RISC-V | rvv, rvv_zvkb, VLEN 512 | proved on the previous RISC-V model; pending on the current one | | | build in kt-int |
+**Misaligned** (RISC-V, `AllU`/`AllUM`, `RvLibU`, `RvLibUV`): input and output at any byte offset.
 
-The kernel table counts 24 entries: 14 x86, 6 ARM, 4 RISC-V, with RVV counted once over its VLEN
-configurations. RVV with VLEN ≥ 1024 is not covered: the model has 8 lanes per vector register.
+## Every-count proofs on the frozen base: 22 of 24 kernels done
+
+All rows below were checked against the frozen shared base (see "Base freeze"); `results/attestation/frozen/`
+has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SAT certificates in the proof.
+
+| ISA | kernel | every count (aligned) | in place | certs |
+|---|---|---|---|---|
+| x86-64 | x86_x1 | ✅ `X86X1.Lib.lib_x86_x1` | ✅ `lib_inplace_x86_x1` | 721 |
+| x86-64 | avx2_x2 | ✅ | ✅ | 786 |
+| x86-64 | avx2_x4 (+ every threshold: `LibV`) | ✅ | ✅ (`InPlaceAll`, `InPlaceAllV`) | 2201 |
+| x86-64 | avx2_x5 | ✅ | ✅ | 1597 |
+| x86-64 | avx2_x6 | ✅ | ✅ | 2294 |
+| x86-64 | avx2_x8 | ✅ | ✅ | 1720 |
+| x86-64 | avx2_x9 | ✅ (Nov 9) | ✅ (Nov 9) | 8348 |
+| x86-64 | **avx2_x10** (+ threshold variant) | ⏳ building, ~40% of segments | ⏳ after | |
+| x86-64 | avx512vl_x4 | ✅ | ✅ | 3297 |
+| x86-64 | avx512vl_x4d | ✅ | ✅ | 3297 |
+| x86-64 | avx512_x8 | ✅ | ✅ | 4455 |
+| x86-64 | avx512_x8d | ✅ | ✅ | 4455 |
+| x86-64 | avx512_x9 | ✅ | ✅ | 6182 |
+| x86-64 | avx512_x9d | ✅ (Nov 9) | ✅ (Nov 9) | 6178 |
+| AArch64 | scalar_x1, sha3_x2, neon_x2, sha3_x3, sha3_x3r, neon_x3 | ✅ all six, table `ArmLib.lib_arm_all` | ✅ all six, `ArmLibInPlace.lib_inplace_arm_all` | 609 / 1187 / 1185 / 1277 / 1323 / 1185 (table 6631) |
+| RISC-V | rv64_x1, zbb_x1 | ✅ + misaligned (`RvLibU.libU`) | ✅ | 741 each |
+| RISC-V | rvv, rvv_zvkb at VLEN 128 | ✅ `RvLib.lib2` (+ any `vl` choice `lib2ch`) + misaligned `RvLibUV.lib2U` | ✅ | 1186 (misaligned 2521) |
+| RISC-V | rvv, rvv_zvkb at VLEN 256 | ✅ `RvLib.lib4`, `lib4ch`, misaligned `lib4U` | ✅ | 2344 (misaligned 4837) |
+| RISC-V | rvv at VLEN 512 | ✅ aligned + misaligned (Nov 9) | ✅ (Nov 9) | 4660 (misaligned 9469) |
+| RISC-V | **rvv_zvkb at VLEN 512** | ⏳ building (body 3 of 8) | ⏳ after | |
+
+The kernel table counts 24 entries: 14 x86, 6 ARM, 4 RISC-V families (RVV counted once across its VLEN
+configurations). RVV with VLEN ≥ 1024 is not covered: the model has 8 lanes per vector register.
 That needs a decision: either cap `vlenb <= 64` upstream, or extend the model.
 
-## Beyond the aligned every-count theorem
-
-| property | proved | pending |
-|---|---|---|
-| **in place** (output = input) | x86_x1 (`lib_inplace_x86_x1`, generic `LibAlias.lib_inplace_x86`); scalar_x1, sha3_x2, neon_x2, sha3_x3 (`lib_inplace_*`, generic `LibArmAl.lib_inplace_arm`); rv64_x1 on the previous RISC-V model | sha3_x3r, neon_x3, ARM table; AVX-512 (generator done, avx512_x8 pilot building); AVX2 (generated, waiting for the rebuild); RISC-V on the new byte/vector-load model |
-| **misaligned buffers** (RISC-V) | rv64_x1, zbb_x1 for any input/output byte offset (`RvLibU.libU`, `libU_ch`); rvv, rvv_zvkb VLEN 128 (`RvLibUV.lib2U`, default `vl` rule) | VLEN 256/512 (generated); x86/ARM unaligned not started |
-| **dispatch** (`keccaktree.c`) | `Dispatch.hash_x86`, `hash_arm`, `hash_rv`, `detect*_sound`, `hash_x86_reachable` | |
-| **differential tests** | every instruction form of the three ISA models against hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512) | |
-
-## Attestation
-
-`results/attestation/interim/` holds the evidence for every row marked proved:
-
-* `<ws>.<module>.lean`: the check script, `import <module>` followed by `#print axioms` for every theorem in it.
-* `<ws>.<module>.ax.txt.gz`: Lean's output: the header line with workspace, module, UTC time and `lean --version`
-  (4.35.0, commit eb6cafb7), then one `depends on axioms` line per theorem.
-* `<ws>.closure.json`: the import closure of each checked module, with the git blob id of **every** source file
-  in it and a sha256 digest over the sorted `(module, blob)` list. Any file can be compared with the repository
-  by `git hash-object`.
-* `summary.txt`: the per-theorem axioms digest of the above. `closures.md`: one row per root module.
-* `SHA256SUMS`: hashes of the raw outputs before compression.
-
-**Result of every check:** only `propext`, `Classical.choice`, `Quot.sound`, plus `bv_decide` certificate
-axioms (`<decl>._native.bv_decide.ax_*`, checked by Lean's verified LRAT checker run as compiled code).
-No `sorryAx`, no other axiom. The certificate count is the number of SAT problems in a kernel's proof.
-
-Interim caveat: the x86 AVX2 rows (and x86_x1) were checked against `Iter.lean` blob 2a55570. Their workspace
-file was swapped to the frozen 28ac8a7 minutes before this run; `x86.closure.json` records the blob the oleans
-were built with. These rows are superseded by the frozen-base rebuild.
-
-To re-check anything: `cd lean && lake build <module>`, then run the check script with `lake env lean`.
-
-## Base freeze
-
-Branches built in parallel had diverged on one proof-library file, `Asm/Iter.lean` (four versions of the
-expression folder `E.fold`). Lean rechecks every module downstream of a changed file. From commit e43c5ea on,
-the shared files are frozen at `Iter.lean` 28ac8a7 (the superset: the signed/closed fold RISC-V needs, plus the
-x86 region-0 case), the RISC-V model of all-rvu, and `Library`/`Lib*`/`LibTable` as on integrate.
-Every remaining artifact is built **once** against that base:
-
-* kt-x86: avx2_x9, avx2_x10, then avx2_x2, x4 (+V), x5, x6, x8, x86_x1
-* kt-x86b: avx512_x9, x9d; avx512_x8/x8d already on the base
-* kt-int (one tree): ARM, RISC-V (aligned + misaligned), all in-place modules, avx512vl_x4/x4d,
-  the x86 kernels by hard link, then `results/manifest.txt` with one combined axioms check
+Also proved: **dispatch** (`Dispatch.hash_x86`, `hash_arm`, `hash_rv`, `detect*_sound`,
+`hash_x86_reachable`). **Differential tests**: every instruction form of the three ISA models against
+hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go kernels**:
+`Generic.lean` transcribes them; CI checks the transcription statement by statement
+(`lean/check_tables.py`) and `Proof.lean` proves both equal `Spec.keccak256`.
 
 ## Pending, with estimates
 
-| item | estimate |
-|---|---|
-| avx2_x9, avx512_x9 | Nov 8 night |
-| avx2_x10, avx512_x9d | Nov 9 morning |
-| AVX2/x86_x1 rebuild on the frozen base | Nov 9 |
-| kt-int: ARM, RISC-V, in-place, combined manifest | Nov 9 evening |
-| VLEN ≥ 1024, x86/ARM unaligned | needs a decision |
+| item | state | estimate |
+|---|---|---|
+| avx2_x10 every count | 24 of ~165 proof slices done since the handoff; 4 in parallel, ~35 min each | Nov 10 ~10:00 UTC |
+| avx2_x10 threshold variant, library kernels, axioms | runs right after (same segments) | Nov 10 ~12:00 |
+| avx2_x10 / x10V in place | after that | Nov 10 ~15:00 |
+| rvv_zvkb VLEN 512 (aligned, misaligned, `RvLib8`, `RvLibUV8`, in place) | 8 batch bodies, 3rd building | Nov 9 ~23:00 |
+| final single-tree assembly: in-place library tables for x86 and RISC-V, combined axioms check, `results/manifest.txt`, `leanchecker` replay of every module | after both | Nov 10 evening |
+| VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
+
+## Attestation
+
+`results/attestation/frozen/` (this run, frozen base):
+
+* `kt-int/<name>.lean`: the check script, `import <modules>` followed by `#print axioms` for every theorem.
+* `kt-int/out_<name>.txt.gz`: Lean's output for that script, run in the single integration tree `kt-int`.
+  `kt-x86/*.ax.txt.gz`: the same for the every-count theorems in the x86 build tree, where the large AVX2 and
+  AVX-512 proofs were built (their oleans are linked into `kt-int`, and `lake build --no-build` there confirms
+  they are up to date against `kt-int`'s sources).
+* `summary.txt`: one row per theorem (202 rows) with its certificate count, produced by `lean/axsum.py`,
+  which fails unless every theorem depends only on `propext`, `Classical.choice`, `Quot.sound` and
+  `<decl>._native.bv_decide.ax_*` certificate axioms and no output contains an error or `sorryAx`.
+* `base.txt`: git blob ids of the shared trusted files in each build tree. They equal this branch's files,
+  except that the x86 trees still have the older `Asm/Riscv.lean`. No x86 kernel module imports it, so this
+  does not affect them: their oleans are up to date in `kt-int`, which has the current file.
+* `SHA256SUMS`: hashes of the raw outputs before compression.
+
+**Result:** 202 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
+certificates (checked by Lean's verified LRAT checker run as compiled code).
+
+`results/attestation/interim/` (Nov 8) holds the earlier per-workspace run, with import-closure blob digests;
+the frozen run supersedes it. The final step produces `results/manifest.txt` and a `leanchecker` replay.
+
+To re-check anything: `cd lean && lake build <module>`, then `lake env lean <check script>`.
+
+## What a reviewer has to read (trust base)
+
+The proof code is large (about 585k generated lines under `lean/Keccaktree/Kernels`, a 19k-line proof core
+under `lean/Keccaktree/Asm`, 24 Python generators), but none of it has to be trusted. Lean's kernel checks
+every proof step, so a bug in a generator or a lemma can only make a proof **fail** to check; it cannot make a
+false theorem check. What `#print axioms` shows (above) rules out `sorry` and any extra assumption.
+
+What does have to be trusted is the **statement**: that the theorem says what we mean, about the code we ship.
+That is about 2,100 lines to read:
+
+| what | file | lines | why it matters |
+|---|---|---|---|
+| Keccak-256 specification | `lean/Keccaktree/Spec.lean` | 201 | the reference function; `SpecVectors.lean` (35) evaluates it on test vectors |
+| what "kernel correct" means | `Asm/Library.lean` (`Outcome`, `KernelThm` lines 25–66, `lib_correct` 168–198) | ~75 | the theorem statement |
+| buffer layout and digest per ISA | `Asm/LibX86.lean` (119), `LibArm.lean` (66), `LibRv.lean` (66), `LibAlias.lean` (214, in place) | 465 | alignment and non-overlap hypotheses, digest = `Spec.keccak256` |
+| machine model | `Asm/Machine.lean` (202), `Exec.lean` (59) | 261 | registers, memory, fetch-execute |
+| instruction semantics | `Asm/X86.lean` (554), `Arm.lean` (258), `Riscv.lean` (305) | 1117 | also differentially tested against hardware and qemu (`lean/difftest`) |
+| code import | `lean/asm2lean.py` (891), `Asm/Rodata.lean` (415) | | turns the shipped object files (`objdump -d -r`) into the Lean programs; constant tables |
+| dispatch model | `lean/Keccaktree/Dispatch.lean` | 447 | model of `keccaktree.c`'s CPU dispatch |
+
+Plus the Lean 4.35.0 kernel and the bv_decide pipeline (Lean's compiler and the verified LRAT checker it runs).
+The `leanchecker` replay in the final step re-checks every module's declarations with an independent run of
+the kernel.
+
+## Base freeze
+
+Branches built in parallel had diverged on one proof-library file, `Asm/Iter.lean`. Lean rechecks every
+module downstream of a changed file. From commit e43c5ea on, the shared files are frozen at `Iter.lean`
+28ac8a7, the RISC-V model of all-rvu, and `Library`/`Lib*`/`LibTable` as on integrate. Every artifact is
+built **once** against that base. Generator changes since then are gated so the outputs for proved kernels
+stay byte-identical (`notes/int.md` lists each gate: `STEP_DEPTH_ALL` for avx2_x9/x10, the `w > 4` split in
+`gen_all_rvvu.py` for VLEN 512).
