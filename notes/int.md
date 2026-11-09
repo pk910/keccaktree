@@ -190,3 +190,9 @@ project in parallel (a stray `--help` reached 41 GB before I stopped it).  Final
   kt-x86b / kt-x86; the final regeneration checks use /root/kt-int-tool.
 * From then on `kt-int-diskguard` (below 30 GB free, every 10 min): same truncation with `-links 1` (never a
   hard-linked file), log `truncated_c2.txt`.  To be listed in the manifest with the placeholder lists.
+
+## Offloaded olean trees (coordinator, 2026-11-09 09:12)
+`/root/kt-int/lean/.lake/build/lib/lean/Keccaktree/Kernels/{RvvV4,RvvZvkbV4,ScalarX1,Sha3X2,NeonX2,Sha3X3,Sha3X3r,NeonX3}` are
+symlinks to `/mnt/kt-store/kt-int-lib/Kernels/<d>` (sshfs archive disk of another VM; storage only).  Copied with
+links=1 only, verified with `rsync -c`, then `lake build --no-build` of RvLib4, RvLibUV4, ArmLib, ArmLibInPlace
+up to date; no olean bytes changed.  Nothing writes into them; if the mount drops: `mount /mnt/kt-store`.
