@@ -206,7 +206,8 @@ up to date; no olean bytes changed.  Nothing writes into them; if the mount drop
 * x86_x1 InPlace summaries: committed one-decide form kept; the current gen_inplace.py writes a per-slice form with
   identical statements (proof form only).
 * avx2_x4 InPlaceAll: regenerated (0c27870; the committed one predated the threshold-only exit filter).
-* gen_all_rvvu.py: `out_w` (w-node output lanes of the misaligned RVV batches) gets `maxHeartbeats 16000000` for w > 4
-  (4000000 timed out at `whnf` for out_5..out_8 of RvvV8.AllUM); w ≤ 4 unchanged: V2/V4 AllUM regenerate
-  byte-identically (checked), V8 AllUM differ from before only in those four lines.
+* gen_all_rvvu.py (rvu 1dd65f1, replacing my short-lived heartbeat bump 8723a4d): `out_w` of the misaligned RVV
+  batches split their case analysis on f, then l, for w > 4 (one `omega` over the 4w (f, l) pairs is exponential in w:
+  RvvV8.AllUM out_5..out_8 timed out after 2124 s; with the fix the module builds in 58 s, 4.7 GB).  w ≤ 4 unchanged:
+  V2/V4 AllUM regenerate byte-identically (checked in kt-int-tool); V8 AllUM generated with the fix.
 * RvvV4/RvvZvkbV4 AllUM.lean (generated, imported by the committed RvLibUV4) committed as built in kt-int; V8 after its build.
