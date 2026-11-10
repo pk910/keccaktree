@@ -224,8 +224,8 @@ up to date; no olean bytes changed.  Nothing writes into them; if the mount drop
 ## x86 glue reproduction (2026-11-10, kt-int, /root/kt-int-gluecheck.sh)
 `GLUE_OUT=<tmp> x86_glue.py <k>` and `x86_glue_al.py <k> --out <tmp>` (and THRESH=1 for the V files) from the committed
 plans (lean/plans/<k>_all.json, <k>_Baf.json) and the kernel's segment files; cmp against the committed files:
-avx2 x2/x4(+V)/x5/x6/x8/x9, avx512 vl_x4/vl_x4d/x8/x8d/x9/x9d: All, Lib, InPlaceAll (and AllV, LibV, InPlaceAllV for x4)
-all byte-identical.  (avx2_x10/x10V: after its build.)  x86_x1's All/Lib/InPlaceAll are not glue-generated.
+avx2 x2/x4(+V)/x5/x6/x8/x9, avx512 vl_x4/vl_x4d/x8/x8d/x9/x9d, avx2_x10: All, Lib, InPlaceAll (and AllV, LibV, InPlaceAllV for x4 and x10)
+all byte-identical.  x86_x1's All/Lib/InPlaceAll are not glue-generated.
 
 ## Archive store moved to a squashfs image (coordinator, 2026-11-10)
 The archive VM was torn down.  All offloaded olean trees (ScalarX1, Sha3X2, NeonX2, Sha3X3, Sha3X3r, NeonX3, RvvV2,
