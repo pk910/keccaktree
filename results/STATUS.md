@@ -1,4 +1,4 @@
-# Verification status (2026-11-10 11:30 UTC)
+# Verification status (2026-11-10 12:00 UTC)
 
 What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
@@ -62,12 +62,21 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 
 | item | state | estimate |
 |---|---|---|
-| final single-tree assembly: combined axioms check of every theorem in one run, `results/manifest.txt`, `leanchecker` replay of every module | running in `kt-int` | Nov 10 ~16:00 |
+| `leanchecker` replay of every module (7277 in the closure) | timing samples in `kt-int`; the large `decide +kernel` slices replay in about their original kernel-check time | ETA after the samples |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
 ## Attestation
 
-`results/attestation/frozen/` (this run, frozen base):
+`results/attestation/final/` (final single tree `kt-int`, all kernels and tables built together on the frozen base):
+the check scripts `Final_{arm,x86,rv,lib,extra}.lean` (`import` + `#print axioms`), Lean's outputs, `final_axsum.txt`
+(**214 theorems, all clean**: every kernel for every count, any alignment and in place, all library tables `ArmLib`,
+`ArmLibInPlace`, `X86Lib`, `X86LibInPlace`, `RvLib`, `RvLibU`, `RvLibUV`, `RvLibInPlace`, `LibTable` and `Dispatch`;
+a superset of the theorem names in `frozen/summary.txt`), `final_times.txt` and `SHA256SUMS`.
+`results/manifest.txt` lists per kernel the imported program, its object source, the proof files, the hashes of the
+generated segment directories (`results/gen_sha256.txt`) and each theorem's axioms; its `leanchecker` column is filled
+by the replay.
+
+`results/attestation/frozen/` (the per-kernel runs on the same base, as each kernel was finished):
 
 * `kt-int/<name>.lean`: the check script, `import <modules>` followed by `#print axioms` for every theorem.
 * `kt-int/out_<name>.txt.gz`: Lean's output for that script, run in the single integration tree `kt-int`.
@@ -86,7 +95,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 certificates (checked by Lean's verified LRAT checker run as compiled code).
 
 `results/attestation/interim/` (Nov 8) holds the earlier per-workspace run, with import-closure blob digests;
-the frozen run supersedes it. The final step produces `results/manifest.txt` and a `leanchecker` replay.
+the frozen and final runs supersede it.
 
 To re-check anything: `cd lean && lake build <module>`, then `lake env lean <check script>`.
 
