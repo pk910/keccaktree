@@ -1,4 +1,4 @@
-# Verification status (2026-11-10 09:15 UTC)
+# Verification status (2026-11-10 11:10 UTC)
 
 What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
@@ -17,7 +17,7 @@ buffer (`out = in`, the tree's level-by-level hashing): every node is read befor
 
 **Misaligned** (RISC-V, `AllU`/`AllUM`, `RvLibU`, `RvLibUV`): input and output at any byte offset.
 
-## Every-count proofs on the frozen base: all 24 kernels done; 23 also in place, avx2_x10 in place building
+## Every-count proofs on the frozen base: all 24 kernels done, all 24 also in place; avx2_x10 threshold variant in place building
 
 All rows below were checked against the frozen shared base (see "Base freeze"); `results/attestation/frozen/`
 has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SAT certificates in the proof.
@@ -31,8 +31,8 @@ has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SA
 | x86-64 | avx2_x6 | ✅ | ✅ | 2294 |
 | x86-64 | avx2_x8 | ✅ | ✅ | 1720 |
 | x86-64 | avx2_x9 | ✅ (Nov 9) | ✅ (Nov 9) | 8348 |
-| x86-64 | avx2_x10 | ✅ (Nov 10) | ⏳ building | 11116 |
-| x86-64 | avx2_x10 threshold variant (`LibV`, every threshold value) | ✅ (Nov 10) | ⏳ after | 11116 |
+| x86-64 | avx2_x10 | ✅ (Nov 10) | ✅ (Nov 10) | 11116 |
+| x86-64 | avx2_x10 threshold variant (`LibV`, every threshold value) | ✅ (Nov 10) | ⏳ building | 11116 |
 | x86-64 | avx512vl_x4 | ✅ | ✅ | 3297 |
 | x86-64 | avx512vl_x4d | ✅ | ✅ | 3297 |
 | x86-64 | avx512_x8 | ✅ | ✅ | 4455 |
@@ -61,8 +61,8 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 
 | item | state | estimate |
 |---|---|---|
-| avx2_x10 / x10V in place | building in `kt-int` | Nov 10 ~10:30 / ~11:30 |
-| final single-tree assembly: x86 library tables (`X86Lib`, `X86LibInPlace`, written, built after avx2_x10), combined axioms check, `results/manifest.txt`, `leanchecker` replay of every module | after both | Nov 10 evening |
+| avx2_x10 threshold variant in place (`InPlaceAllV`); the avx2_x10 in-place sources (`InPlaceAll`, segment summaries, proved and attested above) are committed together with it | building in `kt-int` | Nov 10 ~12:30 |
+| final single-tree assembly: x86 library tables (`X86Lib`, `X86LibInPlace`, written, built after avx2_x10), combined axioms check, `results/manifest.txt`, `leanchecker` replay of every module | after it | Nov 10 ~16:00 |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
 ## Attestation
@@ -74,7 +74,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   `kt-x86/*.ax.txt.gz`: the same for the every-count theorems in the x86 build tree, where the large AVX2 and
   AVX-512 proofs were built (their oleans are linked into `kt-int`, and `lake build --no-build` there confirms
   they are up to date against `kt-int`'s sources).
-* `summary.txt`: one row per theorem (230 rows) with its certificate count, produced by `lean/axsum.py`,
+* `summary.txt`: one row per theorem (234 rows) with its certificate count, produced by `lean/axsum.py`,
   which fails unless every theorem depends only on `propext`, `Classical.choice`, `Quot.sound` and
   `<decl>._native.bv_decide.ax_*` certificate axioms and no output contains an error or `sorryAx`.
 * `base.txt`: git blob ids of the shared trusted files in each build tree. They equal this branch's files,
@@ -82,7 +82,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   does not affect them: their oleans are up to date in `kt-int`, which has the current file.
 * `SHA256SUMS`: hashes of the raw outputs before compression.
 
-**Result:** 230 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
+**Result:** 234 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
 certificates (checked by Lean's verified LRAT checker run as compiled code).
 
 `results/attestation/interim/` (Nov 8) holds the earlier per-workspace run, with import-closure blob digests;

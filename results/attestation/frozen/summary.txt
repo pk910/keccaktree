@@ -142,6 +142,10 @@ out_ScalarX1.txt             Keccaktree.Kernels.ScalarX1.All.scalar_x1_all      
 out_ScalarX1.txt             Keccaktree.Kernels.ScalarX1.All.norm_thm                        609 certs  OK
 out_ScalarX1.txt             Keccaktree.Kernels.ScalarX1.All.kernel                          609 certs  OK
 out_ScalarX1.txt             Keccaktree.Kernels.ScalarX1.All.lib                             609 certs  OK
+out_X86_Avx2X10.txt          Keccaktree.Kernels.Avx2X10.All.norm_thm                       11116 certs  OK
+out_X86_Avx2X10.txt          Keccaktree.Kernels.Avx2X10.Lib.kernel                         11116 certs  OK
+out_X86_Avx2X10.txt          Keccaktree.Kernels.Avx2X10.InPlaceAll.access_thm               2953 certs  OK
+out_X86_Avx2X10.txt          Keccaktree.Kernels.Avx2X10.InPlaceAll.kernelAl                11116 certs  OK
 out_X86_Avx2X2.txt           Keccaktree.Kernels.Avx2X2.All.norm_thm                          786 certs  OK
 out_X86_Avx2X2.txt           Keccaktree.Kernels.Avx2X2.Lib.kernel                            786 certs  OK
 out_X86_Avx2X2.txt           Keccaktree.Kernels.Avx2X2.InPlaceAll.access_thm                 786 certs  OK
@@ -228,4 +232,4 @@ avx512_x9.ax.txt             Keccaktree.Kernels.Avx512X9.Lib.kernel             
 avx512_x9d.ax.txt            Keccaktree.Kernels.Avx512X9d.All.norm_thm                      6178 certs  OK
 avx512_x9d.ax.txt            Keccaktree.Kernels.Avx512X9d.Lib.kernel                        6178 certs  OK
 x86_x1.ax.txt                Keccaktree.Kernels.X86X1.Lib.kernel                             721 certs  OK
-theorems: 230   all clean: True
+theorems: 234   all clean: True
