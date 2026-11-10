@@ -39,12 +39,15 @@ X86="X86X1 Avx2X2 Avx2X4 Avx2X5 Avx2X6 Avx2X8 Avx2X9 Avx2X10 Avx512vlX4 Avx512vl
      Keccaktree.Asm.LibTable.lib_x86 Keccaktree.Asm.LibTable.lib_arm Keccaktree.Asm.LibTable.lib_rv \
      Keccaktree.Dispatch.hash_x86 Keccaktree.Dispatch.hash_x86_reachable Keccaktree.Dispatch.hash_arm Keccaktree.Dispatch.hash_rv
 } > $A/Final_lib.lean
+# ---- the intermediate theorems of the frozen attestation that the tables subsume (per-kernel libraries,
+#      norm_thm_ch / norm_thmU variants): results/attestation/final/Final_extra.lean, kept as committed
+cp /root/kt-int/axioms/Final_extra.lean $A/Final_extra.lean 2>/dev/null || true
 : > $A/final_times.txt
-for g in arm x86 rv lib; do
+for g in arm x86 rv lib extra; do
   echo "Final_$g: $(grep -c '#print' $A/Final_$g.lean) theorems"
   /root/kt-int-gate.sh
   /usr/bin/time -f "Final_$g %e s %M KB rc=%x" lake env lean $A/Final_$g.lean > $A/out_Final_$g.txt 2>> $A/final_times.txt
 done
 cat $A/final_times.txt
-python3 /root/kt-int/lean/axsum.py $A/out_Final_arm.txt $A/out_Final_x86.txt $A/out_Final_rv.txt $A/out_Final_lib.txt > $A/final_axsum.txt
+python3 /root/kt-int/lean/axsum.py $A/out_Final_arm.txt $A/out_Final_x86.txt $A/out_Final_rv.txt $A/out_Final_lib.txt $A/out_Final_extra.txt > $A/final_axsum.txt
 echo "axsum rc=$?"; tail -1 $A/final_axsum.txt
