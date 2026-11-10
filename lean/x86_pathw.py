@@ -9,6 +9,11 @@ import os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# Kernels whose segments need a raised heartbeat bound for `factsV` (and `factsV_rdx`): elaborating
+# `facts.len = segLen` and the structure's proof fields times out at the default 200000 on avx2_x10's larger
+# slices. Gated by kernel so that the PathW files of avx2_x4 stay byte-identical.
+FACTSV_HB = {'Avx2X10'}
+
 
 def main():
     d = sys.argv[1]
@@ -20,6 +25,14 @@ def main():
         seg = open(os.path.join(kdir, g, 'Seg.lean')).read()
         K = len(re.findall(r'^def cert(\d+) ', seg, re.M))
         rdx = 'theorem facts_rdx' in seg
+        # the statement of facts_rdx: `rdx` itself (avx2_x4), or the stack cell it is saved to (avx2_x10 Ba)
+        # or restored from (avx2_x10 Bb)
+        rdx_lhs, rdx_rhs = '258', '258'
+        if rdx:
+            m = re.search(r'theorem facts_rdx .*?:\n    envOf \(X86\.isa\.run rodata prog segLen S0\) (.*?) = envOf S0 (.*?) := by', seg, re.S)
+            assert m, (g, 'facts_rdx statement')
+            rdx_lhs, rdx_rhs = m.group(1), m.group(2)
+        hb = 'set_option maxHeartbeats 40000000 in\n' if d in FACTSV_HB else ''
         L = [f"""import Keccaktree.Kernels.{d}.{g}.Seg
 import Keccaktree.Asm.X86Thresh
 set_option linter.unusedSectionVars false
@@ -52,7 +65,7 @@ theorem run_agree (r2 : Array (BitVec 64)) (hr : AgreeExcept rodata r2 {w}) (ρ 
   rw [{rws}]
 
 set_option maxRecDepth 100000 in
-/-- The segment under the image with word {w} set to `v`. -/
+{hb}/-- The segment under the image with word {w} set to `v`. -/
 def factsV (v : Nat) : X86K.SegFacts (setWord rodata {w} v) prog where
   ctl0 := facts.ctl0
   sc0 := facts.sc0
@@ -71,9 +84,9 @@ def factsV (v : Nat) : X86K.SegFacts (setWord rodata {w} v) prog where
             L.append(f"theorem factsV_{fld} (v : Nat) : (factsV v).{fld} = facts.{fld} := rfl\n")
         if rdx:
             L.append(f"""set_option maxRecDepth 100000 in
-theorem factsV_rdx (v : Nat) (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
+{hb}theorem factsV_rdx (v : Nat) (ρ : Reloc) (hρ : ρ.ok) (hw : ρ.within B) (S0 : State (BitVec 64))
     (hc : relocState ρ (cutOf ctl0 sc0) = cutOf ctl0 S0) (hs : SliceCert.Ok S0) :
-    envOf (X86.isa.run (setWord rodata {w} v) prog segLen S0) 258 = envOf S0 258 := by
+    envOf (X86.isa.run (setWord rodata {w} v) prog segLen S0) {rdx_lhs} = envOf S0 {rdx_rhs} := by
   rw [run_agree _ (agree_setWord rodata {w} v) ρ hρ hw S0 hc hs]
   exact facts_rdx ρ hρ hw S0 hc hs
 """)
