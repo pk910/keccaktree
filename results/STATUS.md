@@ -1,4 +1,4 @@
-# Verification status (2026-11-10 11:10 UTC)
+# Verification status (2026-11-10 11:30 UTC)
 
 What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
@@ -9,7 +9,7 @@ the kernel's symbol, with any input count, any 64-byte-node input buffer (aligne
 any flags, masks and (RISC-V) `vl` at entry, and on a call or a tail call from another kernel, the machine
 code returns, or tail-calls the next kernel with the remaining count. Every digest it has written then
 equals `Spec.keccak256` (FIPS 202, Ethereum padding) of its node, and nothing outside the output range
-is written. The per-ISA tables (`lib_x86`, `ArmLib.lib_arm_all`, `RvLib.lib*`) quantify over all
+is written. The per-ISA tables (`X86Lib.lib_x86_all`, `X86LibInPlace.lib_inplace_x86_all`, `ArmLib.lib_arm_all`, `RvLib.lib*`) quantify over all
 kernels, and `Dispatch` proves that `keccaktree.c`'s CPU-feature dispatch only calls kernels the CPU supports.
 
 **In place** (`InPlaceAll.kernelAl`, `lib_inplace_*`): the same statement when the output buffer is the input
@@ -17,7 +17,7 @@ buffer (`out = in`, the tree's level-by-level hashing): every node is read befor
 
 **Misaligned** (RISC-V, `AllU`/`AllUM`, `RvLibU`, `RvLibUV`): input and output at any byte offset.
 
-## Every-count proofs on the frozen base: all 24 kernels done, all 24 also in place; avx2_x10 threshold variant in place building
+## Every-count proofs on the frozen base: all 24 kernels done, every count and in place; x86 library tables built
 
 All rows below were checked against the frozen shared base (see "Base freeze"); `results/attestation/frozen/`
 has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SAT certificates in the proof.
@@ -32,13 +32,14 @@ has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SA
 | x86-64 | avx2_x8 | ✅ | ✅ | 1720 |
 | x86-64 | avx2_x9 | ✅ (Nov 9) | ✅ (Nov 9) | 8348 |
 | x86-64 | avx2_x10 | ✅ (Nov 10) | ✅ (Nov 10) | 11116 |
-| x86-64 | avx2_x10 threshold variant (`LibV`, every threshold value) | ✅ (Nov 10) | ⏳ building | 11116 |
+| x86-64 | avx2_x10 threshold variant (`LibV`, every threshold value) | ✅ (Nov 10) | ✅ (Nov 10, `InPlaceAllV`) | 11116 |
 | x86-64 | avx512vl_x4 | ✅ | ✅ | 3297 |
 | x86-64 | avx512vl_x4d | ✅ | ✅ | 3297 |
 | x86-64 | avx512_x8 | ✅ | ✅ | 4455 |
 | x86-64 | avx512_x8d | ✅ | ✅ | 4455 |
 | x86-64 | avx512_x9 | ✅ | ✅ | 6182 |
 | x86-64 | avx512_x9d | ✅ (Nov 9) | ✅ (Nov 9) | 6178 |
+| x86-64 | table of all 14 kernels (avx2_x4/x10 under the configured threshold) | ✅ `X86Lib.lib_x86_all` (Nov 10) | ✅ `X86LibInPlace.lib_inplace_x86_all` (Nov 10) | 56296 |
 | AArch64 | scalar_x1, sha3_x2, neon_x2, sha3_x3, sha3_x3r, neon_x3 | ✅ all six, table `ArmLib.lib_arm_all` | ✅ all six, `ArmLibInPlace.lib_inplace_arm_all` | 609 / 1187 / 1185 / 1277 / 1323 / 1185 (table 6631) |
 | RISC-V | rv64_x1, zbb_x1 | ✅ + misaligned (`RvLibU.libU`) | ✅ | 741 each |
 | RISC-V | rvv, rvv_zvkb at VLEN 128 | ✅ `RvLib.lib2` (+ any `vl` choice `lib2ch`) + misaligned `RvLibUV.lib2U` | ✅ | 1186 (misaligned 2521) |
@@ -61,8 +62,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 
 | item | state | estimate |
 |---|---|---|
-| avx2_x10 threshold variant in place (`InPlaceAllV`); the avx2_x10 in-place sources (`InPlaceAll`, segment summaries, proved and attested above) are committed together with it | building in `kt-int` | Nov 10 ~12:30 |
-| final single-tree assembly: x86 library tables (`X86Lib`, `X86LibInPlace`, written, built after avx2_x10), combined axioms check, `results/manifest.txt`, `leanchecker` replay of every module | after it | Nov 10 ~16:00 |
+| final single-tree assembly: combined axioms check of every theorem in one run, `results/manifest.txt`, `leanchecker` replay of every module | running in `kt-int` | Nov 10 ~16:00 |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
 ## Attestation
@@ -74,7 +74,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   `kt-x86/*.ax.txt.gz`: the same for the every-count theorems in the x86 build tree, where the large AVX2 and
   AVX-512 proofs were built (their oleans are linked into `kt-int`, and `lake build --no-build` there confirms
   they are up to date against `kt-int`'s sources).
-* `summary.txt`: one row per theorem (234 rows) with its certificate count, produced by `lean/axsum.py`,
+* `summary.txt`: one row per theorem (240 rows) with its certificate count, produced by `lean/axsum.py`,
   which fails unless every theorem depends only on `propext`, `Classical.choice`, `Quot.sound` and
   `<decl>._native.bv_decide.ax_*` certificate axioms and no output contains an error or `sorryAx`.
 * `base.txt`: git blob ids of the shared trusted files in each build tree. They equal this branch's files,
@@ -82,7 +82,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   does not affect them: their oleans are up to date in `kt-int`, which has the current file.
 * `SHA256SUMS`: hashes of the raw outputs before compression.
 
-**Result:** 234 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
+**Result:** 240 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
 certificates (checked by Lean's verified LRAT checker run as compiled code).
 
 `results/attestation/interim/` (Nov 8) holds the earlier per-workspace run, with import-closure blob digests;
