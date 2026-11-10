@@ -1,4 +1,4 @@
-# Verification status (2026-11-10 07:15 UTC)
+# Verification status (2026-11-10 09:15 UTC)
 
 What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
@@ -32,7 +32,7 @@ has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SA
 | x86-64 | avx2_x8 | ✅ | ✅ | 1720 |
 | x86-64 | avx2_x9 | ✅ (Nov 9) | ✅ (Nov 9) | 8348 |
 | x86-64 | avx2_x10 | ✅ (Nov 10) | ⏳ building | 11116 |
-| x86-64 | avx2_x10 threshold variant (`LibV`) | ⏳ building (same segments, glue only) | ⏳ after | |
+| x86-64 | avx2_x10 threshold variant (`LibV`, every threshold value) | ✅ (Nov 10) | ⏳ after | 11116 |
 | x86-64 | avx512vl_x4 | ✅ | ✅ | 3297 |
 | x86-64 | avx512vl_x4d | ✅ | ✅ | 3297 |
 | x86-64 | avx512_x8 | ✅ | ✅ | 4455 |
@@ -61,8 +61,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 
 | item | state | estimate |
 |---|---|---|
-| avx2_x10 threshold variant (`AllV`/`LibV`), axioms | building (same segments) | Nov 10 ~08:30 |
-| avx2_x10 / x10V in place | building in `kt-int` | Nov 10 ~10:30 |
+| avx2_x10 / x10V in place | building in `kt-int` | Nov 10 ~10:30 / ~11:30 |
 | final single-tree assembly: x86 library tables (`X86Lib`, `X86LibInPlace`, written, built after avx2_x10), combined axioms check, `results/manifest.txt`, `leanchecker` replay of every module | after both | Nov 10 evening |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
@@ -75,7 +74,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   `kt-x86/*.ax.txt.gz`: the same for the every-count theorems in the x86 build tree, where the large AVX2 and
   AVX-512 proofs were built (their oleans are linked into `kt-int`, and `lake build --no-build` there confirms
   they are up to date against `kt-int`'s sources).
-* `summary.txt`: one row per theorem (228 rows) with its certificate count, produced by `lean/axsum.py`,
+* `summary.txt`: one row per theorem (230 rows) with its certificate count, produced by `lean/axsum.py`,
   which fails unless every theorem depends only on `propext`, `Classical.choice`, `Quot.sound` and
   `<decl>._native.bv_decide.ax_*` certificate axioms and no output contains an error or `sorryAx`.
 * `base.txt`: git blob ids of the shared trusted files in each build tree. They equal this branch's files,
@@ -83,7 +82,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   does not affect them: their oleans are up to date in `kt-int`, which has the current file.
 * `SHA256SUMS`: hashes of the raw outputs before compression.
 
-**Result:** 228 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
+**Result:** 230 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
 certificates (checked by Lean's verified LRAT checker run as compiled code).
 
 `results/attestation/interim/` (Nov 8) holds the earlier per-workspace run, with import-closure blob digests;
@@ -127,4 +126,6 @@ stay byte-identical (`notes/int.md` lists each gate: `STEP_DEPTH_ALL` for avx2_x
 One generator fix after the freeze (integrate a043451): `x86_glue.py` and `x86_glue_al.py` now add the
 entry hand-over exclusion (`hE : c ≠ 12 ∧ c ≠ 16`) for every loop exit recorded after more than one batch, not
 only for `kset` exits. avx2_x10 is the first kernel that needs it (its entry hands 12 and 16 nodes to avx2_x8).
-The glue of the 12 other generated kernels (All/Lib/AllV/LibV, InPlaceAll/InPlaceAllV) regenerates byte-identically.
+The glue of the 12 other generated kernels (All/Lib/AllV/LibV, InPlaceAll/InPlaceAllV) regenerates byte-identically. A second one (integrate e9e1d3a) is in `x86_pathw.py`, which only the threshold variants use:
+the count-register fact is copied from each segment (avx2_x10 keeps it in a stack cell), and avx2_x10 gets a raised
+heartbeat bound; avx2_x4's PathW files regenerate byte-identically.
