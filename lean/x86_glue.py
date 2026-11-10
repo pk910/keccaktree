@@ -768,11 +768,11 @@ def XM : Nat := {XM}
         U = [v for v in range(N, A['maxc'] + 1) if v not in seen]
         print('unreachable loop-head counts:', U)
     # exits recorded after more than one batch (b0 > N): the counts reaching them after fewer batches must be
-    # handed to another kernel at the entry; `hE` then carries c ≠ those counts (k-independent)
+    # handed to another kernel at the entry; `hE` then carries c ≠ those counts (k-independent). This holds for
+    # every exit, with or without `kset` (avx2_x10: X1, X10, X13, X14 are recorded at b0 = 20, counts 12 and 16
+    # go to avx2_x8 at the entry); for an exit with b0 ≤ N the range below is empty.
     U0 = []
     for ex in exits:
-        if not ex.get('kset', False):
-            continue
         y_ = ex['vals'].get('2'); b0_ = ex['src']['count'] - y_
         for kk in range(N, b0_, N):
             c_ = kk + y_
