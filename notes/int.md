@@ -226,3 +226,11 @@ up to date; no olean bytes changed.  Nothing writes into them; if the mount drop
 plans (lean/plans/<k>_all.json, <k>_Baf.json) and the kernel's segment files; cmp against the committed files:
 avx2 x2/x4(+V)/x5/x6/x8/x9, avx512 vl_x4/vl_x4d/x8/x8d/x9/x9d: All, Lib, InPlaceAll (and AllV, LibV, InPlaceAllV for x4)
 all byte-identical.  (avx2_x10/x10V: after its build.)  x86_x1's All/Lib/InPlaceAll are not glue-generated.
+
+## Archive store moved to a squashfs image (coordinator, 2026-11-10)
+The archive VM was torn down.  All offloaded olean trees (ScalarX1, Sha3X2, NeonX2, Sha3X3, Sha3X3r, NeonX3, RvvV2,
+RvvZvkbV2, RvvV4, RvvZvkbV4, RvvV8) now live in /root/kt-archive/kt-store.sqfs (zstd squashfs, 17 GB), loop-mounted
+read-only at /mnt/kt-sq; the kt-int symlinks point to /mnt/kt-sq/kt-int-lib/Kernels/<d> (sha256 of all 14662 files
+equal to the old store; `lake build --no-build` ArmLib ArmLibInPlace RvLib RvLibUV RvLibInPlace up to date).  The sshfs
+mounts /mnt/kt-store{,2,3,4} (and the per-mount layout above) are gone; no further offloading is possible.  Old logs:
+/root/kt-archive/kt-int-logs.tar.zst; old store data /mnt/kt-sq/build1.
