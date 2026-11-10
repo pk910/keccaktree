@@ -6,7 +6,7 @@
 export PATH=/root/.elan/bin:$PATH
 cd /root/kt-int/lean; LIST=$1; P=${2:-2}; T=/root/kt-int-logs/leanchecker.tsv; touch $T
 # leanchecker finds its target oleans by walking the search path, which does not follow the symlinks of the
-# offloaded olean trees (Kernels/<d> -> /mnt/kt-store/...): bind-mount them under /root/kt-lcroot, appended
+# offloaded olean trees (Kernels/<d> -> /mnt/kt-sq/..., the read-only archive image): bind-mount them under /root/kt-lcroot, appended
 # LAST to LEAN_PATH (imports still resolve through the main build dir; only the target lookup uses it)
 R=/root/kt-lcroot/Keccaktree/Kernels
 for l in .lake/build/lib/lean/Keccaktree/Kernels/*; do

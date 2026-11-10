@@ -600,10 +600,9 @@ theorem bodyA_{nm} (off c : Nat) (input : Int → BitVec 64) (S0 S : State (BitV
         print('unreachable loop-head counts:', U)
     # exits recorded after more than one batch (as x86_glue.py): the counts reaching them after fewer batches
     # are handed to another kernel at the entry; `hE` carries c ≠ those counts
+    # every exit, with or without `kset` (see x86_glue.py: avx2_x10 X1, X10, X13, X14, counts 12 and 16)
     U0 = []
     for ex in exits:
-        if not ex.get('kset', False):
-            continue
         y_ = ex['vals'].get('2'); b0_ = ex['src']['count'] - y_
         for kk in range(N, b0_, N):
             c_ = kk + y_
