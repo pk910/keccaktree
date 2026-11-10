@@ -1,4 +1,4 @@
-# Verification status (2026-11-09 15:00 UTC)
+# Verification status (2026-11-10 07:15 UTC)
 
 What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
@@ -17,7 +17,7 @@ buffer (`out = in`, the tree's level-by-level hashing): every node is read befor
 
 **Misaligned** (RISC-V, `AllU`/`AllUM`, `RvLibU`, `RvLibUV`): input and output at any byte offset.
 
-## Every-count proofs on the frozen base: 22 of 24 kernels done
+## Every-count proofs on the frozen base: all 24 kernels done; 23 also in place, avx2_x10 in place building
 
 All rows below were checked against the frozen shared base (see "Base freeze"); `results/attestation/frozen/`
 has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SAT certificates in the proof.
@@ -31,7 +31,8 @@ has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SA
 | x86-64 | avx2_x6 | ✅ | ✅ | 2294 |
 | x86-64 | avx2_x8 | ✅ | ✅ | 1720 |
 | x86-64 | avx2_x9 | ✅ (Nov 9) | ✅ (Nov 9) | 8348 |
-| x86-64 | **avx2_x10** (+ threshold variant) | ⏳ building, ~40% of segments | ⏳ after | |
+| x86-64 | avx2_x10 | ✅ (Nov 10) | ⏳ building | 11116 |
+| x86-64 | avx2_x10 threshold variant (`LibV`) | ⏳ building (same segments, glue only) | ⏳ after | |
 | x86-64 | avx512vl_x4 | ✅ | ✅ | 3297 |
 | x86-64 | avx512vl_x4d | ✅ | ✅ | 3297 |
 | x86-64 | avx512_x8 | ✅ | ✅ | 4455 |
@@ -43,7 +44,8 @@ has Lean's `#print axioms` output for each one. "certs" = number of bv_decide SA
 | RISC-V | rvv, rvv_zvkb at VLEN 128 | ✅ `RvLib.lib2` (+ any `vl` choice `lib2ch`) + misaligned `RvLibUV.lib2U` | ✅ | 1186 (misaligned 2521) |
 | RISC-V | rvv, rvv_zvkb at VLEN 256 | ✅ `RvLib.lib4`, `lib4ch`, misaligned `lib4U` | ✅ | 2344 (misaligned 4837) |
 | RISC-V | rvv at VLEN 512 | ✅ aligned + misaligned (Nov 9) | ✅ (Nov 9) | 4660 (misaligned 9469) |
-| RISC-V | **rvv_zvkb at VLEN 512** | ⏳ building (body 3 of 8) | ⏳ after | |
+| RISC-V | rvv_zvkb at VLEN 512 | ✅ aligned + misaligned (Nov 9) | ✅ (Nov 9) | 4660 (misaligned 9469) |
+| RISC-V | tables at VLEN 512 | ✅ `RvLib.lib8`, `lib8ch` (10585), misaligned `RvLibUV.lib8U` (20017); all-VLEN `RvLib`, `RvLibUV` built | ✅ in-place tables `RvLibInPlace.lib_inplace2/4/8` (3637 / 5953 / 10585) | |
 
 The kernel table counts 24 entries: 14 x86, 6 ARM, 4 RISC-V families (RVV counted once across its VLEN
 configurations). RVV with VLEN ≥ 1024 is not covered: the model has 8 lanes per vector register.
@@ -59,11 +61,9 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 
 | item | state | estimate |
 |---|---|---|
-| avx2_x10 every count | 24 of ~165 proof slices done since the handoff; 4 in parallel, ~35 min each | Nov 10 ~10:00 UTC |
-| avx2_x10 threshold variant, library kernels, axioms | runs right after (same segments) | Nov 10 ~12:00 |
-| avx2_x10 / x10V in place | after that | Nov 10 ~15:00 |
-| rvv_zvkb VLEN 512 (aligned, misaligned, `RvLib8`, `RvLibUV8`, in place) | 8 batch bodies, 3rd building | Nov 9 ~23:00 |
-| final single-tree assembly: in-place library tables for x86 and RISC-V, combined axioms check, `results/manifest.txt`, `leanchecker` replay of every module | after both | Nov 10 evening |
+| avx2_x10 threshold variant (`AllV`/`LibV`), axioms | building (same segments) | Nov 10 ~08:30 |
+| avx2_x10 / x10V in place | building in `kt-int` | Nov 10 ~10:30 |
+| final single-tree assembly: x86 library tables (`X86Lib`, `X86LibInPlace`, written, built after avx2_x10), combined axioms check, `results/manifest.txt`, `leanchecker` replay of every module | after both | Nov 10 evening |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
 ## Attestation
@@ -75,7 +75,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   `kt-x86/*.ax.txt.gz`: the same for the every-count theorems in the x86 build tree, where the large AVX2 and
   AVX-512 proofs were built (their oleans are linked into `kt-int`, and `lake build --no-build` there confirms
   they are up to date against `kt-int`'s sources).
-* `summary.txt`: one row per theorem (202 rows) with its certificate count, produced by `lean/axsum.py`,
+* `summary.txt`: one row per theorem (228 rows) with its certificate count, produced by `lean/axsum.py`,
   which fails unless every theorem depends only on `propext`, `Classical.choice`, `Quot.sound` and
   `<decl>._native.bv_decide.ax_*` certificate axioms and no output contains an error or `sorryAx`.
 * `base.txt`: git blob ids of the shared trusted files in each build tree. They equal this branch's files,
@@ -83,7 +83,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
   does not affect them: their oleans are up to date in `kt-int`, which has the current file.
 * `SHA256SUMS`: hashes of the raw outputs before compression.
 
-**Result:** 202 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
+**Result:** 228 theorems, all clean: no `sorryAx`, no axiom besides the three standard ones and the bv_decide
 certificates (checked by Lean's verified LRAT checker run as compiled code).
 
 `results/attestation/interim/` (Nov 8) holds the earlier per-workspace run, with import-closure blob digests;
@@ -123,3 +123,8 @@ module downstream of a changed file. From commit e43c5ea on, the shared files ar
 built **once** against that base. Generator changes since then are gated so the outputs for proved kernels
 stay byte-identical (`notes/int.md` lists each gate: `STEP_DEPTH_ALL` for avx2_x9/x10, the `w > 4` split in
 `gen_all_rvvu.py` for VLEN 512).
+
+One generator fix after the freeze (integrate a043451): `x86_glue.py` and `x86_glue_al.py` now add the
+entry hand-over exclusion (`hE : c ≠ 12 ∧ c ≠ 16`) for every loop exit recorded after more than one batch, not
+only for `kset` exits. avx2_x10 is the first kernel that needs it (its entry hands 12 and 16 nodes to avx2_x8).
+The glue of the 12 other generated kernels (All/Lib/AllV/LibV, InPlaceAll/InPlaceAllV) regenerates byte-identically.
