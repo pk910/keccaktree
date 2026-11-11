@@ -62,7 +62,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 
 | item | state | estimate |
 |---|---|---|
-| `leanchecker` replay of every module (7277 in the closure) | running in `kt-int` since Nov 10 12:00 (≈ 200 CPU-h; the large `decide +kernel` slices replay in about their original kernel-check time) | Nov 11 ~15:00 UTC |
+| `leanchecker` replay of every module (7277 in the closure) | running in `kt-int` since Nov 10 12:00 (≈ 200 CPU-h; the large `decide +kernel` slices replay in about their original kernel-check time) | Nov 11 ~11:00–12:00 UTC |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
 ## Attestation
