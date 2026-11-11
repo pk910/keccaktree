@@ -1,4 +1,4 @@
-# Verification status (2026-11-10 12:00 UTC)
+# Verification status (2026-11-11 19:30 UTC)
 
 What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
@@ -62,7 +62,7 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 
 | item | state | estimate |
 |---|---|---|
-| `leanchecker` replay of every module (7277 in the closure) | running in `kt-int` since Nov 10 12:00 (≈ 200 CPU-h; the large `decide +kernel` slices replay in about their original kernel-check time) | Nov 11 ~12:30–13:30 UTC |
+| `leanchecker` replay of every module (7277 in the closure) | 2972 of 7277 modules ok at Nov 11 10:13 UTC (≈ 85% of the ≈ 200 CPU-h), no rejections; paused since ~12:00 UTC: the build machine is unreachable | ≈ 3 h after it is back |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
 ## Attestation
