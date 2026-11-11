@@ -1,12 +1,12 @@
-# Formal verification of the portable kernel (Lean 4)
+# Formal verification of keccaktree (Lean 4)
 
 A machine-checked proof that keccaktree's portable kernels —
 `src/keccak256_generic.c` and the pure-Go `keccak256_1_generic.go` — and
-all twenty-one assembly kernels compute keccak256 as FIPS 202 defines it,
+all 24 assembly kernels compute keccak256 as FIPS 202 defines it,
 for every input.
 
 ```shell
-cd lean && lake build        # ~15 s, Lean 4.35, no Mathlib
+cd lean && lake build        # what CI builds: the portable-kernel proofs, the models, the kernel programs and tests (Lean 4.35, no Mathlib)
 ```
 
 ## What is proved
@@ -77,86 +77,92 @@ independent specification.  Along the way:
 
 ## The assembly kernels
 
-The thirteen hand-written kernels (`src/keccak256_*.S`: x86-64 AVX2/AVX-512,
-AArch64 NEON/SHA3/scalar, RISC-V scalar/Zbb/RVV) are verified against the
-same specification at the machine-code level.  The object code is the thing
-proved about: `asm2lean.py` disassembles the assembled `.o` files (`objdump
--d -r`) into Lean programs (`Keccaktree/Kernels/<K>/Program.lean`), which are
-executed by instruction-set models and shown to compute keccak256.
+All 24 hand-written kernels (`src/keccak256_*.S`: 14 x86-64 AVX2/AVX-512, 6 AArch64 scalar/NEON/SHA3,
+4 RISC-V scalar/Zbb/RVV/RVV+Zvkb) are verified against the same specification at the machine-code level,
+for every input count, and also in place. The object code is what is proved about: `asm2lean.py`
+disassembles the assembled `.o` files (`objdump -d -r`) into Lean programs
+(`Keccaktree/Kernels/<K>/Program.lean`), which instruction-set models execute.
 
-```shell
-lake build kttool                   # the proof-generation tool (symbolic executor, matcher)
-./gen_all.sh                        # generate Keccaktree/Kernels/<K>/Gen/*.lean (minutes)
-./build_bounded.sh ScalarX1 6       # check one kernel's proofs with ≤ 6 lean processes (5–40 min, 2–15 GB each)
-```
+`results/STATUS.md` has the full table, the trust base with line counts, and the attestation;
+`results/manifest.txt` lists per kernel the program, its object source, the proof files, the hashes of
+the generated proof directories and each theorem's axioms and `leanchecker` result.
 
 ### What is proved
 
-For every kernel `K`, `Keccaktree/Kernels/K/Gen/Final.lean` ends with
+`Asm/Library.lean` states what a correct kernel is (`KernelThm`, `Outcome`). For every kernel `K`,
+`Kernels/K/Lib.lean` proves `kernel : KernelThm isa EntryAt Digest`: started at the kernel's symbol,
+on a call or a tail call from another kernel, with **any count**, any input buffer of 64-byte nodes
+(aligned, not overlapping the output), and any flags, masks and (RISC-V) `vl` at entry, the machine code
 
-```lean
-theorem kernel_keccak256 (input : Int → BitVec 64) :
-    (finalState input).halted = true ∧ (finalState input).err = false ∧
-    ∀ n w i : Nat, n < count → w < 4 → i < 8 →
-      ((finalState input).mem rOutput (Int.ofNat (4 * n + w))).extractLsb' (8 * i) 8 =
-        Spec.keccak256 64 (nodeBytes (nodeWords input n)) (8 * w + i)
-```
+* never reaches a situation the model does not cover, and halts;
+* leaves the output words before its range untouched;
+* either returns with every digest written, or tail-calls one of its listed successor kernels with the
+  first `done` digests written and the remaining nodes handed over from that kernel's entry state;
 
-`finalState input` runs the kernel's machine code from its entry point
-(`keccaktree_keccak256_<K>(out, in, count)` with `count` = the nodes of one
-batch: 4 or 8 for x86, 1/2/3 for AArch64, 1 or `VLEN/64` for RISC-V) on an
-arbitrary input region `input` until its final `ret`; the theorem says the
-run never hits an unmodelled situation (`err = false`), halts, and every byte
-of every output digest is `Spec.keccak256` of the corresponding 64 input
-bytes.  `#print axioms` shows only `propext`, `Classical.choice`, `Quot.sound`
-and `bv_decide`'s checked certificates.
+where a written digest is `Spec.keccak256 64` of its node, byte by byte. The library tables
+(`X86Lib.lib_x86_all`, `ArmLib.lib_arm_all`, `RvLib.lib2/4/8`) chain the hand-overs: a call to any kernel
+produces all digests. Variants:
+
+* **in place** (`InPlaceAll.kernelAl`, `X86LibInPlace`, `ArmLibInPlace`, `RvLibInPlace`): the same when
+  `out = in`, the tree's level-by-level hashing; every node is read before its digest overwrites it;
+* **every threshold value** (avx2_x4, avx2_x10: `AllV`/`LibV`/`InPlaceAllV`);
+* **any `vl` choice** of the RVV hardware (`lib2ch`, `lib4ch`, `lib8ch`);
+* **misaligned buffers** on RISC-V (`RvLibU`, `RvLibUV`): input and output at any byte offset.
+
+`Dispatch.lean` models `keccaktree.c`'s CPU-feature dispatch and proves that it only calls kernels the
+CPU supports (`hash_x86`, `hash_arm`, `hash_rv`, `hash_x86_reachable`).
+
+`#print axioms` of every theorem (`results/attestation/final/`, 214 theorems) shows only `propext`,
+`Classical.choice`, `Quot.sound` and `bv_decide`'s checked certificates (`…_native.bv_decide.ax_*`), and no
+`sorryAx`.
+A `leanchecker` replay of every module (an independent run of Lean's kernel over all 7277 modules) is in
+progress; `results/STATUS.md` has its state.
 
 ### How
 
-* **Machine models** (`Keccaktree/Asm/X86.lean`, `Arm.lean`, `Riscv.lean`):
-  the instruction subsets the kernels use, on one shared state (vector
-  registers of 8 lanes, general registers, flags, AVX-512 masks, RVV `vl`,
-  memory as regions of 64-bit words: input, output, stack, constants).
-  Pointers are tagged addresses; anything the model does not cover
-  (unaligned byte-copy paths, unsupported configurations) makes `exec` fail,
-  and the theorems assert it never does.  The models are polymorphic in the
-  lane type (`LaneOps`), so the same `exec` is the concrete interpreter — run
-  on the C test vectors for every kernel (`Kernels/*/Test.lean`) — and the
-  symbolic executor on expression trees `E`.
-* **Slices and cuts.**  A batch is cut at the 23 round boundaries (found by
-  `kttool`, which runs the kernel on two random inputs and recognises which
-  spec quantity — lane, θ-parity, θ-output, rotated, or a round constant
-  held for the next round — each register and stack word holds).  Each slice is run once symbolically from a cut state whose
-  data locations are fresh variables (`cutOf`); the result is checked by the
-  kernel (`decide +kernel`), and one `bv_decide` lemma per distinct
-  expression shape (shared by all nodes) proves that the slice's outputs are
-  the next round's quantities of the inputs' quantities (`Invs.lean` holds
-  the invariant at every cut; `RoundLanes.lean` the spec round as 25 lane
-  formulas, by `rfl`).
-* **Composition** (`Trace.lean`, `Compose.lean`, `Final.lean`): `exec`
-  commutes with lane homomorphisms (`exec_map`, one lemma per instruction),
-  so the concrete run of a slice is the evaluation of the symbolic one
-  (`execTrace_cut`); `pathOk` (kernel-checked) shows the fetch–execute loop
-  follows the recorded instruction path; `run_batch` chains the 24 slices,
-  `entry_cut` connects the kernel's entry state, and `Node.lean` connects the
-  sponge states to `Spec.keccak256` on bytes.
+* **Machine models** (`Asm/X86.lean`, `Arm.lean`, `Riscv.lean`, on `Asm/Machine.lean`): the instruction
+  subsets the kernels use, on one shared state (vector registers of 8 lanes, general registers, flags,
+  AVX-512 masks, RVV `vl`, memory as regions: input, output, stack, constants). Anything the model does not
+  cover makes `exec` fail, and the theorems assert it never does. The models are differentially tested
+  against hardware and qemu, every instruction form (`lean/difftest`), and executed on the C test vectors.
+* **Slices** (`kttool`, `Asm/Trace.lean`, `Compose.lean`): a batch is cut at its round boundaries; each slice
+  is run once symbolically from a cut state of fresh variables, checked by the kernel (`decide +kernel`), and
+  one `bv_decide` lemma per expression shape proves the slice computes the next round's quantities.
+* **Loops and counts** (`Asm/Iter.lean`, the `x86_glue*.py` / `gen_all_*.py` generators): the paths
+  between slices (entry, batch loop, tail hand-overs, exits) are proved per path segment and composed by
+  induction over the number of batches; `Library.lean` composes kernels through their tail calls.
+* **In place and misaligned** (`Asm/LibAlias.lean`, `InPlace/`, `AllU*`): an access theorem per kernel
+  (every load of a node precedes the store of its digest) transfers the aligned result.
+
+### Checking it
+
+The generated proof directories (`Kernels/<K>/Gen*`, 2.2 GB of Lean source) are not committed;
+`results/gen_sha256.txt` lists the hash of each. They come from `kttool` (`lake build kttool`)
+and the generators in `lean/`, driven per ISA as described in `notes/` (`x86.md`, `x86b.md`, `arm.md`,
+`rv.md`, `rvu.md`, `inplace.md`, `int.md`). With them in place:
+
+```shell
+cd lean
+lake build Keccaktree.Kernels.X86Lib Keccaktree.Kernels.X86LibInPlace   # ... ArmLib, RvLib, RvLibUV, Dispatch, ...
+lake env lean ../results/attestation/final/Final_x86.lean > out.txt     # #print axioms of every theorem
+python3 axsum.py out.txt   # fails on anything but the three standard axioms and bv_decide certificates
+```
+
+A full build is large: about 250 GB of `.olean` files and several hundred CPU-hours (the `leanchecker` replay alone took about 200), with single
+modules needing up to 25 GB of memory (the avx2_x9/x10 and neon_x3 slices). It was built on a 32-core,
+122 GB machine.
 
 ### Limits
 
-* One batch per call: `count` is the kernel's batch size.  Other counts
-  (the loop over several batches and the tail-size hand-overs
-  `avx512_x8 → avx512vl_x4`, `sha3_x3 → scalar_x1/sha3_x2`, …) are executed by
-  the models but not yet proved; the composition needs a relocation lemma
-  for the pointer arithmetic between batches.
-* RVV kernels are proved for `VLEN ∈ {128, 256, 512}` (`vlmax = 2, 4, 8`
-  lanes); vector tail lanes are modelled as undisturbed.
-* Buffers are assumed 8-byte aligned (the kernels' byte-copy fallbacks are
-  not modelled).
+* RVV is proved for `VLEN ∈ {128, 256, 512}`; the model has 8 lanes per vector register, so VLEN ≥ 1024 is
+  not covered.
+* x86-64 and AArch64: buffers are assumed 8-byte aligned (the kernels' byte-copy fallbacks for misaligned
+  buffers are not modelled); RISC-V is proved for any alignment.
 
 ## Trust base (assembly)
 
-As above, plus: the disassembly (`objdump`) and the translation of its
-text to the instruction models (`asm2lean.py`, 1:1 per mnemonic), and the
-instruction semantics themselves (checked against the C test vectors, with
-tail hand-overs, through the executable interpreter).  The generated proofs
-are regenerable from the `.o` files; nothing in them is trusted.
+As above, plus what `results/STATUS.md` lists under "What a reviewer has to read" (about 2,100 lines): the
+statement (`Asm/Library.lean`, `LibX86`/`LibArm`/`LibRv`/`LibAlias.lean`), the machine model and
+instruction semantics (`Asm/Machine.lean`, `Exec.lean`, `X86.lean`, `Arm.lean`, `Riscv.lean`), the
+code import (`asm2lean.py`, `Asm/Rodata.lean`) and the dispatch model (`Dispatch.lean`). The generators,
+`kttool` and the proof library are not trusted: a bug there can only make a proof fail to check.

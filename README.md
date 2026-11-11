@@ -80,17 +80,18 @@ runners and attests their provenance. All bindings link these libraries.
 
 ## Formal verification
 
-`lean/` holds a Lean 4 proof that the portable kernel
-(`src/keccak256_generic.c`, and its pure-Go twin `keccak256_1_generic.go`)
-computes keccak256 as FIPS 202 defines it, for every 64-byte node and
-every batch: the C round loop is Keccak-f[1600] step by step (including the
-in-place rho/pi walk along pi's cycle, whose resulting lane permutation the
-kernel computes), the padding lanes and the byte order are the sponge's,
-and the hard-coded rho offsets and round constants are the ones the
-standard derives.  `cd lean && lake build` checks it (about 15 s, no
-Mathlib); see `lean/README.md` for the theorems and the trust base.  The
-assembly kernels are not covered by the proof; they are tested against the
-portable kernel.
+`lean/` holds a Lean 4 proof (no Mathlib) that keccaktree computes keccak256 as FIPS 202 defines it:
+
+* the portable kernels, `src/keccak256_generic.c` and the pure-Go `keccak256_1_generic.go`, for every
+  64-byte node (`cd lean && lake build`, which CI runs);
+* all 24 assembly kernels (x86-64 AVX2/AVX-512, AArch64 scalar/NEON/SHA3, RISC-V scalar/Zbb/RVV/RVV+Zvkb)
+  at the machine-code level, on the shipped object code: for every input count, including the hand-overs
+  between kernels, and in place (`out = in`); RISC-V also for misaligned buffers;
+* the CPU-feature dispatch in `keccaktree.c` only calls kernels the CPU supports.
+
+Not covered: RVV with VLEN ≥ 1024, and misaligned buffers on x86-64 and AArch64. See `lean/README.md`
+for the theorems, the trust base and how to check them, and `results/STATUS.md` for the per-kernel
+table and the attestation (`#print axioms` of every theorem, `leanchecker` replay).
 
 ## Contributing
 
