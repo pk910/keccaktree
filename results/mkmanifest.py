@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """results/manifest.txt for the final tree.
 
-    mkmanifest.py <repo> <gen_sha256.txt> <axioms outputs dir> [<leanchecker.tsv>] > results/manifest.txt
+    mkmanifest.py <repo> <gen_sha256.txt> <axioms outputs dir> [<leanchecker.tsv> [<elab.tsv>]] > results/manifest.txt
 
 gen_sha256.txt: "<Ns>/<Gen> <files> <sha256>" lines from /root/kt-int-gensha.sh (deterministic tar of each Gen dir).
 axioms outputs: the `#print axioms` outputs of the final combined check (out_Final_*.txt).
-leanchecker.tsv: "<module> <rc> <seconds> <maxKB>" lines from /root/kt-int-leanchecker.sh.
+leanchecker.tsv: "<module> <rc> <seconds> <maxKB>" lines (kt-int-lcsched.py, kt-int-lcfinal.sh); the last row of a module counts.
+elab.tsv: the same for modules whose leanchecker replay exceeded 100 GB: `lake env lean <file>` re-elaboration.
 """
 import hashlib, os, re, subprocess, sys
 repo, gensha, axdir = sys.argv[1:4]
 lctsv = sys.argv[4] if len(sys.argv) > 4 else None
+elabtsv = sys.argv[5] if len(sys.argv) > 5 else None
 git = lambda *a: subprocess.run(['git', '-C', repo] + list(a), capture_output=True, text=True, check=True).stdout.strip()
 def sha(p):
     return hashlib.sha256(open(os.path.join(repo, p), 'rb').read()).hexdigest()
@@ -41,13 +43,26 @@ if lctsv:
         p = l.rstrip('\n').split('\t')
         if len(p) >= 3:
             lc[p[0]] = (int(p[1]), float(p[2]), p[3] if len(p) > 3 else '')
+el = {}
+if elabtsv:
+    for l in open(elabtsv):
+        p = l.rstrip('\n').split('\t')
+        if len(p) >= 3:
+            el[p[0]] = (int(p[1]), float(p[2]))
 def lc_line(prefixes):
     mods = [m for m in lc if any(m == p or m.startswith(p + '.') for p in prefixes)]
     if not mods:
         return 'not run'
     ok = sum(1 for m in mods if lc[m][0] == 0)
     secs = sum(lc[m][1] for m in mods)
-    return '%d/%d modules ok, %.0f s' % (ok, len(mods), secs)
+    rest = [m for m in mods if lc[m][0] != 0]
+    elok = sum(1 for m in rest if el.get(m, (1,))[0] == 0)
+    t = '%d/%d modules leanchecker ok, %.0f s' % (ok, len(mods), secs)
+    if rest:
+        t += '; %d re-elaborated ok (leanchecker exceeded 100 GB)' % elok
+        if elok < len(rest):
+            t += '; %d NOT CHECKED' % (len(rest) - elok)
+    return t
 def axl(t):
     return ax.get(KN + t if not t.startswith('Keccaktree.') else t, 'NOT CHECKED')
 
@@ -106,7 +121,8 @@ w('# gen     : generated segment dirs (not committed), <dir> <files> <sha256 of 
 w('#           tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner --mode=a=r,u+w,a+X --format=gnu -cf - <Ns>/<Gen> | sha256sum')
 w('# axioms  : #print axioms on the frozen base (kt-int, final combined check): the standard axioms + the number of')
 w('#           bv_decide certificate axioms (`<decl>._native.bv_decide.ax_*`); anything else would be listed as OTHER')
-w('# checker : leanchecker (Lean 4.35.0) over the kernel\'s modules: modules ok / checked, summed wall time')
+w('# checker : leanchecker (Lean 4.35.0) over the kernel\'s modules: modules ok / checked, summed wall time; modules whose')
+w('#           leanchecker replay exceeded 100 GB: re-elaborated from source (`lake env lean`, same pipeline as the build)')
 w('')
 for (k, isa, ns, pns, obj, th) in K:
     w(f'[{k}] {isa}')
@@ -144,7 +160,11 @@ w(f'  checker   {lc_line(["Keccaktree.Asm", "Keccaktree.Dispatch", "Keccaktree.S
 w('')
 if lc:
     ok = sum(1 for v in lc.values() if v[0] == 0)
-    w(f'[leanchecker total] {ok}/{len(lc)} modules ok, {sum(v[1] for v in lc.values()):.0f} s summed wall time')
+    rest = [m for m in lc if lc[m][0] != 0]
+    elok = sum(1 for m in rest if el.get(m, (1,))[0] == 0)
+    w(f'[leanchecker total] {ok}/{len(lc)} modules leanchecker ok, {sum(v[1] for v in lc.values()):.0f} s summed wall time; '
+      f'{elok}/{len(rest)} others re-elaborated ok (leanchecker exceeded 100 GB; listed in results/leanchecker_oom.txt; '
+      f're-elaboration runs the same pipeline as the build, not an independent check)')
     w('')
 w('[build notes] see notes/int.md: x86 kernels replayed by hard links (closure sources identical, `lake build --no-build`')
 w('  up to date); placeholder / truncated compiled-C lists (results/x86b_replay_placeholder_c.txt and the')
