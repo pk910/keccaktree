@@ -115,8 +115,12 @@ CPU supports (`hash_x86`, `hash_arm`, `hash_rv`, `hash_x86_reachable`).
 `#print axioms` of every theorem (`results/attestation/final/`, 214 theorems) shows only `propext`,
 `Classical.choice`, `Quot.sound` and `bv_decide`'s checked certificates (`…_native.bv_decide.ax_*`), and no
 `sorryAx`.
-A `leanchecker` replay of every module (an independent run of Lean's kernel over all 7277 modules) is in
-progress; `results/STATUS.md` has its state.
+A `leanchecker` replay (an independent run of Lean's kernel over the stored modules) accepted 7246 of the
+7277 modules in the closure and rejected none. The other 31, all small in-place segment summaries
+(`<Kernel>.InPlace.<Seg>`), cannot be replayed by `leanchecker` within 100 GB of memory, while elaborating
+them from source takes about 2 s and 1 GB. They were re-elaborated from source (`lake env lean`), and all 31
+were accepted. That is the same pipeline as the build, so it is not an independent check.
+`results/leanchecker_oom.txt` lists them, and `results/leanchecker/` has the logs.
 
 ### How
 
@@ -148,7 +152,7 @@ lake env lean ../results/attestation/final/Final_x86.lean > out.txt     # #print
 python3 axsum.py out.txt   # fails on anything but the three standard axioms and bv_decide certificates
 ```
 
-A full build is large: about 250 GB of `.olean` files and several hundred CPU-hours (the `leanchecker` replay alone took about 200), with single
+A full build is large: about 250 GB of `.olean` files and several hundred CPU-hours (the `leanchecker` replay alone took about 220), with single
 modules needing up to 25 GB of memory (the avx2_x9/x10 and neon_x3 slices). It was built on a 32-core,
 122 GB machine.
 

@@ -1,4 +1,4 @@
-# Verification status (2026-11-11 19:30 UTC)
+# Verification status (2026-11-13 01:30 UTC)
 
 What is proved, what the evidence is, what is still pending, and what a reviewer has to read.
 
@@ -58,11 +58,28 @@ hardware or qemu (x86, AArch64, RISC-V at VLEN 128/256/512). **Portable C and Go
 `Generic.lean` transcribes them; CI checks the transcription statement by statement
 (`lean/check_tables.py`) and `Proof.lean` proves both equal `Spec.keccak256`.
 
-## Pending, with estimates
+## leanchecker replay (done, Nov 12)
 
-| item | state | estimate |
+`leanchecker` (Lean 4.35.0) replayed every module of the final tree's closure against its stored `.olean`:
+
+* **7246 of 7277 modules accepted, 0 rejected** (≈ 218 h summed wall time).
+* **31 modules exceed 100 GB under `leanchecker`**, even run alone in a 100 GB cgroup. They are all small
+  in-place segment summaries `<Kernel>.InPlace.<Seg>`: AVX2 x4–x10, AVX-512 vl_x4/x8/x8d/x9, Rv64X1/ZbbX1
+  GenSC, RvvV4/V8 GenB1/B3, NeonX3/Sha3X3r GenSB. The kernel log has one cgroup OOM kill per module at the
+  cap (`results/leanchecker/lcfinal_kernel_oom.txt`). Elaborating the same modules from source takes at most
+  2.6 s and 1.1 GB. They were re-elaborated from source (`lake env lean <file>`), and **all 31 were accepted**.
+  This runs the same pipeline as the build, so for these 31 it is **not** an independent check.
+  `results/leanchecker_oom.txt` lists them.
+* Per kernel, `results/manifest.txt` gives "N/M modules leanchecker ok" plus any re-elaborated ones. No module
+  is unchecked.
+* The logs are in `results/leanchecker/`: the per-module TSVs, scheduler and final-pass logs, and the kernel
+  OOM log. `results/final-tools/` has the scheduler and the final-pass script. A first run overloaded the
+  machine's memory (Nov 11). The rerun ran under a 100 GB cgroup cap; `notes/int.md` describes both.
+
+## Pending
+
+| item | state | |
 |---|---|---|
-| `leanchecker` replay of every module (7277 in the closure) | 2972 of 7277 modules ok at Nov 11 10:13 UTC (≈ 85% of the ≈ 200 CPU-h), no rejections; paused since ~12:00 UTC: the build machine is unreachable | ≈ 3 h after it is back |
 | VLEN ≥ 1024, x86/ARM misaligned buffers | not started | needs a decision |
 
 ## Attestation
@@ -73,8 +90,8 @@ the check scripts `Final_{arm,x86,rv,lib,extra}.lean` (`import` + `#print axioms
 `ArmLibInPlace`, `X86Lib`, `X86LibInPlace`, `RvLib`, `RvLibU`, `RvLibUV`, `RvLibInPlace`, `LibTable` and `Dispatch`;
 a superset of the theorem names in `frozen/summary.txt`), `final_times.txt` and `SHA256SUMS`.
 `results/manifest.txt` lists per kernel the imported program, its object source, the proof files, the hashes of the
-generated segment directories (`results/gen_sha256.txt`) and each theorem's axioms; its `leanchecker` column is filled
-by the replay.
+generated segment directories (`results/gen_sha256.txt`) and each theorem's axioms; its `leanchecker` column has
+the replay's result per kernel.
 
 `results/attestation/frozen/` (the per-kernel runs on the same base, as each kernel was finished):
 
@@ -120,8 +137,8 @@ That is about 2,100 lines to read:
 | dispatch model | `lean/Keccaktree/Dispatch.lean` | 447 | model of `keccaktree.c`'s CPU dispatch |
 
 Plus the Lean 4.35.0 kernel and the bv_decide pipeline (Lean's compiler and the verified LRAT checker it runs).
-The `leanchecker` replay in the final step re-checks every module's declarations with an independent run of
-the kernel.
+The `leanchecker` replay re-checked the declarations of 7246 of the 7277 modules with an independent run of
+the kernel (see above). The 31 others were re-elaborated from source.
 
 ## Base freeze
 
