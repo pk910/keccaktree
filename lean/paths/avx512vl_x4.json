@@ -1,0 +1,2513 @@
+{
+ "kernel": "avx512vl_x4",
+ "nodes": 4,
+ "isa": "x86",
+ "count_range": [
+  0,
+  72
+ ],
+ "loop_head": {
+  "index": 895,
+  "instruction": ".call 0"
+ },
+ "batch_region": {
+  "kind": "subroutine",
+  "start": 0,
+  "end": 879,
+  "instructions": 880
+ },
+ "classes": [
+  {
+   "id": 0,
+   "counts": [
+    0,
+    1
+   ],
+   "iterations": {
+    "0": 0,
+    "1": 0
+   },
+   "tail": "keccaktree_keccak256_x86_x1",
+   "entry_len": 2,
+   "body_variants": [],
+   "exit_len": 0
+  },
+  {
+   "id": 1,
+   "counts": [
+    2
+   ],
+   "iterations": {
+    "2": 0
+   },
+   "tail": null,
+   "entry_len": 2870,
+   "body_variants": [],
+   "exit_len": 0
+  },
+  {
+   "id": 2,
+   "counts": [
+    3
+   ],
+   "iterations": {
+    "3": 0
+   },
+   "tail": null,
+   "entry_len": 2884,
+   "body_variants": [],
+   "exit_len": 0
+  },
+  {
+   "id": 3,
+   "counts": [
+    4
+   ],
+   "iterations": {
+    "4": 0
+   },
+   "tail": null,
+   "entry_len": 11,
+   "body_variants": [],
+   "exit_len": 2829
+  },
+  {
+   "id": 4,
+   "counts": [
+    5
+   ],
+   "iterations": {
+    "5": 0
+   },
+   "tail": "keccaktree_keccak256_x86_x1",
+   "entry_len": 11,
+   "body_variants": [],
+   "exit_len": 2834
+  },
+  {
+   "id": 5,
+   "counts": [
+    6
+   ],
+   "iterations": {
+    "6": 0
+   },
+   "tail": null,
+   "entry_len": 11,
+   "body_variants": [],
+   "exit_len": 5679
+  },
+  {
+   "id": 6,
+   "counts": [
+    7
+   ],
+   "iterations": {
+    "7": 0
+   },
+   "tail": null,
+   "entry_len": 11,
+   "body_variants": [],
+   "exit_len": 5693
+  },
+  {
+   "id": 7,
+   "counts": [
+    8,
+    12,
+    16,
+    20,
+    24,
+    28,
+    32,
+    36,
+    40,
+    44,
+    48,
+    52,
+    56,
+    60,
+    64,
+    68,
+    72
+   ],
+   "iterations": {
+    "8": 1,
+    "12": 2,
+    "16": 3,
+    "20": 4,
+    "24": 5,
+    "28": 6,
+    "32": 7,
+    "36": 8,
+    "40": 9,
+    "44": 10,
+    "48": 11,
+    "52": 12,
+    "56": 13,
+    "60": 14,
+    "64": 15,
+    "68": 16,
+    "72": 17
+   },
+   "tail": null,
+   "entry_len": 11,
+   "body_variants": [
+    2818
+   ],
+   "exit_len": 2829
+  },
+  {
+   "id": 8,
+   "counts": [
+    9,
+    13,
+    17,
+    21,
+    25,
+    29,
+    33,
+    37,
+    41,
+    45,
+    49,
+    53,
+    57,
+    61,
+    65,
+    69
+   ],
+   "iterations": {
+    "9": 1,
+    "13": 2,
+    "17": 3,
+    "21": 4,
+    "25": 5,
+    "29": 6,
+    "33": 7,
+    "37": 8,
+    "41": 9,
+    "45": 10,
+    "49": 11,
+    "53": 12,
+    "57": 13,
+    "61": 14,
+    "65": 15,
+    "69": 16
+   },
+   "tail": "keccaktree_keccak256_x86_x1",
+   "entry_len": 11,
+   "body_variants": [
+    2818
+   ],
+   "exit_len": 2834
+  },
+  {
+   "id": 9,
+   "counts": [
+    10,
+    14,
+    18,
+    22,
+    26,
+    30,
+    34,
+    38,
+    42,
+    46,
+    50,
+    54,
+    58,
+    62,
+    66,
+    70
+   ],
+   "iterations": {
+    "10": 1,
+    "14": 2,
+    "18": 3,
+    "22": 4,
+    "26": 5,
+    "30": 6,
+    "34": 7,
+    "38": 8,
+    "42": 9,
+    "46": 10,
+    "50": 11,
+    "54": 12,
+    "58": 13,
+    "62": 14,
+    "66": 15,
+    "70": 16
+   },
+   "tail": null,
+   "entry_len": 11,
+   "body_variants": [
+    2818
+   ],
+   "exit_len": 5679
+  },
+  {
+   "id": 10,
+   "counts": [
+    11,
+    15,
+    19,
+    23,
+    27,
+    31,
+    35,
+    39,
+    43,
+    47,
+    51,
+    55,
+    59,
+    63,
+    67,
+    71
+   ],
+   "iterations": {
+    "11": 1,
+    "15": 2,
+    "19": 3,
+    "23": 4,
+    "27": 5,
+    "31": 6,
+    "35": 7,
+    "39": 8,
+    "43": 9,
+    "47": 10,
+    "51": 11,
+    "55": 12,
+    "59": 13,
+    "63": 14,
+    "67": 15,
+    "71": 16
+   },
+   "tail": null,
+   "entry_len": 11,
+   "body_variants": [
+    2818
+   ],
+   "exit_len": 5693
+  }
+ ],
+ "per_count": [
+  {
+   "count": 0,
+   "steps": 2,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     2
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 0,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 1,
+   "steps": 2,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     2
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 2,
+   "steps": 2870,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 2,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     2870
+    ],
+    "loop": null,
+    "exit": null
+   }
+  },
+  {
+   "count": 3,
+   "steps": 2884,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 3,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     2884
+    ],
+    "loop": null,
+    "exit": null
+   }
+  },
+  {
+   "count": 4,
+   "steps": 2840,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 4,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11
+    ],
+    "exit": [
+     11,
+     2840
+    ]
+   }
+  },
+  {
+   "count": 5,
+   "steps": 2845,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 4,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11
+    ],
+    "exit": [
+     11,
+     2845
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 256
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 128
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 6,
+   "steps": 5690,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 6,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11
+    ],
+    "exit": [
+     11,
+     5690
+    ]
+   }
+  },
+  {
+   "count": 7,
+   "steps": 5704,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 7,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11
+    ],
+    "exit": [
+     11,
+     5704
+    ]
+   }
+  },
+  {
+   "count": 8,
+   "steps": 5658,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     2829
+    ],
+    "exit": [
+     2829,
+     5658
+    ]
+   }
+  },
+  {
+   "count": 9,
+   "steps": 5663,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     2829
+    ],
+    "exit": [
+     2829,
+     5663
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 10,
+   "steps": 8508,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 10,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     2829
+    ],
+    "exit": [
+     2829,
+     8508
+    ]
+   }
+  },
+  {
+   "count": 11,
+   "steps": 8522,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 11,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     2829
+    ],
+    "exit": [
+     2829,
+     8522
+    ]
+   }
+  },
+  {
+   "count": 12,
+   "steps": 8476,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 12,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     5647
+    ],
+    "exit": [
+     5647,
+     8476
+    ]
+   }
+  },
+  {
+   "count": 13,
+   "steps": 8481,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 12,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     5647
+    ],
+    "exit": [
+     5647,
+     8481
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 768
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 384
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 14,
+   "steps": 11326,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 14,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     5647
+    ],
+    "exit": [
+     5647,
+     11326
+    ]
+   }
+  },
+  {
+   "count": 15,
+   "steps": 11340,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 15,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     5647
+    ],
+    "exit": [
+     5647,
+     11340
+    ]
+   }
+  },
+  {
+   "count": 16,
+   "steps": 11294,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     8465
+    ],
+    "exit": [
+     8465,
+     11294
+    ]
+   }
+  },
+  {
+   "count": 17,
+   "steps": 11299,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     8465
+    ],
+    "exit": [
+     8465,
+     11299
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 18,
+   "steps": 14144,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 18,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     8465
+    ],
+    "exit": [
+     8465,
+     14144
+    ]
+   }
+  },
+  {
+   "count": 19,
+   "steps": 14158,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 19,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     8465
+    ],
+    "exit": [
+     8465,
+     14158
+    ]
+   }
+  },
+  {
+   "count": 20,
+   "steps": 14112,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 20,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11283
+    ],
+    "exit": [
+     11283,
+     14112
+    ]
+   }
+  },
+  {
+   "count": 21,
+   "steps": 14117,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 20,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11283
+    ],
+    "exit": [
+     11283,
+     14117
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1280
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 640
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 22,
+   "steps": 16962,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 22,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11283
+    ],
+    "exit": [
+     11283,
+     16962
+    ]
+   }
+  },
+  {
+   "count": 23,
+   "steps": 16976,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 23,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     11283
+    ],
+    "exit": [
+     11283,
+     16976
+    ]
+   }
+  },
+  {
+   "count": 24,
+   "steps": 16930,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     14101
+    ],
+    "exit": [
+     14101,
+     16930
+    ]
+   }
+  },
+  {
+   "count": 25,
+   "steps": 16935,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     14101
+    ],
+    "exit": [
+     14101,
+     16935
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 26,
+   "steps": 19780,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 26,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     14101
+    ],
+    "exit": [
+     14101,
+     19780
+    ]
+   }
+  },
+  {
+   "count": 27,
+   "steps": 19794,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 27,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     14101
+    ],
+    "exit": [
+     14101,
+     19794
+    ]
+   }
+  },
+  {
+   "count": 28,
+   "steps": 19748,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 28,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     16919
+    ],
+    "exit": [
+     16919,
+     19748
+    ]
+   }
+  },
+  {
+   "count": 29,
+   "steps": 19753,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 28,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     16919
+    ],
+    "exit": [
+     16919,
+     19753
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1792
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 896
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 30,
+   "steps": 22598,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 30,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     16919
+    ],
+    "exit": [
+     16919,
+     22598
+    ]
+   }
+  },
+  {
+   "count": 31,
+   "steps": 22612,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 31,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     16919
+    ],
+    "exit": [
+     16919,
+     22612
+    ]
+   }
+  },
+  {
+   "count": 32,
+   "steps": 22566,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     19737
+    ],
+    "exit": [
+     19737,
+     22566
+    ]
+   }
+  },
+  {
+   "count": 33,
+   "steps": 22571,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     19737
+    ],
+    "exit": [
+     19737,
+     22571
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 34,
+   "steps": 25416,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 34,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     19737
+    ],
+    "exit": [
+     19737,
+     25416
+    ]
+   }
+  },
+  {
+   "count": 35,
+   "steps": 25430,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 35,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     19737
+    ],
+    "exit": [
+     19737,
+     25430
+    ]
+   }
+  },
+  {
+   "count": 36,
+   "steps": 25384,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 36,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     22555
+    ],
+    "exit": [
+     22555,
+     25384
+    ]
+   }
+  },
+  {
+   "count": 37,
+   "steps": 25389,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 36,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     22555
+    ],
+    "exit": [
+     22555,
+     25389
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2304
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1152
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 38,
+   "steps": 28234,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 38,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     22555
+    ],
+    "exit": [
+     22555,
+     28234
+    ]
+   }
+  },
+  {
+   "count": 39,
+   "steps": 28248,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 39,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     22555
+    ],
+    "exit": [
+     22555,
+     28248
+    ]
+   }
+  },
+  {
+   "count": 40,
+   "steps": 28202,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 10,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     25373
+    ],
+    "exit": [
+     25373,
+     28202
+    ]
+   }
+  },
+  {
+   "count": 41,
+   "steps": 28207,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 10,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     25373
+    ],
+    "exit": [
+     25373,
+     28207
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 42,
+   "steps": 31052,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 42,
+   "digests_ok": true,
+   "loop_head_visits": 10,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     25373
+    ],
+    "exit": [
+     25373,
+     31052
+    ]
+   }
+  },
+  {
+   "count": 43,
+   "steps": 31066,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 43,
+   "digests_ok": true,
+   "loop_head_visits": 10,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     25373
+    ],
+    "exit": [
+     25373,
+     31066
+    ]
+   }
+  },
+  {
+   "count": 44,
+   "steps": 31020,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 44,
+   "digests_ok": true,
+   "loop_head_visits": 11,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     28191
+    ],
+    "exit": [
+     28191,
+     31020
+    ]
+   }
+  },
+  {
+   "count": 45,
+   "steps": 31025,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 44,
+   "digests_ok": true,
+   "loop_head_visits": 11,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     28191
+    ],
+    "exit": [
+     28191,
+     31025
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2816
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1408
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 46,
+   "steps": 33870,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 46,
+   "digests_ok": true,
+   "loop_head_visits": 11,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     28191
+    ],
+    "exit": [
+     28191,
+     33870
+    ]
+   }
+  },
+  {
+   "count": 47,
+   "steps": 33884,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 47,
+   "digests_ok": true,
+   "loop_head_visits": 11,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     28191
+    ],
+    "exit": [
+     28191,
+     33884
+    ]
+   }
+  },
+  {
+   "count": 48,
+   "steps": 33838,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 12,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     31009
+    ],
+    "exit": [
+     31009,
+     33838
+    ]
+   }
+  },
+  {
+   "count": 49,
+   "steps": 33843,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 12,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     31009
+    ],
+    "exit": [
+     31009,
+     33843
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 50,
+   "steps": 36688,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 50,
+   "digests_ok": true,
+   "loop_head_visits": 12,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     31009
+    ],
+    "exit": [
+     31009,
+     36688
+    ]
+   }
+  },
+  {
+   "count": 51,
+   "steps": 36702,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 51,
+   "digests_ok": true,
+   "loop_head_visits": 12,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     31009
+    ],
+    "exit": [
+     31009,
+     36702
+    ]
+   }
+  },
+  {
+   "count": 52,
+   "steps": 36656,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 52,
+   "digests_ok": true,
+   "loop_head_visits": 13,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     33827
+    ],
+    "exit": [
+     33827,
+     36656
+    ]
+   }
+  },
+  {
+   "count": 53,
+   "steps": 36661,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 52,
+   "digests_ok": true,
+   "loop_head_visits": 13,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     33827
+    ],
+    "exit": [
+     33827,
+     36661
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3328
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1664
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 54,
+   "steps": 39506,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 54,
+   "digests_ok": true,
+   "loop_head_visits": 13,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     33827
+    ],
+    "exit": [
+     33827,
+     39506
+    ]
+   }
+  },
+  {
+   "count": 55,
+   "steps": 39520,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 55,
+   "digests_ok": true,
+   "loop_head_visits": 13,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     33827
+    ],
+    "exit": [
+     33827,
+     39520
+    ]
+   }
+  },
+  {
+   "count": 56,
+   "steps": 39474,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 14,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     36645
+    ],
+    "exit": [
+     36645,
+     39474
+    ]
+   }
+  },
+  {
+   "count": 57,
+   "steps": 39479,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 14,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     36645
+    ],
+    "exit": [
+     36645,
+     39479
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 58,
+   "steps": 42324,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 58,
+   "digests_ok": true,
+   "loop_head_visits": 14,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     36645
+    ],
+    "exit": [
+     36645,
+     42324
+    ]
+   }
+  },
+  {
+   "count": 59,
+   "steps": 42338,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 59,
+   "digests_ok": true,
+   "loop_head_visits": 14,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     36645
+    ],
+    "exit": [
+     36645,
+     42338
+    ]
+   }
+  },
+  {
+   "count": 60,
+   "steps": 42292,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 60,
+   "digests_ok": true,
+   "loop_head_visits": 15,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     39463
+    ],
+    "exit": [
+     39463,
+     42292
+    ]
+   }
+  },
+  {
+   "count": 61,
+   "steps": 42297,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 60,
+   "digests_ok": true,
+   "loop_head_visits": 15,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     39463
+    ],
+    "exit": [
+     39463,
+     42297
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3840
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1920
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 62,
+   "steps": 45142,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 62,
+   "digests_ok": true,
+   "loop_head_visits": 15,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     39463
+    ],
+    "exit": [
+     39463,
+     45142
+    ]
+   }
+  },
+  {
+   "count": 63,
+   "steps": 45156,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 63,
+   "digests_ok": true,
+   "loop_head_visits": 15,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     39463
+    ],
+    "exit": [
+     39463,
+     45156
+    ]
+   }
+  },
+  {
+   "count": 64,
+   "steps": 45110,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 16,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     42281
+    ],
+    "exit": [
+     42281,
+     45110
+    ]
+   }
+  },
+  {
+   "count": 65,
+   "steps": 45115,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 16,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     42281
+    ],
+    "exit": [
+     42281,
+     45115
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 66,
+   "steps": 47960,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 66,
+   "digests_ok": true,
+   "loop_head_visits": 16,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     42281
+    ],
+    "exit": [
+     42281,
+     47960
+    ]
+   }
+  },
+  {
+   "count": 67,
+   "steps": 47974,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 67,
+   "digests_ok": true,
+   "loop_head_visits": 16,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     42281
+    ],
+    "exit": [
+     42281,
+     47974
+    ]
+   }
+  },
+  {
+   "count": 68,
+   "steps": 47928,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 68,
+   "digests_ok": true,
+   "loop_head_visits": 17,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     45099
+    ],
+    "exit": [
+     45099,
+     47928
+    ]
+   }
+  },
+  {
+   "count": 69,
+   "steps": 47933,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 68,
+   "digests_ok": true,
+   "loop_head_visits": 17,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     45099
+    ],
+    "exit": [
+     45099,
+     47933
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4352
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2176
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 70,
+   "steps": 50778,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 70,
+   "digests_ok": true,
+   "loop_head_visits": 17,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     45099
+    ],
+    "exit": [
+     45099,
+     50778
+    ]
+   }
+  },
+  {
+   "count": 71,
+   "steps": 50792,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 71,
+   "digests_ok": true,
+   "loop_head_visits": 17,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     45099
+    ],
+    "exit": [
+     45099,
+     50792
+    ]
+   }
+  },
+  {
+   "count": 72,
+   "steps": 50746,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 18,
+   "segments": {
+    "entry": [
+     0,
+     11
+    ],
+    "loop": [
+     11,
+     47917
+    ],
+    "exit": [
+     47917,
+     50746
+    ]
+   }
+  }
+ ],
+ "count_dependent_branches": [
+  {
+   "index": 885,
+   "instruction": ".jcct .be \"keccaktree_keccak256_x86_x1\"",
+   "region": "frame"
+  },
+  {
+   "index": 894,
+   "instruction": ".jcc .b 907",
+   "region": "frame"
+  },
+  {
+   "index": 900,
+   "instruction": ".jcc .ae 895",
+   "region": "frame"
+  },
+  {
+   "index": 902,
+   "instruction": ".jcc .a 907",
+   "region": "frame"
+  },
+  {
+   "index": 904,
+   "instruction": ".jcc .e 933",
+   "region": "frame"
+  },
+  {
+   "index": 908,
+   "instruction": ".jcc .e 933",
+   "region": "frame"
+  },
+  {
+   "index": 920,
+   "instruction": ".jcc .ne 913",
+   "region": "frame"
+  },
+  {
+   "index": 932,
+   "instruction": ".jcc .ne 927",
+   "region": "frame"
+  }
+ ],
+ "count_readers": [
+  {
+   "index": 884,
+   "instruction": ".cmpi 2 (1)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 885,
+   "instruction": ".jcct .be \"keccaktree_keccak256_x86_x1\"",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 893,
+   "instruction": ".cmpi 2 (4)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 894,
+   "instruction": ".jcc .b 907",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 898,
+   "instruction": ".sub 2 (4)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 899,
+   "instruction": ".cmpi 2 (4)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 900,
+   "instruction": ".jcc .ae 895",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 901,
+   "instruction": ".cmpi 2 (1)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 902,
+   "instruction": ".jcc .a 907",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 903,
+   "instruction": ".test 2 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 904,
+   "instruction": ".jcc .e 933",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 907,
+   "instruction": ".test 2 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 908,
+   "instruction": ".jcc .e 933",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 909,
+   "instruction": ".mov 0 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 912,
+   "instruction": ".mov 1 0",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 919,
+   "instruction": ".dec 1",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 920,
+   "instruction": ".jcc .ne 913",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 926,
+   "instruction": ".mov 1 0",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 931,
+   "instruction": ".dec 1",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 932,
+   "instruction": ".jcc .ne 927",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 939,
+   "instruction": ".mov 2 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  }
+ ],
+ "batch_count_readers": [],
+ "batch_count_data_readers": [],
+ "batch_count_address_readers": [],
+ "batch_count_vl_readers": 0,
+ "tail_targets": [
+  "keccaktree_keccak256_x86_x1"
+ ],
+ "failing_counts": [],
+ "inconsistent_handovers": []
+}

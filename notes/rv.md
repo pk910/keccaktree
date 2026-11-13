@@ -1,0 +1,110 @@
+# Agent `rv`: every-count theorems for the RISC-V kernels
+
+Branch `all-rv` (worktree `src/wt-rv`, off lean-verification f3a7dc5), remote workspace `/root/kt-rv`
+(seeded from `/root/kt-loop` incl. `.lake`; rsync excluding .lake/.git/Gen*/).  Builds run under
+`systemd-run --scope -p MemoryMax=20G` (`/root/kt-rv-build.sh <Ns> <P> <Gen...>`); P=3 for the
+1-node scalar bodies (≈ 5–7 GB per slice; P=4 hit the 20 GB cap).
+
+## Kernels and shapes
+| kernel | entry | structure | per-iteration steps |
+|---|---|---|---|
+| rv64_x1 | 1 | `bnez a2` / frame+spills (GenSE, positions [1,18)) / body (GenSB [18,5387), 25 slices, LOOP) / back edge `ld t0,80(sp); addi -1; sd; beq; j 20` (concrete) / restores (GenSX [5391,5405)) / `ret` | 5374 (last 5373); total `32 + 5374·c` |
+| zbb_x1  | 1 | identical frame, body [18,3456), back edge at 3479..3483, exit 3484, ret 3498 | 3443; total `32 + 3443·c` |
+| rvv_v{2,4,8}, rvv_zvkb_v{2,4,8} | 1 | `beqz a2` / sp, `t5 = 1<<63`, `a7 = (a0|a1)&7` (concrete) / head 7: `mv t3,a2; beqz a7 →12; vsetvli t0,t3 (vl = min(r, VLMAX)); bnez a7` (concrete) / body from 14 (`vlseg`, rounds, `vsseg`, pointer advance by `vl<<6`/`vl<<5`) / `sub a2,a2,t0; bnez a2 → 7` (concrete) / `addi sp; ret` | body per vl value w ∈ 1..VLMAX (GenB{w}) |
+
+Count-dependence: scalar kernels only through the spilled count word (`[sp+80]`, stack word 131054,
+var 2097155) and the entry test; RVV through `vl = min(count, VLMAX)` (the last batch's body is the
+variant `w = count mod VLMAX` when non-zero) and `a2`.
+
+**Alignment precondition** (stated in each `Entry`): the buffers sit at byte offsets `64·off` / `32·off`
+of their regions, i.e. 8-byte aligned; the misaligned byte-copy / bounce paths (`lbu/sb`,
+`vle8/vse8`) are `unsupported` in the model and not covered.
+
+## Core changes (additive / generalising; listed for the merge)
+* `Asm/RiscvFoot.lean` (new): `Riscv.writes`, `Riscv.exec_frame`, `Riscv.isaFoot vlmax`.
+* `Asm/RiscvSteps.lean` (new): `run_one`, concrete `ld`/`sd`/`opi`/`br`/`j`/`ret` on numbers,
+  `gprWord_dec`, `envOf_setR_other`, `setR_*` field lemmas.
+* `Asm/Iter.lean`: `E.fold` folds `ptr + e` for any *closed* `e`, with a *signed* offset (`k.toInt`):
+  RISC-V moves `sp` down with `addi sp, sp, -224` (the unsigned `toNat` fold gave an unrepresentable
+  pointer), RVV advances pointers by `vl << 6`.  `gprWord_add_const` uses `toInt`;
+  `E.eval_reloc_fold` takes `hρ : ρ.ok` (one call site in `SliceCert.step`).  x86 glue facts unchanged
+  (positive constants: `toInt = toNat`).
+* `gen_plan_proof.py`: segment mode no longer hard-codes x86: `RELOC_EXPR`/`FOOT_EXPR` (defaults per
+  `ISA`: `X86.isaReloc`/`X86.isaFoot`, `Arm.isaReloc`/`Arm.isaFoot`, `(Riscv.isaReloc v)`/`(Riscv.isaFoot v)`),
+  slice import `SEG_IMPORT`; new `START_CTL` (words forced to be control words at the first cut).
+* `gen_segments_rv.sh` (new): segments of the 1-node RISC-V kernels.
+
+## Lessons
+* **Never close a goal by `exact`/`show`/`rw`-then-`rfl` through `next (setR …)` / record updates when the
+  goal is true by computation** (e.g. `(next (setR S 30 1#64)).getGD 30 = 1#64` by `exact setR_getGD_same …`):
+  the elaborator's defeq check evaluates the register file and blew past 8 GB.  Use the rewrite lemmas
+  `next_getGD`, `next_pc`, `getGD_withMem`, `envOf_next`, `envOf_withPc`, `setR_getGD_same/other` and
+  `subst` instead of `rw [← hX]` (whose trailing `rfl` attempt is the same trap).  Found by bisecting with
+  `sorry` cut-offs (`lake env lean` on scratch copies under a 3–4 GB scope: a blow-up shows as rc 143).
+* `decide +kernel` on `prog.all …` (Array, 5430 entries) blew past 9 GB; the same check on `prog.toList.all …`
+  takes 0.6 s.  A type-mismatched `exact` between two `run` towers also blows up (the elaborator unfolds
+  `run`): split the step count with explicit `Isa.run_add _ _ _ n m` instances.
+* rv64_x1 body slices 20–22 need up to 20.6 GB each (`/usr/bin/time -v`); built one at a time in a 26 GB scope.
+* `simp only [(lemma _ _ _).1, …]` silently does nothing inside `try`/`first` when the placeholders can't be
+  elaborated: use named projection lemmas (`setR_zf`, `next_zf`, …).
+* Memory: rv64_x1 body slices peak at 8–12 GB (the late rounds); RVV slices ≈ 2 GB (1 node, ~50 s).
+  `systemd-run --scope` defaults to `OOMPolicy=stop` (one OOM kill stops the whole scope): pass
+  `-p OOMPolicy=continue`.
+
+## Library interface (lib agent, merged lean-verification 8e53c82 → all-rv 7885f38)
+* Every kernel provides `norm_thm : LibRv.NormThmRv vlmax rodata prog 1 steps []` (from `LibTable.EntryR` + `pc = 1`)
+  and `kernel := LibRv.mkKernelRv vlmax (LibTable.sym "<k>") 0 [] … (Riscv.vlAnn RvVl.<k>) RvVl.<k>_ok RvVl.entries.…`
+  (any `vl` at the call).  Digest = `LibX86.Digest` (re-exported by `RiscvCommon`).
+* Scalar kernels (`rv64_x1`, `zbb_x1`): no `vsetvli` (`scalar : prog.all (!·.usesVlmax)` by decide) ⇒
+  `Riscv.run_vlmax`: the same run for every `vlmax`, so `kernel vlmax` for **every** `vlmax`.
+* RVV kernels: one theorem per `vlmax ∈ {2, 4, 8}` (VLEN 128/256/512), body variants `GenB1..GenB<vlmax>`.
+* `Kernels/RvLib.lean`: `table2/4/8` (order of `rvShape`), `shape_ = rfl`, `lib2/lib4/lib8` = `LibTable.lib_rv`.
+* **VLEN coverage gap** (dispatch picks rvv/rvv_zvkb for every VLEN ≥ 128): VLEN ≥ 1024 (`vlmax ≥ 16`) is NOT
+  covered.  The model's vector registers have 8 lanes (`State.v : Vector (Vector α 8) 32`, `setActive` over
+  `Fin 8`), so `Riscv.isa vlmax` for `vlmax > 8` does not model the hardware; a VLEN-parametric theorem would
+  need (a) a wider/parametric register file (touches every ISA model, all cut variable numbering, all generated
+  proofs) and (b) a body proof per `vl` value up to VLMAX (or a lane-generic body proof, which the symbolic
+  per-node method does not give).  Covered exactly: VLEN ∈ {128, 256, 512}.
+
+## Model assumptions stated for the RISC-V theorems (from agent `diff`, merged 0fbdb01 → all-rv b031126)
+* **M11 (vl choice)**: the model's `vsetvli` sets `vl = min(avl, VLMAX)`.  RVV 1.0 also allows any
+  `vl ∈ [⌈avl/2⌉, VLMAX]` when `VLMAX < avl < 2·VLMAX`.  The RVV theorems assume the `min` choice (stated in
+  `RvvCommon` and each generated `All.lean`).  Note: the batch bodies are proved for *every* `vl = w ∈ 1..VLMAX`
+  and contain no `vsetvli`, so the extension only concerns the frame: an ISA variant whose `vsetvli` uses a legal
+  choice function, a transfer lemma for vsetvli-free paths, `run_head` for the chosen `w`, and a loop whose batch
+  count follows the choices — planned after the deterministic proofs are built.
+* **M9 (vector shift by register ≥ 64)**: left as the translator guard (count must be a `li` constant < 64; all
+  RVV shifts are).  The one-line model fix (`% 64` in `Riscv.vsh`) changes `Riscv.lean`, which every generated
+  RISC-V slice imports (via `RiscvFoot`): it would force a rebuild of all RISC-V proofs in flight; to be applied
+  together with any later model change, then a full rebuild.
+* `lakefile.toml` of the merge adds tool targets; not synced to `/root/kt-rv` while builds run (rsync
+  `--exclude lakefile.toml`), to avoid any reconfiguration of the running builds.
+
+## Status (22:55 UTC): COMPLETE
+Every RISC-V kernel is proved for every count, with the library tables for every VLEN the model covers.
+`lake build Keccaktree.Kernels.RvLib` (913 jobs) green on `/root/kt-rv`; `#print axioms` of every theorem below:
+`propext`, `Classical.choice`, `Quot.sound` + `bv_decide` certificates, no `sorryAx`.
+
+| kernel | module | theorems | commit |
+|---|---|---|---|
+| rv64_x1 | `Kernels/Rv64X1/All.lean` | `rv64_x1_all` (`32 + 5374·c` steps), `kernel vlmax`, `kernel_ch vlmax ch` (every vlmax / vl choice) | f17c881 |
+| zbb_x1 | `Kernels/ZbbX1/All.lean` | `zbb_x1_all` (`32 + 3443·c`), `kernel`, `kernel_ch` | 4dfade0 |
+| rvv VLEN 128/256/512 | `Kernels/RvvV{2,4,8}/All.lean` (generated) | `all` (`8 + 5773·⌈c/V⌉`), `all_ch` (any legal vl choice, `8 + 5773·nb ch c c`), `kernel`, `kernel_ch` | a9b4d97/4d16931, f421edc, this |
+| rvv_zvkb VLEN 128/256/512 | `Kernels/RvvZvkbV{2,4,8}/All.lean` (generated) | same, 3166 steps per batch | 0d21c16, 0ed3a64, cfaf5b9 |
+| library | `Kernels/RvLib{2,4,8}.lean`, `RvLib.lean` | `lib<V>` (`LibTable.lib_rv V`), `lib<V>ch` (`LibRv.lib_rv_ch`) | 4dfade0, 5e28364, this |
+
+Model assumptions / coverage: buffers 8-byte aligned (region offsets `64·off`/`32·off`; misaligned paths not
+modelled); VLEN ∈ {128, 256, 512} for RVV (VLEN ≥ 1024 not covered: 8-lane register model); vector shift
+counts are `li` constants < 64 (M9 guard); `64·(off + count) ≤ 2^54`.
+
+Reproduce (remote): segments `gen_segments_rv.sh` (scalar) / `gen_segments_rvv.sh` (RVV body variants),
+bodies `build_plan.sh`, kernel files `gen_all_rv1.py` / `gen_all_rvv.py`, then `lake build Keccaktree.Kernels.RvLib`.
+
+## Status (older) (18:00 UTC)
+* rv64_x1: GenSE/GenSX built; GenSB slices 0–12 built, 13–24 building (P=1: 8–12 GB, ~8 min each).
+* zbb_x1: segments generated (`gen_segments_rv.sh zbb_x1 ZbbX1 18 3456 3460 3474 2097155`), `All.lean` from the
+  template (`gen_all_rv1.py zbb_x1 ZbbX1 3479 3498 3438`); build after rv64.
+* RVV: frame lemmas (`RvvCommon`) build; generator `gen_all_rvv.py` checked on `batch1` of rvv_v2; queue
+  `/root/kt-rv-rvvq.sh` building all body variants (log `/root/kt-rv-rvvq.log`), then each `All`.
+* Commands: `/root/kt-rv-gen-rvv.sh` (generation), `/root/kt-rv-rvvq.sh "<Ns> <ProgNs> <kernel> <V> <s> <L>" …`
+  (rvv: s=380 L=5767; rvv_zvkb: s=237 L=3160), `/root/kt-rv-build.sh <Ns> <P> <Gen…>`.

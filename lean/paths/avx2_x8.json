@@ -1,0 +1,3497 @@
+{
+ "kernel": "avx2_x8",
+ "nodes": 8,
+ "isa": "x86",
+ "count_range": [
+  0,
+  80
+ ],
+ "loop_head": {
+  "index": 1532,
+  "instruction": ".call 0"
+ },
+ "batch_region": {
+  "kind": "subroutine",
+  "start": 0,
+  "end": 1511,
+  "instructions": 1512
+ },
+ "classes": [
+  {
+   "id": 0,
+   "counts": [
+    0,
+    1
+   ],
+   "iterations": {
+    "0": 0,
+    "1": 0
+   },
+   "tail": "keccaktree_keccak256_x86_x1",
+   "entry_len": 2,
+   "body_variants": [],
+   "exit_len": 0
+  },
+  {
+   "id": 1,
+   "counts": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "iterations": {
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "7": 0
+   },
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "entry_len": 38,
+   "body_variants": [],
+   "exit_len": 0
+  },
+  {
+   "id": 2,
+   "counts": [
+    5,
+    6
+   ],
+   "iterations": {
+    "5": 0,
+    "6": 0
+   },
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "entry_len": 7,
+   "body_variants": [],
+   "exit_len": 0
+  },
+  {
+   "id": 3,
+   "counts": [
+    8
+   ],
+   "iterations": {
+    "8": 0
+   },
+   "tail": null,
+   "entry_len": 16,
+   "body_variants": [],
+   "exit_len": 10319
+  },
+  {
+   "id": 4,
+   "counts": [
+    9
+   ],
+   "iterations": {
+    "9": 0
+   },
+   "tail": "keccaktree_keccak256_x86_x1",
+   "entry_len": 16,
+   "body_variants": [],
+   "exit_len": 10324
+  },
+  {
+   "id": 5,
+   "counts": [
+    10,
+    11,
+    12,
+    14,
+    15
+   ],
+   "iterations": {
+    "10": 0,
+    "11": 0,
+    "12": 0,
+    "14": 0,
+    "15": 0
+   },
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "entry_len": 16,
+   "body_variants": [],
+   "exit_len": 10332
+  },
+  {
+   "id": 6,
+   "counts": [
+    13
+   ],
+   "iterations": {
+    "13": 0
+   },
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "entry_len": 16,
+   "body_variants": [],
+   "exit_len": 10329
+  },
+  {
+   "id": 7,
+   "counts": [
+    16,
+    24,
+    32,
+    40,
+    48,
+    56
+   ],
+   "iterations": {
+    "16": 1,
+    "24": 2,
+    "32": 3,
+    "40": 4,
+    "48": 5,
+    "56": 6
+   },
+   "tail": null,
+   "entry_len": 16,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10319
+  },
+  {
+   "id": 8,
+   "counts": [
+    17,
+    25,
+    33,
+    41,
+    49,
+    57
+   ],
+   "iterations": {
+    "17": 1,
+    "25": 2,
+    "33": 3,
+    "41": 4,
+    "49": 5,
+    "57": 6
+   },
+   "tail": "keccaktree_keccak256_x86_x1",
+   "entry_len": 16,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10324
+  },
+  {
+   "id": 9,
+   "counts": [
+    18,
+    19,
+    20,
+    22,
+    23,
+    26,
+    27,
+    28,
+    30,
+    31,
+    34,
+    35,
+    36,
+    38,
+    39,
+    42,
+    43,
+    44,
+    46,
+    47,
+    50,
+    51,
+    52,
+    54,
+    55,
+    58,
+    59,
+    60,
+    62,
+    63
+   ],
+   "iterations": {
+    "18": 1,
+    "19": 1,
+    "20": 1,
+    "22": 1,
+    "23": 1,
+    "26": 2,
+    "27": 2,
+    "28": 2,
+    "30": 2,
+    "31": 2,
+    "34": 3,
+    "35": 3,
+    "36": 3,
+    "38": 3,
+    "39": 3,
+    "42": 4,
+    "43": 4,
+    "44": 4,
+    "46": 4,
+    "47": 4,
+    "50": 5,
+    "51": 5,
+    "52": 5,
+    "54": 5,
+    "55": 5,
+    "58": 6,
+    "59": 6,
+    "60": 6,
+    "62": 6,
+    "63": 6
+   },
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "entry_len": 16,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10332
+  },
+  {
+   "id": 10,
+   "counts": [
+    21,
+    29,
+    37,
+    45,
+    53,
+    61
+   ],
+   "iterations": {
+    "21": 1,
+    "29": 2,
+    "37": 3,
+    "45": 4,
+    "53": 5,
+    "61": 6
+   },
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "entry_len": 16,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10329
+  },
+  {
+   "id": 11,
+   "counts": [
+    64,
+    72,
+    80
+   ],
+   "iterations": {
+    "64": 7,
+    "72": 8,
+    "80": 9
+   },
+   "tail": null,
+   "entry_len": 13,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10319
+  },
+  {
+   "id": 12,
+   "counts": [
+    65,
+    73
+   ],
+   "iterations": {
+    "65": 7,
+    "73": 8
+   },
+   "tail": "keccaktree_keccak256_x86_x1",
+   "entry_len": 13,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10324
+  },
+  {
+   "id": 13,
+   "counts": [
+    66,
+    67,
+    68,
+    70,
+    71,
+    74,
+    75,
+    76,
+    78,
+    79
+   ],
+   "iterations": {
+    "66": 7,
+    "67": 7,
+    "68": 7,
+    "70": 7,
+    "71": 7,
+    "74": 8,
+    "75": 8,
+    "76": 8,
+    "78": 8,
+    "79": 8
+   },
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "entry_len": 13,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10332
+  },
+  {
+   "id": 14,
+   "counts": [
+    69,
+    77
+   ],
+   "iterations": {
+    "69": 7,
+    "77": 8
+   },
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "entry_len": 13,
+   "body_variants": [
+    10308
+   ],
+   "exit_len": 10329
+  }
+ ],
+ "per_count": [
+  {
+   "count": 0,
+   "steps": 2,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     2
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 0,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 1,
+   "steps": 2,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     2
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 2,
+   "steps": 38,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     38
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 3,
+   "steps": 38,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     38
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 4,
+   "steps": 38,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     38
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 5,
+   "steps": 7,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     7
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 6,
+   "steps": 7,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     7
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 7,
+   "steps": 38,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 0,
+   "digests_ok": true,
+   "loop_head_visits": 0,
+   "segments": {
+    "entry": [
+     0,
+     38
+    ],
+    "loop": null,
+    "exit": null
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 0
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 0
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 8,
+   "steps": 10335,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10335
+    ]
+   }
+  },
+  {
+   "count": 9,
+   "steps": 10340,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10340
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 10,
+   "steps": 10348,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10348
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 11,
+   "steps": 10348,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10348
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 12,
+   "steps": 10348,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10348
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 13,
+   "steps": 10345,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10345
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 14,
+   "steps": 10348,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10348
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 15,
+   "steps": 10348,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 8,
+   "digests_ok": true,
+   "loop_head_visits": 1,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     16
+    ],
+    "exit": [
+     16,
+     10348
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 512
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 256
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 16,
+   "steps": 20643,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20643
+    ]
+   }
+  },
+  {
+   "count": 17,
+   "steps": 20648,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20648
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 18,
+   "steps": 20656,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20656
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 19,
+   "steps": 20656,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20656
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 20,
+   "steps": 20656,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20656
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 21,
+   "steps": 20653,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20653
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 22,
+   "steps": 20656,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20656
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 23,
+   "steps": 20656,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 16,
+   "digests_ok": true,
+   "loop_head_visits": 2,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     10324
+    ],
+    "exit": [
+     10324,
+     20656
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1024
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 512
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 24,
+   "steps": 30951,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30951
+    ]
+   }
+  },
+  {
+   "count": 25,
+   "steps": 30956,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30956
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 26,
+   "steps": 30964,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30964
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 27,
+   "steps": 30964,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30964
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 28,
+   "steps": 30964,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30964
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 29,
+   "steps": 30961,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30961
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 30,
+   "steps": 30964,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30964
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 31,
+   "steps": 30964,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 24,
+   "digests_ok": true,
+   "loop_head_visits": 3,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     20632
+    ],
+    "exit": [
+     20632,
+     30964
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 1536
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 768
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 32,
+   "steps": 41259,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41259
+    ]
+   }
+  },
+  {
+   "count": 33,
+   "steps": 41264,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41264
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 34,
+   "steps": 41272,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41272
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 35,
+   "steps": 41272,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41272
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 36,
+   "steps": 41272,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41272
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 37,
+   "steps": 41269,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41269
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 38,
+   "steps": 41272,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41272
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 39,
+   "steps": 41272,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 32,
+   "digests_ok": true,
+   "loop_head_visits": 4,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     30940
+    ],
+    "exit": [
+     30940,
+     41272
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2048
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1024
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 40,
+   "steps": 51567,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51567
+    ]
+   }
+  },
+  {
+   "count": 41,
+   "steps": 51572,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51572
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 42,
+   "steps": 51580,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51580
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 43,
+   "steps": 51580,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51580
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 44,
+   "steps": 51580,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51580
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 45,
+   "steps": 51577,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51577
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 46,
+   "steps": 51580,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51580
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 47,
+   "steps": 51580,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 40,
+   "digests_ok": true,
+   "loop_head_visits": 5,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     41248
+    ],
+    "exit": [
+     41248,
+     51580
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 2560
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1280
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 48,
+   "steps": 61875,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61875
+    ]
+   }
+  },
+  {
+   "count": 49,
+   "steps": 61880,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61880
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 50,
+   "steps": 61888,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61888
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 51,
+   "steps": 61888,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61888
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 52,
+   "steps": 61888,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61888
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 53,
+   "steps": 61885,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61885
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 54,
+   "steps": 61888,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61888
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 55,
+   "steps": 61888,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 48,
+   "digests_ok": true,
+   "loop_head_visits": 6,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     51556
+    ],
+    "exit": [
+     51556,
+     61888
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3072
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1536
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 56,
+   "steps": 72183,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72183
+    ]
+   }
+  },
+  {
+   "count": 57,
+   "steps": 72188,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72188
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 58,
+   "steps": 72196,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72196
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 59,
+   "steps": 72196,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72196
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 60,
+   "steps": 72196,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72196
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 61,
+   "steps": 72193,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72193
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 62,
+   "steps": 72196,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72196
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 63,
+   "steps": 72196,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 56,
+   "digests_ok": true,
+   "loop_head_visits": 7,
+   "segments": {
+    "entry": [
+     0,
+     16
+    ],
+    "loop": [
+     16,
+     61864
+    ],
+    "exit": [
+     61864,
+     72196
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 3584
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 1792
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 64,
+   "steps": 82488,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82488
+    ]
+   }
+  },
+  {
+   "count": 65,
+   "steps": 82493,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82493
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 66,
+   "steps": 82501,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82501
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 67,
+   "steps": 82501,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82501
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 68,
+   "steps": 82501,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82501
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 69,
+   "steps": 82498,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82498
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 70,
+   "steps": 82501,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82501
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 71,
+   "steps": 82501,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 64,
+   "digests_ok": true,
+   "loop_head_visits": 8,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     72169
+    ],
+    "exit": [
+     72169,
+     82501
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4096
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2048
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 72,
+   "steps": 92796,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92796
+    ]
+   }
+  },
+  {
+   "count": 73,
+   "steps": 92801,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_x86_x1",
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92801
+    ]
+   },
+   "handover": {
+    "remaining": 1,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4608
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2304
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 74,
+   "steps": 92809,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92809
+    ]
+   },
+   "handover": {
+    "remaining": 2,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4608
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2304
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 75,
+   "steps": 92809,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92809
+    ]
+   },
+   "handover": {
+    "remaining": 3,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4608
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2304
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 76,
+   "steps": 92809,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92809
+    ]
+   },
+   "handover": {
+    "remaining": 4,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4608
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2304
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 77,
+   "steps": 92806,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x5",
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92806
+    ]
+   },
+   "handover": {
+    "remaining": 5,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4608
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2304
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 78,
+   "steps": 92809,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92809
+    ]
+   },
+   "handover": {
+    "remaining": 6,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4608
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2304
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 79,
+   "steps": 92809,
+   "halted": true,
+   "err": false,
+   "tail": "keccaktree_keccak256_avx2_x4",
+   "own_nodes": 72,
+   "digests_ok": true,
+   "loop_head_visits": 9,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     82477
+    ],
+    "exit": [
+     82477,
+     92809
+    ]
+   },
+   "handover": {
+    "remaining": 7,
+    "input": {
+     "kind": "ptr",
+     "region": 1,
+     "offset": 4608
+    },
+    "output": {
+     "kind": "ptr",
+     "region": 2,
+     "offset": 2304
+    },
+    "consistent": true
+   }
+  },
+  {
+   "count": 80,
+   "steps": 103104,
+   "halted": true,
+   "err": false,
+   "tail": null,
+   "own_nodes": 80,
+   "digests_ok": true,
+   "loop_head_visits": 10,
+   "segments": {
+    "entry": [
+     0,
+     13
+    ],
+    "loop": [
+     13,
+     92785
+    ],
+    "exit": [
+     92785,
+     103104
+    ]
+   }
+  }
+ ],
+ "count_dependent_branches": [
+  {
+   "index": 1517,
+   "instruction": ".jcct .be \"keccaktree_keccak256_x86_x1\"",
+   "region": "frame"
+  },
+  {
+   "index": 1519,
+   "instruction": ".jcc .a 1523",
+   "region": "frame"
+  },
+  {
+   "index": 1522,
+   "instruction": ".jcct .b \"keccaktree_keccak256_avx2_x5\"",
+   "region": "frame"
+  },
+  {
+   "index": 1531,
+   "instruction": ".jcc .b 1544",
+   "region": "frame"
+  },
+  {
+   "index": 1537,
+   "instruction": ".jcc .ae 1532",
+   "region": "frame"
+  },
+  {
+   "index": 1539,
+   "instruction": ".jcc .a 1544",
+   "region": "frame"
+  },
+  {
+   "index": 1541,
+   "instruction": ".jcc .e 1579",
+   "region": "frame"
+  },
+  {
+   "index": 1545,
+   "instruction": ".jcc .e 1579",
+   "region": "frame"
+  },
+  {
+   "index": 1548,
+   "instruction": ".jcc .ae 1551",
+   "region": "frame"
+  },
+  {
+   "index": 1552,
+   "instruction": ".jcc .a 1555",
+   "region": "frame"
+  }
+ ],
+ "count_readers": [
+  {
+   "index": 1516,
+   "instruction": ".cmpi 2 (1)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1517,
+   "instruction": ".jcct .be \"keccaktree_keccak256_x86_x1\"",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1518,
+   "instruction": ".cmpi 2 (63)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1519,
+   "instruction": ".jcc .a 1523",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1521,
+   "instruction": ".bt 0 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1522,
+   "instruction": ".jcct .b \"keccaktree_keccak256_avx2_x5\"",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1530,
+   "instruction": ".cmpi 2 (8)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1531,
+   "instruction": ".jcc .b 1544",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1535,
+   "instruction": ".sub 2 (8)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1536,
+   "instruction": ".cmpi 2 (8)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1537,
+   "instruction": ".jcc .ae 1532",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1538,
+   "instruction": ".cmpi 2 (1)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1539,
+   "instruction": ".jcc .a 1544",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1540,
+   "instruction": ".test 2 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1541,
+   "instruction": ".jcc .e 1579",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1544,
+   "instruction": ".test 2 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1545,
+   "instruction": ".jcc .e 1579",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1547,
+   "instruction": ".bt 0 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1548,
+   "instruction": ".jcc .ae 1551",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1551,
+   "instruction": ".cmpi 2 (7)",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1552,
+   "instruction": ".jcc .a 1555",
+   "reads": [
+    "flags"
+   ],
+   "region": "frame"
+  },
+  {
+   "index": 1585,
+   "instruction": ".mov 2 2",
+   "reads": [
+    "gpr"
+   ],
+   "region": "frame"
+  }
+ ],
+ "batch_count_readers": [],
+ "batch_count_data_readers": [],
+ "batch_count_address_readers": [],
+ "batch_count_vl_readers": 0,
+ "tail_targets": [
+  "keccaktree_keccak256_avx2_x4",
+  "keccaktree_keccak256_avx2_x5",
+  "keccaktree_keccak256_x86_x1"
+ ],
+ "failing_counts": [],
+ "inconsistent_handovers": []
+}

@@ -1,0 +1,979 @@
+# keccaktree Lean verification: manifest of the proved kernels (final tree, frozen base)
+# regenerate: python3 results/mkmanifest.py . results/gen_sha256.txt <axioms outputs> <leanchecker.tsv>
+# tree: 74f5893; base freeze e43c5ea (Iter 28ac8a7); src/ tree cf5f623007fe50a81143c856dafbc222792cba96
+# program : lean/Keccaktree/Kernels/<P>/Program.lean (lean/asm2lean.py of the object file), sha256, last commit
+# object  : keccak256_<k>.o assembled from src/keccak256_<k>.S at the src/ tree above; last commit of the .S
+# files   : the committed proof files of the kernel (All/Lib/AllU/AllUM/InPlace*), sha256
+# gen     : generated segment dirs (not committed), <dir> <files> <sha256 of a deterministic tar>:
+#           tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner --mode=a=r,u+w,a+X --format=gnu -cf - <Ns>/<Gen> | sha256sum
+# axioms  : #print axioms on the frozen base (kt-int, final combined check): the standard axioms + the number of
+#           bv_decide certificate axioms (`<decl>._native.bv_decide.ax_*`); anything else would be listed as OTHER
+# checker : leanchecker (Lean 4.35.0) over the kernel's modules: modules ok / checked, summed wall time; modules whose
+#           leanchecker replay exceeded 100 GB: re-elaborated from source (`lake env lean`, same pipeline as the build)
+
+[x86_x1] x86-64
+  program   lean/Keccaktree/Kernels/X86X1/Program.lean sha256 2b6c3d1642aa80a2c7cf642ef93bc6fa02ce4b34af5b55c0fc45bbf641da4793 commit 4454455
+  object    keccak256_x86_x1.o from src/keccak256_x86_x1.S commit 67c3819
+  file      lean/Keccaktree/Kernels/X86X1/All.lean sha256 60ad8faddb328b52e0c57e1ac208259aa8ed120b2ab4a6714c7a7e182a619472
+  file      lean/Keccaktree/Kernels/X86X1/Lib.lean sha256 e8d917ee8cb7e98db8715725b7c028b1362d36a0108f1b5b13acc9dbd5b9860d
+  file      lean/Keccaktree/Kernels/X86X1/InPlaceAll.lean sha256 26dc41c5a70e7a9492a493cb296bc27c0a8452619327052dfc099f736b8e7d9c
+  inplace   lean/Keccaktree/Kernels/X86X1/InPlace 4 files, git tree 236c82f49227f33e22c4c5ae94014d7975577712
+  gen       X86X1/GenSB 28 b1705ad401e082167dcd15ab0a187c971747bbb2cb89f91b430da12e13a080ae
+  gen       X86X1/GenSE1 4 8227a457431b436102d921adccbf1c82badd18b5ecb448acf6345704e44ca77e
+  gen       X86X1/GenSE3 4 b58dbaee7e39df54a09def7e73fdadeb5f6992f660b02a187d390bb4be5139ab
+  gen       X86X1/GenSX 4 daaf1bc5522c32038e46398b168529e90de92b500cb28a18bf9d77c26f66f10f
+  theorem   Keccaktree.Kernels.X86X1.All.x86_x1_all
+    axioms  propext, Classical.choice, Quot.sound + 721 bv_decide certificates
+  theorem   Keccaktree.Kernels.X86X1.Lib.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 721 bv_decide certificates
+  theorem   Keccaktree.Kernels.X86X1.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 721 bv_decide certificates
+  theorem   Keccaktree.Kernels.X86X1.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 721 bv_decide certificates
+  theorem   Keccaktree.Kernels.X86X1.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 721 bv_decide certificates
+  checker   48/48 modules leanchecker ok, 1035 s
+
+[avx2_x2] x86-64
+  program   lean/Keccaktree/Kernels/Avx2X2/Program.lean sha256 ee063deaa8fb62a06de24092db0776c31c98989a72b42a9e99880f693df4a37e commit 4454455
+  object    keccak256_avx2_x2.o from src/keccak256_avx2_x2.S commit 3ebac06
+  file      lean/Keccaktree/Kernels/Avx2X2/All.lean sha256 5ee3996c23dffadcef7c8ec7236584d85344b9e86e64b7ca81b66bc4144a4b32
+  file      lean/Keccaktree/Kernels/Avx2X2/Lib.lean sha256 2698abdde76da8cd4586271c20c8bb6066989fb80d918f448ac9ac01d222e3b6
+  file      lean/Keccaktree/Kernels/Avx2X2/InPlaceAll.lean sha256 69c3888b8ab5eae3c4b2cd2f13032317f59d0864c40850315caf1224ce6f372e
+  inplace   lean/Keccaktree/Kernels/Avx2X2/InPlace 38 files, git tree 2f167e3e172abfc6538d0428820ca098855a1583
+  gen       Avx2X2/GenBaf 6 9727a835c3304280bb17e2c366141fa589ead97c36f3e1d90dbb1673a63747ed
+  gen       Avx2X2/GenBat 6 cd7c108396fb77202fae2da942109ccdb2240c846cf1131b4b518d247835a36b
+  gen       Avx2X2/GenBb 26 3e01d89cd7165e401b958712439aaa072a3c3912267ab60f0af2f22c434132eb
+  gen       Avx2X2/GenPff 4 608f19e3dd18712bd66bb57f6529ef6fc38232789e6459a01c4642a635bfac86
+  gen       Avx2X2/GenX0 4 fb388efd8648cee65e1e242a61834f25249e9c9c60ff44c229d4a4f25aafca68
+  gen       Avx2X2/GenX1 4 f59677140837ab39637d35c06a0932edd7220dff165d7a7e0869efad3956adf6
+  theorem   Keccaktree.Kernels.Avx2X2.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 786 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X2.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 786 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X2.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 786 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X2.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 786 bv_decide certificates
+  checker   92/92 modules leanchecker ok, 1405 s
+
+[avx2_x4] x86-64
+  program   lean/Keccaktree/Kernels/Avx2X4/Program.lean sha256 af9a52cfdb5ec3fdd3e5eaa2eb35c27b596fe93c01aaab5f98a7725b252b41be commit 4454455
+  object    keccak256_avx2_x4.o from src/keccak256_avx2_x4.S commit 5645f1c
+  file      lean/Keccaktree/Kernels/Avx2X4/All.lean sha256 8ad1c7021bc5e31d3a8a993c0847801f0b38d3ff75672c7ab0a9ded39bd756fd
+  file      lean/Keccaktree/Kernels/Avx2X4/AllV.lean sha256 95f7f2dfb61961c2dfabaa2609dbe20efb8645c7bf2aee36c91084e6c1951dee
+  file      lean/Keccaktree/Kernels/Avx2X4/Lib.lean sha256 9a7ec98c238ce9c5fe805c1c8ed6efdc4db6c6db20f72a5c3a50b7bcab8b7c61
+  file      lean/Keccaktree/Kernels/Avx2X4/LibV.lean sha256 d062faacb193484574fd5ddd7dc745d2d641d30c08c358c38da99d5b7646fef5
+  file      lean/Keccaktree/Kernels/Avx2X4/InPlaceAll.lean sha256 9939c39da5f5af1dd7e1ed296c97a9df811b07436a090fc123a605c33dac1352
+  file      lean/Keccaktree/Kernels/Avx2X4/InPlaceAllV.lean sha256 503d431f46ff55c7cf796df78e5e14b5baf95628d018c9c93a6f1ccb70fc1566
+  inplace   lean/Keccaktree/Kernels/Avx2X4/InPlace 99 files, git tree 873278167e712e5efe361846bf19c8888290fb2f
+  gen       Avx2X4/GenBaf 8 4f7482c4889acf83b54891791fab6839a6e72c3ad8007a72af6d23747036d54d
+  gen       Avx2X4/GenBat 8 fa057e9dedaa09a5af2670c5e60aa226e1ad56d167fa32d0d4724fcd4e42d254
+  gen       Avx2X4/GenBb 26 ad90ae394bab9deefd25df27130c044e777fba93345aa55b2ee4c6b2bfe65746
+  gen       Avx2X4/GenPff 5 a171124eb629a7bb43bc398540cebd75157c46447b87ca040d8900408412e761
+  gen       Avx2X4/GenX0 29 3905b29308040995b6e0702188cf08dfd8f8f3fbadfc41776d2088960881ff83
+  gen       Avx2X4/GenX1 29 76a36349c12817ed80f8d0fbde9a85306ed1ffacbb57f2f31bb3c3ff0081a395
+  gen       Avx2X4/GenX2 5 a31f209428072ba61cff2559f7f48ae77c5dd93ee89386bdd5f5783045d94c38
+  gen       Avx2X4/GenX3 5 6129ad5c270193fd4a7038f4c7c48d1b5bd3dbbe5f4895c65b04d95cff3bf7e3
+  gen       Avx2X4/GenX4 5 4ebe8153358ac3639243e4edf7257f8459d7d85c2f7ccf4e50eec4653fcb74f7
+  gen       Avx2X4/GenX5 5 0d50f93587dccbd790dc70e638a61e0b9446ffdef2532ba45fefca21bbeb4a47
+  gen       Avx2X4/GenX6 5 b10c8305743c4b6fd446f1f185e9df05bb64e8354f242894cb141f0616c8d928
+  gen       Avx2X4/GenX7 5 434c285cd6b3e776059d1bba62229ff8bc4e7061972ccfbaf64457af4c4288de
+  theorem   Keccaktree.Kernels.Avx2X4.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 2201 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X4.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 2201 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X4.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 813 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X4.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 2201 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X4.AllV.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 2201 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X4.LibV.kernel
+    axioms  propext, Classical.choice, Quot.sound + 2201 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X4.InPlaceAllV.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 813 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X4.InPlaceAllV.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 2201 bv_decide certificates
+  checker   241/241 modules leanchecker ok, 7826 s
+
+[avx2_x5] x86-64
+  program   lean/Keccaktree/Kernels/Avx2X5/Program.lean sha256 b386aa262da42c4f8feed5008206fee9da3c446c609ef9ca14dfe26b1180dc5c commit 4454455
+  object    keccak256_avx2_x5.o from src/keccak256_avx2_x5.S commit 4a94a74
+  file      lean/Keccaktree/Kernels/Avx2X5/All.lean sha256 f20331af800168ef5be5eabb69451ecd16a701e9bbbbcf5f2fe84e1255df7cad
+  file      lean/Keccaktree/Kernels/Avx2X5/Lib.lean sha256 32c0ca7b2d9186ff2409d060f81d44243f0ac0329503f6cdc4a2ea2c5b33ad1b
+  file      lean/Keccaktree/Kernels/Avx2X5/InPlaceAll.lean sha256 0b77c012e0ba5200afa052639af5f58f87d76a85dc612b4ce21b5663c5999f05
+  inplace   lean/Keccaktree/Kernels/Avx2X5/InPlace 45 files, git tree 38d9b9322a453654498b07b25ffe1c1f7575cf47
+  gen       Avx2X5/GenBaf 7 de1b419c10793d2896bff4d605f92d49c8eaa1cb90d647f89c3bfedac67d746c
+  gen       Avx2X5/GenBat 7 28462454810017740f38b46e0d3a43c7edf4605ce5cd9bbc63b821800819108c
+  gen       Avx2X5/GenBb 25 715bfba51e297cf24189d6ce0f217fdef23d0f508f5a4584b4d2906caa460600
+  gen       Avx2X5/GenPff 4 e77f8b0b349bd2e62053afe2d092d98e9d6ba43586d1714f2da030714666b3a2
+  gen       Avx2X5/GenX0 4 5c0a4214c156cddd689e764aba9342c77081e22794921e78487b5c972e13478b
+  gen       Avx2X5/GenX1 4 8e2733758e6708af1c85b8f4318523b200f8c0d2d7bd3b53b0ae16c7039bc21d
+  gen       Avx2X5/GenX2 4 24dc3554df692b4ed45daeb922ea55c85687c73f446dad716484f27256b655e3
+  gen       Avx2X5/GenX3 4 009097b7d2e5141e03f94af1b73633adaac00fee36781b584ff26fa306b64c64
+  gen       Avx2X5/GenX4 4 40b38607aa2093580b12d75767950e588f9cc25f1927048e66e852a10c004e8e
+  theorem   Keccaktree.Kernels.Avx2X5.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1597 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X5.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1597 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X5.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1597 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X5.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1597 bv_decide certificates
+  checker   111/112 modules leanchecker ok, 10559 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[avx2_x6] x86-64
+  program   lean/Keccaktree/Kernels/Avx2X6/Program.lean sha256 0e4cf465eab3adda536aa2d4d3c29d83648087fade5e8d01d7a4989c42024f54 commit e2e4982
+  object    keccak256_avx2_x6.o from src/keccak256_avx2_x6.S commit d497fa4
+  file      lean/Keccaktree/Kernels/Avx2X6/All.lean sha256 80000971449e5886989ad16f8fca5e3a84e38e3156e35ad6937ab1c4c8c29302
+  file      lean/Keccaktree/Kernels/Avx2X6/Lib.lean sha256 b6666382239006afb6943a74458ff5e79c05ba45db4f58a5905edfd33a42a03d
+  file      lean/Keccaktree/Kernels/Avx2X6/InPlaceAll.lean sha256 619e3ffb60c80ef5f35490147628b32bb4b5fba0343ed5c72d91204f93121f58
+  inplace   lean/Keccaktree/Kernels/Avx2X6/InPlace 53 files, git tree 07d577838473ef60d529846c03d94086bcf05a64
+  gen       Avx2X6/GenBaf 7 58d5b232501cb4a528d737fdb777b2a662924af81230b03aefc481b4f7ca519c
+  gen       Avx2X6/GenBat 7 baa5eda7d07dd5c9349fb2be1be15e2857dd14901b31c087ae0f891988c24456
+  gen       Avx2X6/GenBb 25 fc2a909dea47977369ba41274958547d62ee2429c8ab403666c17d82a9738db8
+  gen       Avx2X6/GenPff 4 15c882f86fc3deaef9ebf0adec7bd87ba6c7b4965f9c6ed553a1aa32700a31fe
+  gen       Avx2X6/GenPtf 4 87b8dea9b488fe5934c87b95ae4bbada4d791baa0b0179cca4fbd767c92a1121
+  gen       Avx2X6/GenX0 4 634c7adc8c02f15069e0a178bfb99736aa87948159cff0f23c92ee4c687c94d5
+  gen       Avx2X6/GenX1 4 2736848e236fb445e59b9a1c34dc7455622a6d38a11e4e5ea473519271ec9ef7
+  gen       Avx2X6/GenX2 4 4d14860fde6086c27c12efaf286c292b680622fe03a10814f2c51ed85c5a20aa
+  gen       Avx2X6/GenX3 4 f7499e4fbdf8de8ea4e7bd5b1804dd996c31309cec269a8cfd3dc869c03c0d07
+  gen       Avx2X6/GenX4 4 c982f101f1b9b99399db77adb85dc1d2abb5979996b911619610a257af15259a
+  gen       Avx2X6/GenX5 4 61d186e76a6b1a82f8b88506637de38bb523119d07469e18a5f3d7a96107ba91
+  gen       Avx2X6/GenX6 4 f9ce3ae836ee2aebc55976e489de592f5fb25086a81f10d316d48121c9a8bdc5
+  gen       Avx2X6/GenX7 4 997b90118be0c8a60835867e8c8eba0ee927e781178674c5b34356b99d043d73
+  theorem   Keccaktree.Kernels.Avx2X6.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 2294 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X6.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 2294 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X6.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2294 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X6.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 2294 bv_decide certificates
+  checker   135/136 modules leanchecker ok, 25137 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[avx2_x8] x86-64
+  program   lean/Keccaktree/Kernels/Avx2X8/Program.lean sha256 af992f4edb062b38e110ad9369dca7a5e4c6fd12736e51d87ff30a585497351b commit 4454455
+  object    keccak256_avx2_x8.o from src/keccak256_avx2_x8.S commit 4a94a74
+  file      lean/Keccaktree/Kernels/Avx2X8/All.lean sha256 28fe1a9bdb66a73e9341e0dd2c62b7d99593803c4fa1e4a30f9167bd047a68e5
+  file      lean/Keccaktree/Kernels/Avx2X8/Lib.lean sha256 f6f163269f8a6d636b11d068779252d82b78bd8d4d245351327c02d429e58e3d
+  file      lean/Keccaktree/Kernels/Avx2X8/InPlaceAll.lean sha256 081e602b768ee183a28611b10f2b0e30ebc79efdd0b21a4f948be4a0c5243cad
+  inplace   lean/Keccaktree/Kernels/Avx2X8/InPlace 56 files, git tree 2b61235315180c5b7aa14dda1b340099792fb159
+  gen       Avx2X8/GenBaf 8 a8788dfac1902e0f5fdd4822f8dbd145101fa0bf62b2fcbb80d918d2f531f881
+  gen       Avx2X8/GenBat 8 ca11e678b9aab0913932a3b9ea8864825beb74ed0f1827d4a43976fddf8092be
+  gen       Avx2X8/GenBb 26 e52f604b22c95b88291f222d30a040e7e5c2ccbed9486f50ad91717d9e2c3584
+  gen       Avx2X8/GenPff 4 a4c01cfedd7addb941e36fe25ee7cb6247f79195cc034c83588196587e3b74b3
+  gen       Avx2X8/GenPtf 4 d28b8ae1292a16b1cbc6b42d43fac6a1379d3a89247b595b113a3d6955762ee2
+  gen       Avx2X8/GenX0 4 9b4862e1c512b4e8bad50baa64f3db1c6d01ed971b07243a9c5b9b23d4c67573
+  gen       Avx2X8/GenX1 4 39117c0022029f5d597f74938c60078b860c3c000cdafda10f29f97c47ba0c8c
+  gen       Avx2X8/GenX2 4 23ba432c0a17ad7b9ae13eb6c9498d259b2160630e0a2dbc483e27afa4013ed3
+  gen       Avx2X8/GenX3 4 94b961ff1e57b766b5179db3aaa155b8afea2db45a6fa813eb90c9ff387b8611
+  gen       Avx2X8/GenX4 4 5e6787aa41a2d257402f21f467be084fb86b8a9cb1f3fb0a249908aaf6efb061
+  gen       Avx2X8/GenX5 4 dd88e7c6a858ab510cf8a63eefa5717de70196011724383fb747418a78bb206f
+  gen       Avx2X8/GenX6 4 62b9f05f34033495a2a51bc3a994f42eeb47538f9f3ef3d727adddd9a1fd6d33
+  gen       Avx2X8/GenX7 4 e417d3517aac63eccbe51602e5c4ec04f88533772a1591628d43064ca53e733b
+  theorem   Keccaktree.Kernels.Avx2X8.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1720 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X8.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1720 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X8.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1720 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X8.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1720 bv_decide certificates
+  checker   141/142 modules leanchecker ok, 22739 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[avx2_x9] x86-64
+  program   lean/Keccaktree/Kernels/Avx2X9/Program.lean sha256 1a1d108db9172b85d49bce87129eca843cd180fc739b8937a1e04ff764def311 commit 4454455
+  object    keccak256_avx2_x9.o from src/keccak256_avx2_x9.S commit 9023275
+  file      lean/Keccaktree/Kernels/Avx2X9/All.lean sha256 4af84a5968a01e865bebb6a107f69df91761eafcdd5837d919739925e4714148
+  file      lean/Keccaktree/Kernels/Avx2X9/Lib.lean sha256 10f50e57ee51eed6ff6069c144f5f7f7903b3487708da9802271a2f7c90cebbd
+  file      lean/Keccaktree/Kernels/Avx2X9/InPlaceAll.lean sha256 50fef20f93c2082f48461b84ce0b749a85ca7cd9dea0bb57f0e5a7af9e24bb78
+  inplace   lean/Keccaktree/Kernels/Avx2X9/InPlace 160 files, git tree d6666c5a01b85937a3ffb3f66570eb884f62b371
+  gen       Avx2X9/GenBaf 6 dd4e9fd6966d3be958009f4c14fdd6b56dbddc548d307a3f8ce01e60197e807f
+  gen       Avx2X9/GenBat 6 789fe90d4ffcacdb3ce91bd4ff1b6f6eac24d3161627298ae31bbd6c35e09adb
+  gen       Avx2X9/GenBb 26 0e81a2cc21d917cc905952ab8e17fe3b7bc4e5b864904c61f92451158eea20a4
+  gen       Avx2X9/GenPff 4 67ec905260f65ebe9bcaf8c65b04874f768231f7dc55fb06bd4cdea0f80e6974
+  gen       Avx2X9/GenPtf 4 e1f0444a0bfe21730163692b758668831b2ce45d6122b28c829557b682ea2d28
+  gen       Avx2X9/GenX0 30 379e2566ab0edf283024d53822564f5c487ee5750f662c0da506036f21c79978
+  gen       Avx2X9/GenX1 30 b00ca5b4d621e41eacd6ff2c332e5dc622a0a94deafbcd73b8ac62d5e1ae1de5
+  gen       Avx2X9/GenX2 30 34811515b2f9c2eaf0078742309dfa7e89220cbd6b746f6e73f909d39683e0e0
+  gen       Avx2X9/GenX3 30 01aa573cf1f0c19d11ef299e334b7d5042aa7c8c2b80c8a37aff2be3f17e751f
+  gen       Avx2X9/GenX4 4 1196d3938ab95b1a1c2bf870b144298bc7f299e8b378ca58ee63e8942c695c8c
+  gen       Avx2X9/GenX5 4 46d2d0546381c5e16bbf1a8088283c4603b4e931828ddf5bbb8332a0e5d53e8f
+  gen       Avx2X9/GenX6 4 88d2c4f6bb7fa1fda0a762529a55ce9dffd472dc10be04dacf7602f21539565c
+  gen       Avx2X9/GenX7 4 ab0b3cf00ba22eb5c25b974cfaa2b0713ccd28992e8a144874326a8818c27b38
+  gen       Avx2X9/GenX8 4 febf36f91d4c68ef5b14505361cd69ee43b8ceb6a3b67a2016a10a6305426ae2
+  gen       Avx2X9/GenX9 4 ecd7c0b64c359c9d005a4066d1e9415f048614ecd6ab587ec3f92f9eeaf5f446
+  theorem   Keccaktree.Kernels.Avx2X9.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 8348 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X9.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 8348 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X9.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2348 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X9.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 8348 bv_decide certificates
+  checker   349/354 modules leanchecker ok, 131164 s; 5 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[avx2_x10] x86-64
+  program   lean/Keccaktree/Kernels/Avx2X10/Program.lean sha256 e8b153a0c880bfa4b81e2151242f2c9fd4002aa182a242fb8eee3c9ca564b3d2 commit 4454455
+  object    keccak256_avx2_x10.o from src/keccak256_avx2_x10.S commit 094d733
+  file      lean/Keccaktree/Kernels/Avx2X10/All.lean sha256 295d7985d076066348031c366efc1bd3768d31c7b3eee3659209e57ea31f4fe4
+  file      lean/Keccaktree/Kernels/Avx2X10/AllV.lean sha256 cbd37149dd06b03235d33b35ce1d940e91eda3630e0f96a2aab4aadf6d81537f
+  file      lean/Keccaktree/Kernels/Avx2X10/Lib.lean sha256 2618bc1a6a66ea7f7d410b90f7bf7a1be373b305d7038ef0107a6483e7f4adf1
+  file      lean/Keccaktree/Kernels/Avx2X10/LibV.lean sha256 7287694f6dd7f82cd490aa7706fbfeda45420a2c1b8327827fef3953600b29a7
+  file      lean/Keccaktree/Kernels/Avx2X10/InPlaceAll.lean sha256 a1f6b1e06d0646f942054ff21bc451910f8b5c0ca988fee6ab166e02d7ae0e4a
+  file      lean/Keccaktree/Kernels/Avx2X10/InPlaceAllV.lean sha256 ec275d82406914eee0c42b928c4cb3812a1bbb6a3b123c04e8814621128ef33a
+  inplace   lean/Keccaktree/Kernels/Avx2X10/InPlace 206 files, git tree b09c1713be94d942f3c71eed186032ede9bda0de
+  gen       Avx2X10/GenBaf 7 ab9c306ec8aa0ea2ad345d205fe78b07ee16962665b5d12afffcb82c556086c4
+  gen       Avx2X10/GenBat 7 e342cf1dcbf9f67c66aa7ee928d698fcb002c3fb5d3e069d0face9677ab5f5e8
+  gen       Avx2X10/GenBb 27 bfd272515dcd1e76461c6a299515cb92b6c9307b874d09fae6f3e5c508f69104
+  gen       Avx2X10/GenPff 5 5b255ccf48736555e047b9e825e8c4d5a2b5118ceeb7a7c956ae9f256545d4b4
+  gen       Avx2X10/GenPtf 5 d7809b229814a6703f9e7bcad9a18d811659b4dd46cbc1c552f71125ea46a450
+  gen       Avx2X10/GenX0 31 d3333fb005056d98c7fe59adef58526be626f5227494655405967d25c21f158e
+  gen       Avx2X10/GenX1 31 cd4021c8cd9fca006bc919c75d9b6b6584c0b52685b0aca3d461198557c03b5d
+  gen       Avx2X10/GenX10 5 87a866d4ba210e5e464987784ee1ea86731b4631851ee8fc96d75ae849756c68
+  gen       Avx2X10/GenX11 5 a3bfeeff64719ed55c3414cec0d88c159fd2ed6c81d45b17057cfef5f2b481c2
+  gen       Avx2X10/GenX12 5 8bbf2c20936cf1e1c3867c8b2b01243e79f70ed4c71edf46b8b8bb17fa73eb62
+  gen       Avx2X10/GenX13 5 8d2c9d853cf834567bdf859a17124e9fe921fd8452ec3680bb231212979ea741
+  gen       Avx2X10/GenX14 5 a17b2fd7e7d648d4218f38c86b2a2a51849086c31ec9066cfdcf05026d69172a
+  gen       Avx2X10/GenX15 5 dcbd40170cdc5eba6f49655c16bb1ddd6ed3a3c5dc4f04133f24e7632926e5f0
+  gen       Avx2X10/GenX16 5 2bbd01d7aaa3ccd3c7d6f6d640fcb407482a86758c4e2d14a55188bbcacd91e5
+  gen       Avx2X10/GenX17 5 47132063b9df1cb8d4570f247df2d418c88186320233534c9469560ec43751cb
+  gen       Avx2X10/GenX18 5 5eedb11c9f96ed8734bd478382da903b57a5b9cd8f092335eddca060dc0ac20d
+  gen       Avx2X10/GenX19 5 be27a2728608207ab9cde6292b5760ec6bb549bbb641c3c57c91c100cebadb09
+  gen       Avx2X10/GenX2 31 e3edd2aab339a7d3887e1826d677b9298eb095f92844636b316aeceeed59fcbe
+  gen       Avx2X10/GenX20 5 8270459c79d8a606f069465c3c08224fd84c57efcfadc3f396a680e56197a2d6
+  gen       Avx2X10/GenX3 31 cbedaa844d9a61aa27e945110f870a4b0169c89880652821aa67c80a1eba65a9
+  gen       Avx2X10/GenX4 29 d275b0ccc5874c1d1ab99c4eb309059e5a78a097b5a636fb63545482a093e3ae
+  gen       Avx2X10/GenX5 5 976722aa375fee94a4576cacfa98a4e8d80e721ce5e763dcac25bd83bc2abb70
+  gen       Avx2X10/GenX6 5 47baaf62db6ae0e2ee1bd5d3f2f85b47fe92edb8df0ffc5fafd5381009d45404
+  gen       Avx2X10/GenX7 5 63db33488ba20e41666415476aa2bf3d4fd0fbf48f5db103b1b2f68583e1f138
+  gen       Avx2X10/GenX8 5 35076455375e3360a947ef9cf844a222c08f613cb9b72bb6deb902eec1615b8f
+  gen       Avx2X10/GenX9 5 af2adf4bdf4640ed3c88dc8b2a6b86b8bba2f4044841fc5e1c738d0f4bea0d76
+  theorem   Keccaktree.Kernels.Avx2X10.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 11116 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X10.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 11116 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X10.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2953 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X10.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 11116 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X10.AllV.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 11116 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X10.LibV.kernel
+    axioms  propext, Classical.choice, Quot.sound + 11116 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X10.InPlaceAllV.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2953 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx2X10.InPlaceAllV.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 11116 bv_decide certificates
+  checker   491/497 modules leanchecker ok, 279177 s; 6 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[avx512vl_x4] x86-64
+  program   lean/Keccaktree/Kernels/Avx512vlX4/Program.lean sha256 10e7c061722baf45993a2313cf2133f38638f36d0f473210b30734ef69c077da commit 4454455
+  object    keccak256_avx512vl_x4.o from src/keccak256_avx512vl_x4.S commit 697d052
+  file      lean/Keccaktree/Kernels/Avx512vlX4/All.lean sha256 658da4a4084d2abc8006865064c62e5a8050a78d632c622853876bd36d12dc17
+  file      lean/Keccaktree/Kernels/Avx512vlX4/Lib.lean sha256 257616dfc92f8e988f89f5d0fae84f5debf38b0725e3907d431a61d72c24c7c4
+  file      lean/Keccaktree/Kernels/Avx512vlX4/InPlaceAll.lean sha256 4d94fc3e6e00fb0b55d62e9e0bf7703bed8431cd678a089e9cd2bfd5d72de019
+  inplace   lean/Keccaktree/Kernels/Avx512vlX4/InPlace 159 files, git tree 212cede2b88ebe2bd438fe61f3333bcec24ceff2
+  gen       Avx512vlX4/GenBaf 9 814cb2a16ab805969289b8454f798708e863e66e8df2145e45669fcc9babd4ae
+  gen       Avx512vlX4/GenBafm 9 8049a797702a396c438f9558c6a1b98b7fd9c8758213ffdcff157a42bbf2eac1
+  gen       Avx512vlX4/GenBat 9 bab1c367b454939dcc921dd1a7605aa590f0e7de73ff457e1b531663b6fafadb
+  gen       Avx512vlX4/GenBatm 9 29f65855567b25515a4e44837d44189539a23f832544a0c9dab8a2a859884721
+  gen       Avx512vlX4/GenBb 23 93a7e8130153e1492321747e922c8ab09dca53634e9ee49900a340169dc40126
+  gen       Avx512vlX4/GenPff 4 49dea744296b6df9dc37a4f2d47432eb4bfc7509a4a6f67e3c23ed1aa08efcad
+  gen       Avx512vlX4/GenX0 28 2223a9b164f9bf065ae89af9cf26ae75f29b3c2735a3340c6e4cfbee24801730
+  gen       Avx512vlX4/GenX1 28 49bbaab99e68f7b0dbc82a1cd1cb73368eeb7033eb6aa479de974ccf15491f2a
+  gen       Avx512vlX4/GenX2 28 9a9035f5e2df56456beac627fa3f59f2c3c137e40fb19f6b12deff555d8c7804
+  gen       Avx512vlX4/GenX3 28 16fa9b73685c0e97efb70a04916a5f2c4ef2a2fb0b757553dd29f8f1f73ac389
+  gen       Avx512vlX4/GenX4 4 e732dde0e0b977bed0edd0987197918a9a6820a1c5cbddbd8671fbe1df152447
+  gen       Avx512vlX4/GenX5 4 6c13352ee4207a8983a970b67f486156739b0d0985f256fc4e57ee921f8f9964
+  theorem   Keccaktree.Kernels.Avx512vlX4.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512vlX4.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512vlX4.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512vlX4.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
+  checker   346/346 modules leanchecker ok, 7287 s
+
+[avx512vl_x4d] x86-64
+  program   lean/Keccaktree/Kernels/Avx512vlX4d/Program.lean sha256 a89f3c70e7e72e08dbe365a423abc89a29c612b790e795539116a1ef1a1a5020 commit e2e4982
+  object    keccak256_avx512vl_x4d.o from src/keccak256_avx512vl_x4d.S commit 697d052
+  file      lean/Keccaktree/Kernels/Avx512vlX4d/All.lean sha256 2ca171ea6f099f6d05da2b628538dc7aca8e06182b18bea64fa94ff87814a82d
+  file      lean/Keccaktree/Kernels/Avx512vlX4d/Lib.lean sha256 c9d08dbc5a600112cfc949eeb33ca1e4ab58fba4d364763e31c6db09cc8117b8
+  file      lean/Keccaktree/Kernels/Avx512vlX4d/InPlaceAll.lean sha256 a8147a68004c2774972d31a850f2a5b1b028a2199b4951c33770743a38fe9fdf
+  inplace   lean/Keccaktree/Kernels/Avx512vlX4d/InPlace 159 files, git tree 03914f9887341f5cbf49924dc9ebd0c500e9d439
+  gen       Avx512vlX4d/GenBaf 9 b0cac141a34828a8272396be7f93a71fdbe94e6224d1507d8f51facd8de30e92
+  gen       Avx512vlX4d/GenBafm 9 1146ec4ca5dd4a134d6a4d0324ca2a873982636e90df28f922fed0e848e94d48
+  gen       Avx512vlX4d/GenBat 9 846fb9b4c671a6118db088cd0d2cbd9b4e07277b32782df27563b1eb980e424f
+  gen       Avx512vlX4d/GenBatm 9 fcc14483b00536e793cf46d57178bcce239fe7eb111c33da0d613b7d7e1559df
+  gen       Avx512vlX4d/GenBb 23 29ac230fc35ecfa718c19e4b6df9b63a25e4ab409161b06558aedc785c30997a
+  gen       Avx512vlX4d/GenPff 4 7e4100700a8993491eaa02d399c7a9a4e2139d2f559f754c4f27512973e454c7
+  gen       Avx512vlX4d/GenX0 28 31c8717d193c79333cdfc273adf8911396ab811801b9f586bb005e9082bf4a2f
+  gen       Avx512vlX4d/GenX1 28 e52d89e6f512def6243ee93843225d1d01b162bc207bc94f3d5468057d3525cb
+  gen       Avx512vlX4d/GenX2 28 ab5a8ecb528d993f154b90924a64337458ae035a6809123bf9e754c58e59c36c
+  gen       Avx512vlX4d/GenX3 28 e6ae670937a7c823850b98d509606a93ab73318f4c6a6327de6f0a9b319e77c8
+  gen       Avx512vlX4d/GenX4 4 d93d78ebb150a3887741e001e26aed6207ff6060c38f331a27ee16a771fdc2a9
+  gen       Avx512vlX4d/GenX5 4 dfbbcded4b72c6e6c8e40f5d05a335ae8ac360024e93a3904511078c9aebe236
+  theorem   Keccaktree.Kernels.Avx512vlX4d.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512vlX4d.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512vlX4d.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512vlX4d.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
+  checker   346/346 modules leanchecker ok, 6880 s
+
+[avx512_x8] x86-64
+  program   lean/Keccaktree/Kernels/Avx512X8/Program.lean sha256 6d59af822751d1d0138fb22da5c1b1b717d3d7031545512ed7cf580dd8d3d215 commit 4454455
+  object    keccak256_avx512_x8.o from src/keccak256_avx512_x8.S commit 697d052
+  file      lean/Keccaktree/Kernels/Avx512X8/All.lean sha256 a8cef5dcaf9aaddd22c2a43811036a7214c0e44cfeb90bf0904a817f1eb46609
+  file      lean/Keccaktree/Kernels/Avx512X8/Lib.lean sha256 87463d0769d23fb26adf5abff6b8cef02748a487896767cf804be55a09edb724
+  file      lean/Keccaktree/Kernels/Avx512X8/InPlaceAll.lean sha256 7a6b4981a5f1400a8c2e396caad00c7e886d7644252c295e68782b82bc762cd2
+  inplace   lean/Keccaktree/Kernels/Avx512X8/InPlace 223 files, git tree a4ddbef72df1ea4ba716d1d988fb6130fbb4feee
+  gen       Avx512X8/GenBaf 9 9f25340dcf263fef2b549578d008e44f8831a1bda77b50eeade30beb1f57473d
+  gen       Avx512X8/GenBafm 9 4bcff06f9cd6939c102ff706eac233ca75e3c5b798a1ce227040ebfbed815479
+  gen       Avx512X8/GenBat 9 24ac01d983fcfb5d90b0e15deee6fdcff5797ca6f37dda99175364f53a15ed1b
+  gen       Avx512X8/GenBatm 9 631cd25970d1e7518682f8ffe3d82825b61fa52c230a908c4abd713712ce8786
+  gen       Avx512X8/GenBb 23 0a0ddcb86acd0de8215fd863caa7ae34aede160f59c4e0cc8f490af0fc10e5d7
+  gen       Avx512X8/GenPff 4 ed12a44eba1ca2330a590fd98ba77d59ead8e94bd66e18c167487a5e16e4de0e
+  gen       Avx512X8/GenX0 28 7f770bdfdd55c4795fd50025bbfa890d31c8eb428ec0019dd7bd037ac5d4d796
+  gen       Avx512X8/GenX1 28 c4505db18f53def3e5ffd6a70ff1c336408f9727a1c60b3221ecd796a8c1a690
+  gen       Avx512X8/GenX10 4 5b31815273d12ef76fea468ef0881f0b56159ae74f17d4bdffefc278124e2f74
+  gen       Avx512X8/GenX11 4 143369d6f16326f660acf3e4e7bfe77824889c94b85e4ede9e26f272259f8d9e
+  gen       Avx512X8/GenX12 4 6ab38ae0f35890b80987a5e8c5f12d268c31985072c4244ca48a07cba38008cc
+  gen       Avx512X8/GenX13 4 1b86976d11438e13caa9216571137999999477d2bd06f33e383e3046c7192ae5
+  gen       Avx512X8/GenX2 28 4b93b1d15514866d6f75f7e3e2c7f2df7d4fd2e553fb8647a65241977682af9c
+  gen       Avx512X8/GenX3 28 df86c54f759dd0d8309cf33398c571f6da2a962299260a46f8d0de87ada01c57
+  gen       Avx512X8/GenX4 28 4612118636fa028dea664f2cd027c02aea93c473445476c33063c1adf879c5ae
+  gen       Avx512X8/GenX5 28 a4f1340b518e3f893b64d46b072bcfac4931f0fe193a0d567407389c7910fb22
+  gen       Avx512X8/GenX6 4 4d21f8fcf82c73058aab52b32f955964211865f0b92584665d4d88b2885c0276
+  gen       Avx512X8/GenX7 4 d6ec63483132ec5d38c2b56fd87dbd12105c0dcf6467d35048bcc57651359f8e
+  gen       Avx512X8/GenX8 4 133338fbf6e9a08c25fcf1a44f2b0a4639ff729c55a76606a43a0f343a0f5513
+  gen       Avx512X8/GenX9 4 909384cb5198eb29bec84e38565dd153a242cc4c3a013e8b748e8a3367058bd8
+  theorem   Keccaktree.Kernels.Avx512X8.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X8.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X8.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X8.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
+  checker   490/490 modules leanchecker ok, 14263 s
+
+[avx512_x8d] x86-64
+  program   lean/Keccaktree/Kernels/Avx512X8d/Program.lean sha256 387f607e972d9adc4a16c1ad53160b999db9fd7f1eb07429f57fc8a9dc00dae2 commit e2e4982
+  object    keccak256_avx512_x8d.o from src/keccak256_avx512_x8d.S commit 697d052
+  file      lean/Keccaktree/Kernels/Avx512X8d/All.lean sha256 334ced8d642f4017f873bee025f3ec9f9461b0add19b641f7002db7bdca55abe
+  file      lean/Keccaktree/Kernels/Avx512X8d/Lib.lean sha256 9148cfdcc512b9b8804613de25aa60d38b5e6e1acc43ed39ab390dddee5ea65b
+  file      lean/Keccaktree/Kernels/Avx512X8d/InPlaceAll.lean sha256 5c406dfbd34ad4581a1da3e3a6484514680ccbaa3ec82bc6cccedaf61d000b53
+  inplace   lean/Keccaktree/Kernels/Avx512X8d/InPlace 223 files, git tree cf18474889df133537c22d8e2f0988404488e513
+  gen       Avx512X8d/GenBaf 9 1d31d25e2a96c702204648b35ec0709c8337b70b86bdde936322b5f8b1c864aa
+  gen       Avx512X8d/GenBafm 9 c00a579468aa0c9a5332d18508aa289f43e066f417f8acede867aad54792cdfe
+  gen       Avx512X8d/GenBat 9 e8935dfd974d1f2afb805618be523754589a95219f12bb1de9dac395bb91fef4
+  gen       Avx512X8d/GenBatm 9 a57207aa59b4133facc12340afe02fff69870b1f5f28c2e8396e1e46978241bd
+  gen       Avx512X8d/GenBb 23 bfcde28a0416552e61da7f84b1cb43c36aa561d12e8799d05a422a6e4c9eb124
+  gen       Avx512X8d/GenPff 4 338273d4d51d985f4927e1435aaac3b44d6cab5ef48e28eebf6ba0eeb7ac39ec
+  gen       Avx512X8d/GenX0 28 f38933620b1990cc0a737632eb7d096b6385173cd321293f7578847300746da4
+  gen       Avx512X8d/GenX1 28 0cf08b9f27599a4f33d93d9d2c0d60212b1ab5d46c6e5a569f45eb28cd6cb2d8
+  gen       Avx512X8d/GenX10 4 995b1ed379d0fa6e71857fe0915a43e21fa9e8bad05cadc61bbf7661bd5a0794
+  gen       Avx512X8d/GenX11 4 c94499562b06dd00d93e3e73b4af5fcaa5be14bd5239e0ef98fc0a171c291a52
+  gen       Avx512X8d/GenX12 4 cbaf1c16f8e21e82d6991a7dc7538ab4075cbca23f9422fde1743eb53e5c3fe0
+  gen       Avx512X8d/GenX13 4 bb78405f62c359afe9cf685b9a7e5f566edf5898a0e38cbea0fb7d6b6ab37a7e
+  gen       Avx512X8d/GenX2 28 89f7d3aabec0c5f63c42f39c62e4c0cff389a3c3d75dfe131888342ccac16659
+  gen       Avx512X8d/GenX3 28 87b58f77ca0d82eb9234477a1ad652ca3efcbc51a80bf5cb6e7a8ce90ebf67e7
+  gen       Avx512X8d/GenX4 28 645f5bffd7b1b5a99f468d570f3a5684bf9d754362718fb7e30621e7b7e9c481
+  gen       Avx512X8d/GenX5 28 1ddc7308d7e0567e731b97a461bbbeee462872791832211c9511b9cbaee2ad8f
+  gen       Avx512X8d/GenX6 4 d4e8ce4c7dcca101b502c10a5f9f0982b6f6ec2759ffa776f0bf6bc41cee66f5
+  gen       Avx512X8d/GenX7 4 965a280bd9b68b00f1c816ffca16bc4ae0de83b23bb7dbff9ec864c8a710625c
+  gen       Avx512X8d/GenX8 4 032afeea471e2ce7cd9226d4c004c0ff1349bed8984f7e50275575f815e7a7c8
+  gen       Avx512X8d/GenX9 4 2c0bdb817b5a66d4f0d3682bcd18e072b934ba5e25677f8deb7867c0d6f09138
+  theorem   Keccaktree.Kernels.Avx512X8d.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X8d.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X8d.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X8d.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
+  checker   490/490 modules leanchecker ok, 13398 s
+
+[avx512_x9] x86-64
+  program   lean/Keccaktree/Kernels/Avx512X9/Program.lean sha256 ee9b5d4ac71c9598d1fa835341a4278eb14317535a6f6f0fd33cc2b407643b3f commit 4454455
+  object    keccak256_avx512_x9.o from src/keccak256_avx512_x9.S commit 516bef1
+  file      lean/Keccaktree/Kernels/Avx512X9/All.lean sha256 f60f56f3e3ee8e8df08a9d9d227e9914081958b72339b2fc29687ae09a6fcaa3
+  file      lean/Keccaktree/Kernels/Avx512X9/Lib.lean sha256 71c6d2bc674c3a022314f32b3f52b2a928c020eda85138fc072c0c2b584c04aa
+  file      lean/Keccaktree/Kernels/Avx512X9/InPlaceAll.lean sha256 91a9d87eb2089c0b20c0e360f8bce3228c2b68f21703371e7b674126d420da7f
+  inplace   lean/Keccaktree/Kernels/Avx512X9/InPlace 251 files, git tree fbb69bfd70ac7b008f4c4a29a98357c2f73ea53a
+  gen       Avx512X9/GenBaf 9 cf1cbf56ad0b0c199d349e733170df89f2d03d776fd4fae2fd7b6c0835cc378a
+  gen       Avx512X9/GenBafm 9 ffaea2f387fdf1a4b4d72ba2dec33f14253bcb5c4bbe83d157a8e470fcb3cbf7
+  gen       Avx512X9/GenBat 9 2ec2b53799ad995f12827af7ef283aedb28f978de908939872067f0fdfe2e44f
+  gen       Avx512X9/GenBatm 9 2c60879dca025a1b6a2864cb9d4e6248f6e20d5a25a1f81c63d2d55144172859
+  gen       Avx512X9/GenBb 23 23c71de19c3895a38d1c0a058fc1b4de99ec7e16640847b984d69263657d41ad
+  gen       Avx512X9/GenPff 4 1e16bf830a09f7bb65ec5cf0964d0288dadeecf3051b7fee1f5d3d5140bee9be
+  gen       Avx512X9/GenPtf 4 13b296e29a2143050aecf8922e71b373ed78f7f64cb9f75bdd1215ee77ca2dad
+  gen       Avx512X9/GenX0 28 502c8a21dbfa43ba3dd89dab88f6072cbfab568d95608ce839fd2e59721dfaab
+  gen       Avx512X9/GenX1 28 a9451a9ddcd9b70a26f6a5ba7979e7bce018d67dd28b2ee55a8b8c562f04dbcb
+  gen       Avx512X9/GenX10 4 7090b96d86c4856d2d2763b28c446bfaa88aefd41e64aeddea750597c1950b14
+  gen       Avx512X9/GenX11 4 83813d6ed08d0df46ea67ee22f56c7a1bd0652ace440fab7e95f6a34710e9d17
+  gen       Avx512X9/GenX12 4 ea3284a16f62916f8288fd7467d16be65a52cbe88996f03823fdda6a3550a148
+  gen       Avx512X9/GenX13 4 cc5bfc075bc74e1ebb946156d1e38f6c42c5796dcf64b91e61fcf88715817689
+  gen       Avx512X9/GenX14 4 06330acfc8e7efe0183fe710be0e408ddfa491009daba13c0c14791dd9068ff3
+  gen       Avx512X9/GenX2 28 44a9a9232081ed8d0d7fd9c72980e2a22246c20a21b8f042aab00fbe762fc0b6
+  gen       Avx512X9/GenX3 28 201513df897666e07cd6cce87087731df613abe6421217dd1da0272ee0007d6a
+  gen       Avx512X9/GenX4 28 f31fc26b6e504ff0abd230da2918dcd02bd1fff10021ccf5ced60d521549cf04
+  gen       Avx512X9/GenX5 28 8713840a86a092c33db8e0cb342f91cb002d8436f76ed6a146429c980074e8e8
+  gen       Avx512X9/GenX6 28 2a33272667f2fd17e511cbd6d79644b573eb76547df02777ed1db8cb9af5ecb9
+  gen       Avx512X9/GenX7 4 93d05a18a3429c79755c326d03d80c4698c2339959a8def9191c3d1da30bef87
+  gen       Avx512X9/GenX8 4 c807c3ef1591ecb3de3d9e6c6122c7d378981b22bb57ae95eb18376e7dd64a23
+  gen       Avx512X9/GenX9 4 a340ec0b02b7650aa6631968fe7971ebb7c1300d60762a2e500e950535f878c5
+  theorem   Keccaktree.Kernels.Avx512X9.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 6182 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X9.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 6182 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X9.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2129 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X9.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 6182 bv_decide certificates
+  checker   542/550 modules leanchecker ok, 67707 s; 8 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[avx512_x9d] x86-64
+  program   lean/Keccaktree/Kernels/Avx512X9d/Program.lean sha256 bd6f7f5d52385277859e6545443d52417ed3e68bb977804090694bcabb447a72 commit e2e4982
+  object    keccak256_avx512_x9d.o from src/keccak256_avx512_x9d.S commit 697d052
+  file      lean/Keccaktree/Kernels/Avx512X9d/All.lean sha256 8a4ef85e3eec62137a47c9d4edaafea04667f14059576ae1b34e17255d3faffb
+  file      lean/Keccaktree/Kernels/Avx512X9d/Lib.lean sha256 fdef2da0372bc530e0f0a99ede1be8d5c84f514c59668c6f7c73aaece52596ac
+  file      lean/Keccaktree/Kernels/Avx512X9d/InPlaceAll.lean sha256 f92bb59f78d29f14229a22da653cd76ac203ff23d90b8baa272e85d25f240c00
+  inplace   lean/Keccaktree/Kernels/Avx512X9d/InPlace 251 files, git tree 4dfb79f13f127e63ea088ebb6ac0cf3167f67ec9
+  gen       Avx512X9d/GenBaf 9 d51e5b9c573b621b83aa33363b87ebebb65584601f6c834396a8abc0593350f6
+  gen       Avx512X9d/GenBafm 9 723a7f55c045593d1d0eeea8269cbf4e4511f4f6105b99f81ab3ce55fc497b1d
+  gen       Avx512X9d/GenBat 9 e5c813bfd7b3efeba8aa9cfa380d1692c3eb4d97f567b2f556d0bf4174e07e3c
+  gen       Avx512X9d/GenBatm 9 cfc327f6e349b45329fad9b1c9a79c0fb85fe321eeb6a474a26e1bb9ab4eec73
+  gen       Avx512X9d/GenBb 23 60fb12cdd1d6638ac374d3494e0ee29e049a5198e6aa6f36784debba0c5fd0f4
+  gen       Avx512X9d/GenPff 4 995af7f43cada8e866735e7d818961e4862850bcc4c933ecbfced8620d34a231
+  gen       Avx512X9d/GenPtf 4 5ad57f9834095cb907e6647bffff5ea4c393a9ba90199cd187eb95bcbfa4f66e
+  gen       Avx512X9d/GenX0 28 d67d64781999db5fc696c0b9cdfcd06d21368752c072367283752a1aba9305b0
+  gen       Avx512X9d/GenX1 28 45267e4ae6b80a6a632d44935d8bca9a0af984e7eb3af1b7fb3d04ac3d247545
+  gen       Avx512X9d/GenX10 4 cbc0911e15e79c9add30d6b5730ba54e838a072a5cce04cd91c72a18bf08543b
+  gen       Avx512X9d/GenX11 4 9c33ad680dad221432b2b601161ecde4b91c81068f4330b5f56acae9d3c843b4
+  gen       Avx512X9d/GenX12 4 4ac93b54d72db2aeaed54ee433bba1ee4286c3c2404b96f51d8b078828194f12
+  gen       Avx512X9d/GenX13 4 2bbffccb239b07af8a69618557786b1f14cc929565919eb78e3256d7ae2078f8
+  gen       Avx512X9d/GenX14 4 6972a38c7f56a327c180ac4b910a72d184333beecfec45938b7e8be65fd9f024
+  gen       Avx512X9d/GenX2 28 5bc3be286080250d0614f52da43833815d70a1b4a13df594d68c3bd63388c8c7
+  gen       Avx512X9d/GenX3 28 e42a36448013f09fac7d10a345143240ce4f9fee7dfc4af11d2e68398ac66ecf
+  gen       Avx512X9d/GenX4 28 e1142464c4f82988fbed097dc0298680f3ba38178e8e29f729b2191301dbd3b8
+  gen       Avx512X9d/GenX5 28 a53641c87cb4d7269ec08ab0489c12c9d0087613b1b2d50aa9915c9579c86d3d
+  gen       Avx512X9d/GenX6 28 e4aeb37fe6de283a8f6a473c16864bc79d1178cf642142a56eb33ea33b242a1d
+  gen       Avx512X9d/GenX7 4 b69235590c8a8033b54144f8e335ebdf3619fc8eff8af8077a4ee16ca5c50396
+  gen       Avx512X9d/GenX8 4 46c44e4415bd3234d3f5c664b0a4c65f079ad268e5323e2d43b1158198a6d6b1
+  gen       Avx512X9d/GenX9 4 351fbee8f3c1d3ed6e12052efae46697f5117c76802169f81ca940ed97484d79
+  theorem   Keccaktree.Kernels.Avx512X9d.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 6178 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X9d.Lib.kernel
+    axioms  propext, Classical.choice, Quot.sound + 6178 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X9d.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2125 bv_decide certificates
+  theorem   Keccaktree.Kernels.Avx512X9d.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 6178 bv_decide certificates
+  checker   542/550 modules leanchecker ok, 64554 s; 8 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[scalar_x1] AArch64
+  program   lean/Keccaktree/Kernels/ScalarX1/Program.lean sha256 b3515a1bd1e36b7d6ccde3dadea63e3d676669a2127a68cad17671480061b152 commit a06f462
+  object    keccak256_scalar_x1.o from src/keccak256_scalar_x1.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/ScalarX1/All.lean sha256 159bcae69ba696f6953aabe0dea2d5ea9c9b94a924c90af4b346a2783f941105
+  file      lean/Keccaktree/Kernels/ScalarX1/InPlaceAll.lean sha256 46d8f21aab4251f0fdb60f65f52c19891acd63bdbce3ffa7f770f8b97048d228
+  inplace   lean/Keccaktree/Kernels/ScalarX1/InPlace 3 files, git tree ca681bd01108be046e02212f85e88c79d870c8fb
+  gen       ScalarX1/GenSB 28 a36aa96ab91d91f85f6d057f12357f4abbc497d51654987dd405b7e7a655f110
+  gen       ScalarX1/GenSE1 4 39b6866e3ff3ab803bf042258489a45c21e267c67c231980ef796ae2c4f38f94
+  gen       ScalarX1/GenSX 4 c450b72916195392cccf01cf1f6f10d9243c8123c311c6464fe2f1d469ba5b8d
+  theorem   Keccaktree.Kernels.ScalarX1.All.scalar_x1_all
+    axioms  propext, Classical.choice, Quot.sound + 609 bv_decide certificates
+  theorem   Keccaktree.Kernels.ScalarX1.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 609 bv_decide certificates
+  theorem   Keccaktree.Kernels.ScalarX1.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 609 bv_decide certificates
+  theorem   Keccaktree.Kernels.ScalarX1.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 609 bv_decide certificates
+  theorem   Keccaktree.Kernels.ScalarX1.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 609 bv_decide certificates
+  checker   42/42 modules leanchecker ok, 2145 s
+
+[sha3_x2] AArch64
+  program   lean/Keccaktree/Kernels/Sha3X2/Program.lean sha256 984458e0cf3e29dab68221caafd3190a15b8c56a33159c8892ef8951b970bd52 commit a06f462
+  object    keccak256_sha3_x2.o from src/keccak256_sha3_x2.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/Sha3X2/All.lean sha256 da86c99c3fc735c51c2a0377c6c151b6395d81b8b0d1ee2bdb8fd8e81e4cf8d2
+  file      lean/Keccaktree/Kernels/Sha3X2/InPlaceAll.lean sha256 64737713532b03ecdef9f5f7613a5c989062818599302e57c254d3ea88b81bae
+  inplace   lean/Keccaktree/Kernels/Sha3X2/InPlace 8 files, git tree 53ceb30f44bc87beaea17a79f235f03263239fb9
+  gen       Sha3X2/GenSBe 28 a09961ec14053d6c9bcbe8f862d5899ab0a177a082304b6b67865fd45f79deb2
+  gen       Sha3X2/GenSBo 28 56b06ae27aa4d712d966edd4c810285313f47194beac28acdeee69c4a27666ff
+  gen       Sha3X2/GenSE1 4 72267db7d4a05683fff6fd4f0c39a739d91833a1fe2096790bff94e0fa06dbaf
+  gen       Sha3X2/GenSH 4 252e35904e08070cb296d1ec2693e624b138aae4e13ce777b751a145ef7b44ec
+  gen       Sha3X2/GenSHa 4 a584a8ea4f14e949968a8d57485fe6f51e781bfae0dfb410222c5bafc69dd4ce
+  gen       Sha3X2/GenSHb 4 7a6ad8defe5c8df16c4f8573435134c17ce4b4900b26778aaa9ff0997a5f077e
+  gen       Sha3X2/GenSHc 4 2a57d25c8a4437f2a06ca22eebd1f24e6ade5037d8a22f3bd40610d6183a14b3
+  gen       Sha3X2/GenSX 4 1ce066ab8c51d111096d18e4f14feee8f55a1ea591d43924b3bf6301575c0471
+  theorem   Keccaktree.Kernels.Sha3X2.All.all
+    axioms  propext, Classical.choice, Quot.sound + 1187 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X2.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1187 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X2.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1187 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X2.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1187 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X2.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1187 bv_decide certificates
+  checker   91/91 modules leanchecker ok, 2505 s
+
+[neon_x2] AArch64
+  program   lean/Keccaktree/Kernels/NeonX2/Program.lean sha256 be0f0f2de47d7a60032b6e39dd85a7aa11abc24ef72166cbfef20267070d07b4 commit a06f462
+  object    keccak256_neon_x2.o from src/keccak256_neon_x2.S commit 7785eb0
+  file      lean/Keccaktree/Kernels/NeonX2/All.lean sha256 0acdce76fffc28dd651bb8474727222eb776be2b5219875f6d677755c0a80fb4
+  file      lean/Keccaktree/Kernels/NeonX2/InPlaceAll.lean sha256 6c0eeaebc939311246afe7d68e45a9f47313a28d8c56b84f3d22f0670b8decd5
+  inplace   lean/Keccaktree/Kernels/NeonX2/InPlace 8 files, git tree a09bc35f7c9bc81b670d4ee597fcf580996189eb
+  gen       NeonX2/GenSBe 28 77bf1208880fb12fc1f9d85de6c81a339c2fa40ec55011f8a8dba35944ba21f5
+  gen       NeonX2/GenSBo 28 33e329b9f460ce95e08825dcb608c12755fa122d709461d2445b03404579cded
+  gen       NeonX2/GenSE1 4 1a7a74f4b2ef7e9daaf8b2062e218909cda24646d882d79d4877c3492e02ce2f
+  gen       NeonX2/GenSH 4 eb6a1ff83da7d39997269e7531a660556a7de746fbbf00cdbdee8b193cd357fe
+  gen       NeonX2/GenSHa 4 dc388621f711dbb7d313faa2bcaf1fd527cac920a750a7c56dee6719712651c5
+  gen       NeonX2/GenSHb 4 457fd022253adeee82a0a7be59c3963dd35476d2a863edd960dcf9a302721125
+  gen       NeonX2/GenSHc 4 b3d8d52c55c773362c9b43f5dee0e5492b518f68f6e6cee7ce0429c8c2e0f4c3
+  gen       NeonX2/GenSX 4 3015b3054a3adad8704439a4a30804e8b28f5aeabfb8ad55d8198e278d2e65b4
+  theorem   Keccaktree.Kernels.NeonX2.All.all
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX2.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX2.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX2.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX2.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  checker   91/91 modules leanchecker ok, 13700 s
+
+[sha3_x3] AArch64
+  program   lean/Keccaktree/Kernels/Sha3X3/Program.lean sha256 a06b13b22420b113c4c0ff47d2bfc6f931f873852eed48b720430d1053004bce commit a06f462
+  object    keccak256_sha3_x3.o from src/keccak256_sha3_x3.S commit f0e9403
+  file      lean/Keccaktree/Kernels/Sha3X3/All.lean sha256 acb673e03dea31cef6b20e8fbce07fa0c7517d2c2321767426d81032dce377b2
+  file      lean/Keccaktree/Kernels/Sha3X3/InPlaceAll.lean sha256 a65b1121054416c1f5a307539b4552641013d3c373d550cd621a8b6a2f8479d2
+  inplace   lean/Keccaktree/Kernels/Sha3X3/InPlace 3 files, git tree 08ae66a89d9c63c74b359b463fbad7e51587750a
+  gen       Sha3X3/GenSB 27 77febdb63dda83483895dadc61732e072499a5053139f409e242fcf8f3cf6e64
+  gen       Sha3X3/GenSE1 4 eab617f47213c8fd0273e04413e44fa7ed54fd6c49d7f1ac9ebd618c9a499188
+  gen       Sha3X3/GenSX 4 8fc6c9f5827c836cedb7902cee17e8bc05eae9a4c46551a58c59b10bcadc63bf
+  theorem   Keccaktree.Kernels.Sha3X3.All.all
+    axioms  propext, Classical.choice, Quot.sound + 1277 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1277 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1277 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1277 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1277 bv_decide certificates
+  checker   41/41 modules leanchecker ok, 11534 s
+
+[sha3_x3r] AArch64
+  program   lean/Keccaktree/Kernels/Sha3X3r/Program.lean sha256 2a96a57af0374b9f75585d9892716053de33b634d8e8130d9c418564045ef50e commit a06f462
+  object    keccak256_sha3_x3r.o from src/keccak256_sha3_x3r.S commit b7b6fc3
+  file      lean/Keccaktree/Kernels/Sha3X3r/All.lean sha256 5d8620d0dc17cebb64c459c3b7727693945568720bf79f15f5a79c756dd3911d
+  file      lean/Keccaktree/Kernels/Sha3X3r/InPlaceAll.lean sha256 b3554696f1b255c8319163aaa6cc7916a079f3f4c09781a2b9fd3ef5d9b7af0d
+  inplace   lean/Keccaktree/Kernels/Sha3X3r/InPlace 3 files, git tree fe7c8f4ae00525a6d9c400242d551466f53cab84
+  gen       Sha3X3r/GenSB 27 58c9dd8ad547dcd4bc55bba75db066543b30b1ec3c57e4af193006a3b8caddd5
+  gen       Sha3X3r/GenSE1 4 5ffdeefce45aeff162a0e805ba1f6afcef9f51b6ea1269a890505c555af681d8
+  gen       Sha3X3r/GenSX 4 c7fa7c9a9969da133726ec0fca94dff9ab762066ef2cd7e894428323c562b937
+  theorem   Keccaktree.Kernels.Sha3X3r.All.all
+    axioms  propext, Classical.choice, Quot.sound + 1323 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3r.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1323 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3r.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1323 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3r.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1323 bv_decide certificates
+  theorem   Keccaktree.Kernels.Sha3X3r.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1323 bv_decide certificates
+  checker   41/41 modules leanchecker ok, 12100 s
+
+[neon_x3] AArch64
+  program   lean/Keccaktree/Kernels/NeonX3/Program.lean sha256 a1c069013325600fdf860420a427da85152d1c7d156aff2ca7b432efe6eb36ad commit a06f462
+  object    keccak256_neon_x3.o from src/keccak256_neon_x3.S commit 7785eb0
+  file      lean/Keccaktree/Kernels/NeonX3/All.lean sha256 9cae4749360f22ed8eda97a4c0c1b29a28daeaf5f3497bf1b068c0544b371f5f
+  file      lean/Keccaktree/Kernels/NeonX3/InPlaceAll.lean sha256 d46649770fbe9ab7dd93d6f8db3c9df355a15826b67a1d7c18454dec1fd2b5f2
+  inplace   lean/Keccaktree/Kernels/NeonX3/InPlace 3 files, git tree 88ac3bb98bb7dad1423ebc26a2c860aedfceeb14
+  gen       NeonX3/GenSB 27 8411926d69f2dbb67669d9c4a324078c1d51c5ce7c887b9122b1c91b8dd48f7b
+  gen       NeonX3/GenSE1 4 3c710fcc6a595f80ea7e96f5c5a29fc70b14c84a9af4d536d9179fd06dc00e1c
+  gen       NeonX3/GenSX 4 f748e4492aa88c3f05fb424572a34be19dce0d20a891de65b8c0a39448527355
+  theorem   Keccaktree.Kernels.NeonX3.All.all
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX3.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX3.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX3.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  theorem   Keccaktree.Kernels.NeonX3.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
+  checker   41/41 modules leanchecker ok, 21956 s
+
+[rv64_x1] RISC-V
+  program   lean/Keccaktree/Kernels/Rv64X1/Program.lean sha256 cf05f9579c70132216ba491959fc00f3cbea421e7b0f7046230ccba5afc00677 commit 93fa04f
+  object    keccak256_rv64_x1.o from src/keccak256_rv64_x1.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/Rv64X1/All.lean sha256 f5d7dfe1ba4cfa91b9ce2e36cdcbadf0388cce9902b3066d47856c4dcbffdc89
+  file      lean/Keccaktree/Kernels/Rv64X1/AllU.lean sha256 8171ba3cf8d3bfd165da7c3ea35b85d7a0de97de2f385b4e501207a5f93966a4
+  file      lean/Keccaktree/Kernels/Rv64X1/AllUIn.lean sha256 b0b28eea8e066eef009c143b26087d0f93e92b445d223e831e1d1917b0db46c7
+  file      lean/Keccaktree/Kernels/Rv64X1/InPlaceAll.lean sha256 25da0a1997efdf4fe90a3283d23ff1f66f7a7f7166aae0a00c414e2fd2ee06e6
+  inplace   lean/Keccaktree/Kernels/Rv64X1/InPlace 33 files, git tree ded1e4274c65f201ba1e6ed4bcf18182f4d7dc7b
+  gen       Rv64X1/GenSC 27 162f6891d6f596e8b23a236af2a791b9a6648f59fae8a51faaecbd7fef07b39d
+  gen       Rv64X1/GenSE 4 a11bcd669231cd5c308fb3f69658bc5011fb89bd08279b0b02fda875e820d142
+  gen       Rv64X1/GenSI 4 153dba21ae9a44107e5f8f6fa389fef247efb2eff1c14123a783c55f8a3fc9c5
+  gen       Rv64X1/GenSJ 4 31354a2e0318ba56bd76d98a0e127b9e07d31cc2bea85a4773798af6ff65e6f2
+  gen       Rv64X1/GenSX 4 f2f7ed7955c73da210d99e6dedd9f2ef04f394868701bc1dc96dba43e1a815fa
+  theorem   Keccaktree.Kernels.Rv64X1.All.rv64_x1_all
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.Rv64X1.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.Rv64X1.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.Rv64X1.AllU.rv64_x1_allU
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.Rv64X1.AllU.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.Rv64X1.AllU.kernelU_ch
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.Rv64X1.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.Rv64X1.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  checker   78/79 modules leanchecker ok, 10150 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
+
+[zbb_x1] RISC-V
+  program   lean/Keccaktree/Kernels/ZbbX1/Program.lean sha256 b638ac02a51972f7931976689a4bb816e51d914d2f88ccc11ae4cc87578bd4c7 commit 93fa04f
+  object    keccak256_zbb_x1.o from src/keccak256_zbb_x1.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/ZbbX1/All.lean sha256 e9a359d94d618aa584498eb27b1a405d3a4934f6c9371983bf37234a0c847afd
+  file      lean/Keccaktree/Kernels/ZbbX1/AllU.lean sha256 f59c4d36c694253f4930c7509354889a6156b117935fb3f1215e7a4b52e3dd19
+  file      lean/Keccaktree/Kernels/ZbbX1/AllUIn.lean sha256 dac6194089764965c363503ff3d30e2f21ce306ace6af9830a00ac0a50237eb2
+  file      lean/Keccaktree/Kernels/ZbbX1/InPlaceAll.lean sha256 e9d48b2e017b95baac25919654da1465b9ed38c6a1625cea19f2e4afd0c0810e
+  inplace   lean/Keccaktree/Kernels/ZbbX1/InPlace 33 files, git tree 143b7ca5767364bfab19cf3aedad021907af26aa
+  gen       ZbbX1/GenSC 27 d1f064d8bd704dabf4b69f7a9fcf1941c2708f7dc10716f58dec2df4292d3b13
+  gen       ZbbX1/GenSE 4 38cbb809a65e5caab1c7c78012f18f41fdd6373159d99abdc89d373da6cf505e
+  gen       ZbbX1/GenSI 4 d0ee53612ccc9ddbcd060ae36e118d0bdb9d3f6780f4b1bf73d12dad33d2dc4b
+  gen       ZbbX1/GenSJ 4 5b004222a30344008840addf71a706c4246567cd893701b4cee9b0cc8330201e
+  gen       ZbbX1/GenSX 4 9baf45f0aa36c053a1cc01d0f43261429a3e7fcc16ac2bf7448944fc206c98d9
+  theorem   Keccaktree.Kernels.ZbbX1.All.zbb_x1_all
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.ZbbX1.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.ZbbX1.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.ZbbX1.AllU.zbb_x1_allU
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.ZbbX1.AllU.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.ZbbX1.AllU.kernelU_ch
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.ZbbX1.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  theorem   Keccaktree.Kernels.ZbbX1.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
+  checker   79/79 modules leanchecker ok, 4120 s
+
+[rvv_v2] RISC-V VLEN 128
+  program   lean/Keccaktree/Kernels/Rvv/Program.lean sha256 5dc58df9d59a1ee7c936fcd1535d61ca4338447bc04a76ec50c3fc74b5971582 commit 93fa04f
+  object    keccak256_rvv.o from src/keccak256_rvv.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/RvvV2/All.lean sha256 ec4ec8e3e05f0daa6f4bb887b401878ee42bb8887c2f0a3ef1aa4a0d048eb620
+  file      lean/Keccaktree/Kernels/RvvV2/AllUM.lean sha256 e7b903728fddfa11d9724a7f3ae62ad72fb2d702163f087b82840a5c4bbc5f1b
+  file      lean/Keccaktree/Kernels/RvvV2/InPlaceAll.lean sha256 901410afbae4a6fa343909065cd7f1bbeddfcf5e074c8b1602ded6b6df6f87fa
+  inplace   lean/Keccaktree/Kernels/RvvV2/InPlace 52 files, git tree fbe7effe717748c0a1633a3eee2f5d6087c77145
+  gen       RvvV2/GenB1 28 383ec35edc7066836ee09525849fc581d05bac9f218690b1571918cbaccce4ee
+  gen       RvvV2/GenB2 28 45ea5c76aa1dcc1f14e84acf784e8a918b6babccf5b1796714d37452553751ba
+  gen       RvvV2/GenM1 27 f5fabd302ed6c5cb455195a74419bf4ea88fae09618d3c468901072b8b4fecc5
+  gen       RvvV2/GenM2 27 4ed1a07e2b5b3393e1c4ec04df72a90152b791153c9211f7cdc9333263ddef93
+  theorem   Keccaktree.Kernels.RvvV2.All.all
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.All.all_ch
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.AllUM.norm_thmU
+    axioms  propext, Classical.choice, Quot.sound + 2521 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.AllUM.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 2521 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV2.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  checker   165/165 modules leanchecker ok, 3885 s
+
+[rvv_v4] RISC-V VLEN 256
+  program   lean/Keccaktree/Kernels/Rvv/Program.lean sha256 5dc58df9d59a1ee7c936fcd1535d61ca4338447bc04a76ec50c3fc74b5971582 commit 93fa04f
+  object    keccak256_rvv.o from src/keccak256_rvv.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/RvvV4/All.lean sha256 ab52d5ab52b1121201fb54cc3fb590326e02d8afc48670b50a291cdb66640168
+  file      lean/Keccaktree/Kernels/RvvV4/AllUM.lean sha256 1bd80d13ff947757b6897d3829ff2aadc11c266404c4cc000d941f878fb6d40f
+  file      lean/Keccaktree/Kernels/RvvV4/InPlaceAll.lean sha256 4a42ff95b50070ff846474484c5bf11287e4bcd8350187c1097340356bab531a
+  inplace   lean/Keccaktree/Kernels/RvvV4/InPlace 104 files, git tree c2ff76526ebbba0a88e3df86924246f32a88e37c
+  gen       RvvV4/GenB1 28 5583c60cf530b956f0f4e557c469af5f8101ffec517137eff63cb281411d0df4
+  gen       RvvV4/GenB2 28 a70425a4644e2e3d348903cd1673540182a12980f1f2d00a303f9b2c37b2c79c
+  gen       RvvV4/GenB3 28 43e307265ca507d51d43f66977a8c758adda010c2ef9d9d712f3e6da2599b281
+  gen       RvvV4/GenB4 28 5c2a8cc73032b61fb1384c42f3f8862ca8ed15dc926a734eb6d8d63fa762f023
+  gen       RvvV4/GenM1 27 dc3ad297f909bb3e79edffea90dccfff9ae1e9cbf4f6f0c24ef1ba24e0b7c24e
+  gen       RvvV4/GenM2 27 6bf1d946794042fb2896e6cde982bf406c54738659279613d90c010bd4892793
+  gen       RvvV4/GenM3 27 229614be9d5e45d44c998e5a1110e0fb193a6033a9c5f283d79d418f5e3f56af
+  gen       RvvV4/GenM4 27 c25474fa96e45a4b5269517d3908fc032cc9fef06aaff4badcd106761cdb802b
+  theorem   Keccaktree.Kernels.RvvV4.All.all
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.All.all_ch
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.AllUM.norm_thmU
+    axioms  propext, Classical.choice, Quot.sound + 4837 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.AllUM.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 4837 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV4.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  checker   327/327 modules leanchecker ok, 8873 s
+
+[rvv_v8] RISC-V VLEN 512
+  program   lean/Keccaktree/Kernels/Rvv/Program.lean sha256 5dc58df9d59a1ee7c936fcd1535d61ca4338447bc04a76ec50c3fc74b5971582 commit 93fa04f
+  object    keccak256_rvv.o from src/keccak256_rvv.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/RvvV8/All.lean sha256 7be8ddfb847ecfe6aa8b76d16b76ee2e104b94f4df45f383597cd13dce7f11d5
+  file      lean/Keccaktree/Kernels/RvvV8/AllUM.lean sha256 f238b634765d8fe30f67f154f1abea7d047e97ef6117db22fd488fffb5448a37
+  file      lean/Keccaktree/Kernels/RvvV8/InPlaceAll.lean sha256 655d6e7a2644cd00bf92e9544cf291fedf92c4388a030ca61875b2200c0e771f
+  inplace   lean/Keccaktree/Kernels/RvvV8/InPlace 208 files, git tree ec4b744c098e3f8d3d8c25a48b7b04ab0ad6b7dc
+  gen       RvvV8/GenB1 28 584b0c0d5db3de456ab510b07cc13390782a447e33f58a922deef5d230321209
+  gen       RvvV8/GenB2 28 f319291b3625ef0b4b0ed819d3362923083986c50f0da0df1c8d49e3a5dc04ba
+  gen       RvvV8/GenB3 28 0eef0c593750124e627d6ca4a8797d1c3eb277c27a435c43d553173a55d3621b
+  gen       RvvV8/GenB4 28 9740d3090d8b98ed35347c19dcd24966aa1ffb67fee76f64b7ba66743fc15b86
+  gen       RvvV8/GenB5 28 9ddb79191c0d38f8f3e0db319df53097afd406e358ac28045a10d6213946c3b7
+  gen       RvvV8/GenB6 28 be68ff245f48668524bc9565187b3d99cad5c8264c3b7667e66da4be14c2fc36
+  gen       RvvV8/GenB7 28 9cef52eb11e318cec993d6c1be4f1a2f88a37ec219f66522e9e8699112802c43
+  gen       RvvV8/GenB8 28 90f856b2ccd1a596a78e8f9431723c039e452bf9de740bf4532d1cdb08d53a19
+  gen       RvvV8/GenM1 27 d5f352fb330de8754983ecf600ddf94a5861bd6466e8a5d6edd31983ee87ed60
+  gen       RvvV8/GenM2 27 c6215fa9ff13be70a00b5df72cabf7befc21557a358c38a2c84d469b4f8098b5
+  gen       RvvV8/GenM3 27 d6262d596e85c69d3fb8537e600a52e9a16c706666dc2dd419a2762f0098f202
+  gen       RvvV8/GenM4 27 59f9b5fa9e97db46bc0bc9d0ba8609c1882e673babdeb364d2460c10fb36906d
+  gen       RvvV8/GenM5 27 71103b81941e1fca7d0b72bc3f99ab3521183e48b16789155031afa79aaa8c53
+  gen       RvvV8/GenM6 27 a87955c22ccb3cca56d4b85b1db1a09280be3f41b9a88782266f8ca85d18ec5e
+  gen       RvvV8/GenM7 27 b1a937be760ce1aacd40e4802e6761d51fbc394bfdd813a56efad475862b1ec4
+  gen       RvvV8/GenM8 27 fc469f5e683027034f195be7754fae6f624fa3f975917a6a6970d59929a5e98a
+  theorem   Keccaktree.Kernels.RvvV8.All.all
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.All.all_ch
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.AllUM.norm_thmU
+    axioms  propext, Classical.choice, Quot.sound + 9469 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.AllUM.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 9469 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvV8.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  checker   651/651 modules leanchecker ok, 22873 s
+
+[rvv_zvkb_v2] RISC-V VLEN 128
+  program   lean/Keccaktree/Kernels/RvvZvkb/Program.lean sha256 42236e086f2726a6742c5568b5bdf98a393a5a141f8e7e8aee76d62f8600702c commit 93fa04f
+  object    keccak256_rvv_zvkb.o from src/keccak256_rvv_zvkb.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/RvvZvkbV2/All.lean sha256 37de53925bc229f036a0471e00b49caf92f65f591f324db06a0dd5f56462a919
+  file      lean/Keccaktree/Kernels/RvvZvkbV2/AllUM.lean sha256 afb8f6953a86a1b6a01ac19255a7a86a312df213df97d7a86da7a255049ac332
+  file      lean/Keccaktree/Kernels/RvvZvkbV2/InPlaceAll.lean sha256 eda5dba83d49953ac9d06aa480168a67a8a5c3063aee25044cc01e8dbf2bd984
+  inplace   lean/Keccaktree/Kernels/RvvZvkbV2/InPlace 52 files, git tree 7dda9807854713b2b2a574b6783d821f668e6b5b
+  gen       RvvZvkbV2/GenB1 28 8b830e5e21788580e43af91394d4390dfb7c527a0d62ce0d4237313271a337ab
+  gen       RvvZvkbV2/GenB2 28 6bb3c1336ec25f5dc0a7faa2cc852eb2ef80edd0d0fbb6d8246cd88a4490d916
+  gen       RvvZvkbV2/GenM1 27 bc5f901bfd2d6ce0ebd711f4256e4d41202d8dfcf7c0887ca507aae9ed1d1960
+  gen       RvvZvkbV2/GenM2 27 cd8957b967039a5a589d85ecc5d63e8e973edb8f227ebe3a8d6f95fabd97fed4
+  theorem   Keccaktree.Kernels.RvvZvkbV2.All.all
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.All.all_ch
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.AllUM.norm_thmU
+    axioms  propext, Classical.choice, Quot.sound + 2521 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.AllUM.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 2521 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV2.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
+  checker   165/165 modules leanchecker ok, 2065 s
+
+[rvv_zvkb_v4] RISC-V VLEN 256
+  program   lean/Keccaktree/Kernels/RvvZvkb/Program.lean sha256 42236e086f2726a6742c5568b5bdf98a393a5a141f8e7e8aee76d62f8600702c commit 93fa04f
+  object    keccak256_rvv_zvkb.o from src/keccak256_rvv_zvkb.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/RvvZvkbV4/All.lean sha256 a1d708e726a45cf2317480fd528572a4b8bbccb489e6b564a0d95ada82e54e41
+  file      lean/Keccaktree/Kernels/RvvZvkbV4/AllUM.lean sha256 96b23de53ab0fb4c2d97ae7c2a929b5e20497cceed027da0945f9f6130097d44
+  file      lean/Keccaktree/Kernels/RvvZvkbV4/InPlaceAll.lean sha256 38fee307756a0f36b7b9cf8fcfd2dc75f88217443a3d8160b2de0660bddfa8f6
+  inplace   lean/Keccaktree/Kernels/RvvZvkbV4/InPlace 104 files, git tree a57f9049b794570882c614fd6497c34f6810f103
+  gen       RvvZvkbV4/GenB1 28 03f58c80a48f6f6ab567f6b99c329c5513ec9c119f66391307e9a745fd72d141
+  gen       RvvZvkbV4/GenB2 28 df63bd81258a9715bc1813f0da640bf4f49a1637798a08784ccb0cb29c4acd9b
+  gen       RvvZvkbV4/GenB3 28 1d5663f5cf9c08ef4eb7f5904b0be7f94c78ef99a76e0862448a8bd9255a0791
+  gen       RvvZvkbV4/GenB4 28 a65edb0d93922cbb3c00ba552d460d56f03cba1169205a3152797b8de031a41e
+  gen       RvvZvkbV4/GenM1 27 aa04936b879fa91947e47ce0bc83143774d00407ec36e9e9139d44c2f61de0d7
+  gen       RvvZvkbV4/GenM2 27 fe6a01ace82597a411762a1bfb3dbd04b3c2326aa73c2438f7b36e94d87ff52b
+  gen       RvvZvkbV4/GenM3 27 80517334c31297cc429e1f260c5696ff9678ee206a32e7ef82651a2303e7d258
+  gen       RvvZvkbV4/GenM4 27 78ec97422e35da56227fab582baa9f2c5b4292f13a074868998a459558819541
+  theorem   Keccaktree.Kernels.RvvZvkbV4.All.all
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.All.all_ch
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.AllUM.norm_thmU
+    axioms  propext, Classical.choice, Quot.sound + 4837 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.AllUM.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 4837 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV4.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
+  checker   327/327 modules leanchecker ok, 4635 s
+
+[rvv_zvkb_v8] RISC-V VLEN 512
+  program   lean/Keccaktree/Kernels/RvvZvkb/Program.lean sha256 42236e086f2726a6742c5568b5bdf98a393a5a141f8e7e8aee76d62f8600702c commit 93fa04f
+  object    keccak256_rvv_zvkb.o from src/keccak256_rvv_zvkb.S commit 5ce1a55
+  file      lean/Keccaktree/Kernels/RvvZvkbV8/All.lean sha256 0fba64ae7af27f4a07d8db9ca289e6d6f1db4856f6f9bd327262323f96dafc7f
+  file      lean/Keccaktree/Kernels/RvvZvkbV8/AllUM.lean sha256 1d6fa683ed5fe49fd37c0c0b36a411bfda74c375f7417e5440d614bf3512b52a
+  file      lean/Keccaktree/Kernels/RvvZvkbV8/InPlaceAll.lean sha256 b4d2f43817aa5b9159c1dcf19469bf8a89a4a96e760bab7306c45fc5c0cb3663
+  inplace   lean/Keccaktree/Kernels/RvvZvkbV8/InPlace 208 files, git tree b915abba044de297a0a7cc0d281ce89296c854ff
+  gen       RvvZvkbV8/GenB1 28 dfb3e86f13be08b498ca381e10b0a69ac93d15c7907cb8e38ae26fad2f228111
+  gen       RvvZvkbV8/GenB2 28 7f6426ccd2acdfd67c6cf204a81e2dd3058f246b94c2966e8667785cd1eda6bb
+  gen       RvvZvkbV8/GenB3 28 2a4259a89e4048bd50d5561bfb7df4143fc9a0b77d9c05b48f66ba98120ea979
+  gen       RvvZvkbV8/GenB4 28 966bf64fa7f8e3129b40dfd6e486dfb70aaf5fe52de0ba2067bf233351cdb42c
+  gen       RvvZvkbV8/GenB5 28 77ef7a3bb009cd2da797d0333ffa24cf5cba6d9d2ff49f19fc1005048100cf0c
+  gen       RvvZvkbV8/GenB6 28 b068a13c6b9068ea254b0c90173e7f830e70ca201eb089ecadadb17f708b7e59
+  gen       RvvZvkbV8/GenB7 28 7aa3317f0d3bfdc2bc180adec1e914ca58444776a32a66e0b90d17f78e322447
+  gen       RvvZvkbV8/GenB8 28 ecd1a506c6b0b5f292145a6f2b8520fc051680e7828187eb22f074f8628bb784
+  gen       RvvZvkbV8/GenM1 27 0ce63996ae3857dd411456735a5100ec7e7c60fd106fa7b7610edcbdfd002303
+  gen       RvvZvkbV8/GenM2 27 03cbc64094585be34e86c2cdc5d5b3b3bae0f49b27952f8c4660c80365d66c4d
+  gen       RvvZvkbV8/GenM3 27 ad5f6aaac6676a1f09347ae48027145d23876f1b7edc6fbfb4b8c285442e4826
+  gen       RvvZvkbV8/GenM4 27 89d67b43a9271365b856f3e78fc8cb54d7598c961cf0f98dc28463a5503a778a
+  gen       RvvZvkbV8/GenM5 27 7c141a45b083c82c56b71efc2ef49e404df11a216458a71918e8099cb74166a6
+  gen       RvvZvkbV8/GenM6 27 87e9ab25e581ad077777b60bd4df01a4957a94fc505c190823803019bd603512
+  gen       RvvZvkbV8/GenM7 27 e9a38de2b6b6ae792fe214a00d62b1b2477c8bbda014e9d62576653eeb5bd98f
+  gen       RvvZvkbV8/GenM8 27 3e4cf12079a5ad3e19f7357c9d7e71f251170459fa88092b69f33f88eb1a2652
+  theorem   Keccaktree.Kernels.RvvZvkbV8.All.all
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.All.all_ch
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.All.norm_thm
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.All.kernel
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.All.kernel_ch
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.AllUM.norm_thmU
+    axioms  propext, Classical.choice, Quot.sound + 9469 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.AllUM.kernelU
+    axioms  propext, Classical.choice, Quot.sound + 9469 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.InPlaceAll.access_thm
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvvZvkbV8.InPlaceAll.kernelAl
+    axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
+  checker   651/651 modules leanchecker ok, 11290 s
+
+[AArch64 library] lean/Keccaktree/Kernels/ArmLib.lean sha256 4f17dffdd87834792de47b151f717e605b2d44ec5a2f3df883e4d25b4ea4f690
+  theorem   Keccaktree.Kernels.ArmLib.lib_arm_all
+    axioms  propext, Classical.choice, Quot.sound + 6631 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 10 s
+
+[AArch64 library, in place] lean/Keccaktree/Kernels/ArmLibInPlace.lean sha256 54e9012c5f72116a6a9f4e9e66f1ac700f2b7ca88c1069277d7983092298be6c
+  theorem   Keccaktree.Kernels.ArmLibInPlace.lib_inplace_arm_all
+    axioms  propext, Classical.choice, Quot.sound + 6631 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 5 s
+
+[x86-64 library (every threshold configuration)] lean/Keccaktree/Kernels/X86Lib.lean sha256 1a9108ef1e611776cbec1913d371d43b464194b98f92e1805d4b05666b09bd3d
+  theorem   Keccaktree.Kernels.X86Lib.lib_x86_all
+    axioms  propext, Classical.choice, Quot.sound + 56296 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 25 s
+
+[x86-64 library, in place] lean/Keccaktree/Kernels/X86LibInPlace.lean sha256 dac208ebf778c8d254ae7d16527f50cff324b3acc892e6291b00945b7921a159
+  theorem   Keccaktree.Kernels.X86LibInPlace.lib_inplace_x86_all
+    axioms  propext, Classical.choice, Quot.sound + 56296 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 5 s
+
+[RISC-V library (VLEN 128/256/512, any vl choice)] lean/Keccaktree/Kernels/RvLib.lean sha256 b009970717816768ec9f82a5cbf5fe10066a12b6d7bda001cd15a882e071630c
+  theorem   Keccaktree.Kernels.RvLib.lib2
+    axioms  propext, Classical.choice, Quot.sound + 3637 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLib.lib2ch
+    axioms  propext, Classical.choice, Quot.sound + 3637 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLib.lib4
+    axioms  propext, Classical.choice, Quot.sound + 5953 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLib.lib4ch
+    axioms  propext, Classical.choice, Quot.sound + 5953 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLib.lib8
+    axioms  propext, Classical.choice, Quot.sound + 10585 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLib.lib8ch
+    axioms  propext, Classical.choice, Quot.sound + 10585 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 5 s
+
+[RISC-V scalar library, any buffer alignment] lean/Keccaktree/Kernels/RvLibU.lean sha256 3eb2e64353ea94c31f76515f0e7732ef1823541a72615d437c20d0ec5e4d2bdb
+  theorem   Keccaktree.Kernels.RvLibU.libU
+    axioms  propext, Classical.choice, Quot.sound + 1320 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLibU.libU_ch
+    axioms  propext, Classical.choice, Quot.sound + 1320 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 5 s
+
+[RISC-V library, any buffer alignment] lean/Keccaktree/Kernels/RvLibUV.lean sha256 bc534e6d07d8b099a4cdf4365c9fadad73a1235278c34c73c79c487c0697d554
+  theorem   Keccaktree.Kernels.RvLibUV.lib2U
+    axioms  propext, Classical.choice, Quot.sound + 6121 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLibUV.lib4U
+    axioms  propext, Classical.choice, Quot.sound + 10753 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLibUV.lib8U
+    axioms  propext, Classical.choice, Quot.sound + 20017 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 25 s
+
+[RISC-V library, in place] lean/Keccaktree/Kernels/RvLibInPlace.lean sha256 7ab9550ac5ffc7890320ce82827e9a6a6e9a046186ca8d49cfcea4e914aacbea
+  theorem   Keccaktree.Kernels.RvLibInPlace.lib_inplace2
+    axioms  propext, Classical.choice, Quot.sound + 3637 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLibInPlace.lib_inplace4
+    axioms  propext, Classical.choice, Quot.sound + 5953 bv_decide certificates
+  theorem   Keccaktree.Kernels.RvLibInPlace.lib_inplace8
+    axioms  propext, Classical.choice, Quot.sound + 10585 bv_decide certificates
+  checker   1/1 modules leanchecker ok, 40 s
+
+[core] lean/Keccaktree/Asm/LibTable.lean, lean/Keccaktree/Dispatch.lean
+  theorem   Keccaktree.Asm.LibTable.lib_x86
+    axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
+  theorem   Keccaktree.Asm.LibTable.lib_arm
+    axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
+  theorem   Keccaktree.Asm.LibTable.lib_rv
+    axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
+  theorem   Keccaktree.Dispatch.hash_x86
+    axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
+  theorem   Keccaktree.Dispatch.hash_x86_reachable
+    axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
+  theorem   Keccaktree.Dispatch.hash_arm
+    axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
+  theorem   Keccaktree.Dispatch.hash_rv
+    axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
+  checker   67/67 modules leanchecker ok, 340 s
+
+[leanchecker total] 7246/7277 modules leanchecker ok, 785603 s summed wall time; 31/31 others re-elaborated ok (leanchecker exceeded 100 GB; listed in results/leanchecker_oom.txt; re-elaboration runs the same pipeline as the build, not an independent check)
+
+[build notes] see notes/int.md: x86 kernels replayed by hard links (closure sources identical, `lake build --no-build`
+  up to date); placeholder / truncated compiled-C lists (results/x86b_replay_placeholder_c.txt and the
+  truncation lists); offloaded olean trees (symlinks to the archive disk); regeneration notes.

@@ -1,0 +1,25 @@
+name = "keccaktree"
+version = "0.1.0"
+defaultTargets = ["Keccaktree"]
+
+[[lean_lib]]
+name = "Keccaktree"
+
+[[lean_lib]]
+name = "Tools"
+
+[[lean_exe]]
+name = "kttool"
+root = "Tools.Main"
+
+[[lean_exe]]
+name = "difftool"
+root = "Tools.Diff"
+
+[[lean_exe]]
+name = "alignaudit"
+root = "Tools.AlignAudit"
+
+[[lean_exe]]
+name = "inplaceaudit"
+root = "Tools.InplaceAudit"

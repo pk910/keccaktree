@@ -78,6 +78,21 @@ runners and attests their provenance. All bindings link these libraries.
   in-place and direct `ByteBuffer` variants. `java/build-native.sh` builds
   the JNI library from `lib/`.
 
+## Formal verification
+
+`lean/` holds a Lean 4 proof (no Mathlib) that keccaktree computes keccak256 as FIPS 202 defines it:
+
+* the portable kernels, `src/keccak256_generic.c` and the pure-Go `keccak256_1_generic.go`, for every
+  64-byte node (`cd lean && lake build`, which CI runs);
+* all 24 assembly kernels (x86-64 AVX2/AVX-512, AArch64 scalar/NEON/SHA3, RISC-V scalar/Zbb/RVV/RVV+Zvkb)
+  at the machine-code level, on the shipped object code: for every input count, including the hand-overs
+  between kernels, and in place (`out = in`); RISC-V also for misaligned buffers;
+* the CPU-feature dispatch in `keccaktree.c` only calls kernels the CPU supports.
+
+Not covered: RVV with VLEN ≥ 1024, and misaligned buffers on x86-64 and AArch64. See `lean/README.md`
+for the theorems, the trust base and how to check them, and `results/STATUS.md` for the per-kernel
+table and the attestation (`#print axioms` of every theorem, `leanchecker` replay).
+
 ## Contributing
 
 CI tests pull requests against the libraries committed in `lib/`, so a pull

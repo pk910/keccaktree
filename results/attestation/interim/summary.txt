@@ -1,0 +1,111 @@
+## arm.ArmLib.ax.txt | workspace /root/kt-arm/lean  module Keccaktree.Kernels.ArmLib  2026-11-08T12:59:07Z  Lea
+   Keccaktree.Kernels.ArmLib.table_shape: propext, Classical.choice, Quot.sound + 6631 bv_decide certs
+   Keccaktree.Kernels.ArmLib.lib_arm_all: propext, Classical.choice, Quot.sound + 6631 bv_decide certs
+## inplace_arm.ScalarX1.InPlaceAll.ax.txt | workspace /root/kt-inplace/arm  module Keccaktree.Kernels.ScalarX1.InPlaceAll  2026-11-0
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.body_access: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.loop_access: propext, Classical.choice, Quot.sound + 609 bv_decide certs
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.exit_access: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.access_all: propext, Classical.choice, Quot.sound + 609 bv_decide certs
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.access_thm: propext, Classical.choice, Quot.sound + 609 bv_decide certs
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.kernelAl: propext, Classical.choice, Quot.sound + 609 bv_decide certs
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.ranks_al: propext, Classical.choice, Quot.sound + 609 bv_decide certs
+   Keccaktree.Kernels.ScalarX1.InPlaceAll.lib_inplace_scalar_x1: propext, Classical.choice, Quot.sound + 609 bv_decide certs
+## inplace_arm2.NeonX2.InPlaceAll.ax.txt | workspace /root/kt-inplace/arm2  module Keccaktree.Kernels.NeonX2.InPlaceAll  2026-11-08
+   Keccaktree.Kernels.NeonX2.InPlaceAll.annIP_ok: propext, Quot.sound + 0 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.batch_a: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.batch_b: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.batch_c: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.loop_access: propext, Classical.choice, Quot.sound + 1185 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.exit_access: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.access_all: propext, Classical.choice, Quot.sound + 1185 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.access_thm: propext, Classical.choice, Quot.sound + 1185 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.kernelAl: propext, Classical.choice, Quot.sound + 1185 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.ranks_al: propext, Classical.choice, Quot.sound + 1185 bv_decide certs
+   Keccaktree.Kernels.NeonX2.InPlaceAll.lib_inplace_neon_x2: propext, Classical.choice, Quot.sound + 1185 bv_decide certs
+## inplace_arm2.Sha3X2.InPlaceAll.ax.txt | workspace /root/kt-inplace/arm2  module Keccaktree.Kernels.Sha3X2.InPlaceAll  2026-11-08
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.annIP_ok: propext, Quot.sound + 0 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.batch_a: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.batch_b: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.batch_c: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.loop_access: propext, Classical.choice, Quot.sound + 1187 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.exit_access: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.access_all: propext, Classical.choice, Quot.sound + 1187 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.access_thm: propext, Classical.choice, Quot.sound + 1187 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.kernelAl: propext, Classical.choice, Quot.sound + 1187 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.ranks_al: propext, Classical.choice, Quot.sound + 1187 bv_decide certs
+   Keccaktree.Kernels.Sha3X2.InPlaceAll.lib_inplace_sha3_x2: propext, Classical.choice, Quot.sound + 1187 bv_decide certs
+## inplace_arm2.Sha3X3.InPlaceAll.ax.txt | workspace /root/kt-inplace/arm2  module Keccaktree.Kernels.Sha3X3.InPlaceAll  2026-11-08
+   Keccaktree.Kernels.Sha3X3.InPlaceAll.annIP_ok: propext, Quot.sound + 0 bv_decide certs
+   Keccaktree.Kernels.Sha3X3.InPlaceAll.batch_access: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.Sha3X3.InPlaceAll.loop_access: propext, Classical.choice, Quot.sound + 1277 bv_decide certs
+   Keccaktree.Kernels.Sha3X3.InPlaceAll.exit_access: propext, Classical.choice, Quot.sound + 18 bv_decide certs
+   Keccaktree.Kernels.Sha3X3.InPlaceAll.access_all: propext, Classical.choice, Quot.sound + 1277 bv_decide certs
+   Keccaktree.Kernels.Sha3X3.InPlaceAll.access_thm: propext, Classical.choice, Quot.sound + 1277 bv_decide certs
+   Keccaktree.Kernels.Sha3X3.InPlaceAll.kernelAl: propext, Classical.choice, Quot.sound + 1277 bv_decide certs
+## lib.Keccaktree.Asm.LibTable.ax.txt | workspace /root/kt-lib/lean  module Keccaktree.Asm.LibTable  2026-11-08T12:59:40Z  Lean 
+   Keccaktree.Asm.LibTable.x86Shape_ok: propext + 0 bv_decide certs
+   Keccaktree.Asm.LibTable.armShape_ok: propext + 0 bv_decide certs
+   Keccaktree.Asm.LibTable.rvShape_ok: propext + 0 bv_decide certs
+   Keccaktree.Asm.LibTable.rank_le_maxRank: propext + 0 bv_decide certs
+   Keccaktree.Asm.LibTable.lib_arm: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Asm.LibTable.lib_rv: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+## lib.Keccaktree.Dispatch.ax.txt | workspace /root/kt-lib/lean  module Keccaktree.Dispatch  2026-11-08T12:59:38Z  Lean (ver
+   Keccaktree.Dispatch.calibrate_mem: propext + 0 bv_decide certs
+   Keccaktree.Dispatch.needsX86_closed: propext + 0 bv_decide certs
+   Keccaktree.Dispatch.detectX86_sound: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Dispatch.detectX86_cfg: propext + 0 bv_decide certs
+   Keccaktree.Dispatch.hash_x86: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Dispatch.goodPtr_detect: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Dispatch.reachable: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Dispatch.reachable_cfg: propext + 0 bv_decide certs
+   Keccaktree.Dispatch.hash_x86_reachable: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Dispatch.needsArm_closed: propext + 0 bv_decide certs
+   Keccaktree.Dispatch.detectArm_sound: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Dispatch.hash_arm: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Dispatch.detectRv_sound: propext + 0 bv_decide certs
+   Keccaktree.Dispatch.hash_rv: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+## lib.X86X1.Lib.ax.txt | workspace /root/kt-lib/lean  module Keccaktree.Kernels.X86X1.Lib  2026-11-08T12:59:39Z  
+   Keccaktree.Kernels.X86X1.Lib.norm_thm: propext, Classical.choice, Quot.sound + 721 bv_decide certs
+   Keccaktree.Kernels.X86X1.Lib.kernel: propext, Classical.choice, Quot.sound + 721 bv_decide certs
+   Keccaktree.Kernels.X86X1.Lib.ranks_ok: propext, Classical.choice, Quot.sound + 721 bv_decide certs
+   Keccaktree.Kernels.X86X1.Lib.lib_x86_x1: propext, Classical.choice, Quot.sound + 721 bv_decide certs
+## rvu.LibRvU.ax.txt | workspace /root/kt-rvu/lean  module Keccaktree.Kernels.LibRvU  2026-11-08T12:59:22Z  Lea
+   Keccaktree.Kernels.LibRvU.outcome_ovr_u: propext, Quot.sound + 0 bv_decide certs
+   Keccaktree.Kernels.LibRvU.lib_rvU: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Kernels.LibRvU.lib_rvU_ch: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+   Keccaktree.Kernels.LibRvU.words_of_bytes: propext, Classical.choice, Quot.sound + 1 bv_decide certs
+   Keccaktree.Kernels.LibRvU.normU_zero: propext, Classical.choice, Quot.sound + 0 bv_decide certs
+## rvu.RvLib2.ax.txt | workspace /root/kt-rvu/lean  module Keccaktree.Kernels.RvLib2  2026-11-08T12:59:15Z  Lea
+   Keccaktree.Kernels.RvLib.shape2: propext, Classical.choice, Quot.sound + 3637 bv_decide certs
+   Keccaktree.Kernels.RvLib.lib2: propext, Classical.choice, Quot.sound + 3637 bv_decide certs
+   Keccaktree.Kernels.RvLib.shape2ch: propext, Classical.choice, Quot.sound + 3637 bv_decide certs
+   Keccaktree.Kernels.RvLib.lib2ch: propext, Classical.choice, Quot.sound + 3637 bv_decide certs
+## rvu.RvLib4.ax.txt | workspace /root/kt-rvu/lean  module Keccaktree.Kernels.RvLib4  2026-11-08T12:59:17Z  Lea
+   Keccaktree.Kernels.RvLib.shape4: propext, Classical.choice, Quot.sound + 5953 bv_decide certs
+   Keccaktree.Kernels.RvLib.lib4: propext, Classical.choice, Quot.sound + 5953 bv_decide certs
+   Keccaktree.Kernels.RvLib.shape4ch: propext, Classical.choice, Quot.sound + 5953 bv_decide certs
+   Keccaktree.Kernels.RvLib.lib4ch: propext, Classical.choice, Quot.sound + 5953 bv_decide certs
+## rvu.RvLibU.ax.txt | workspace /root/kt-rvu/lean  module Keccaktree.Kernels.RvLibU  2026-11-08T12:59:14Z  Lea
+   Keccaktree.Kernels.RvLibU.scalarShape_noTail: propext + 0 bv_decide certs
+   Keccaktree.Kernels.RvLibU.shapeU: propext, Classical.choice, Quot.sound + 1320 bv_decide certs
+   Keccaktree.Kernels.RvLibU.libU: propext, Classical.choice, Quot.sound + 1320 bv_decide certs
+   Keccaktree.Kernels.RvLibU.shapeU_ch: propext, Classical.choice, Quot.sound + 1320 bv_decide certs
+   Keccaktree.Kernels.RvLibU.libU_ch: propext, Classical.choice, Quot.sound + 1320 bv_decide certs
+## rvu.RvLibUV2.ax.txt | workspace /root/kt-rvu/lean  module Keccaktree.Kernels.RvLibUV2  2026-11-08T12:59:21Z  L
+   Keccaktree.Kernels.RvLibUV.lib2U: propext, Classical.choice, Quot.sound + 6121 bv_decide certs
+## x86.Avx2X2.Lib.ax.txt | workspace /root/kt-x86/lean  module Keccaktree.Kernels.Avx2X2.Lib  2026-11-08T12:59:26Z 
+   Keccaktree.Kernels.Avx2X2.Lib.kernel: propext, Classical.choice, Quot.sound + 786 bv_decide certs
+## x86.Avx2X4.Lib.ax.txt | workspace /root/kt-x86/lean  module Keccaktree.Kernels.Avx2X4.Lib  2026-11-08T12:59:26Z 
+   Keccaktree.Kernels.Avx2X4.Lib.kernel: propext, Classical.choice, Quot.sound + 2201 bv_decide certs
+## x86.Avx2X4.LibV.ax.txt | workspace /root/kt-x86/lean  module Keccaktree.Kernels.Avx2X4.LibV  2026-11-08T12:59:27Z
+   Keccaktree.Kernels.Avx2X4.LibV.kernel: propext, Classical.choice, Quot.sound + 2201 bv_decide certs
+## x86.Avx2X5.Lib.ax.txt | workspace /root/kt-x86/lean  module Keccaktree.Kernels.Avx2X5.Lib  2026-11-08T12:59:28Z 
+   Keccaktree.Kernels.Avx2X5.Lib.kernel: propext, Classical.choice, Quot.sound + 1597 bv_decide certs
+## x86.Avx2X6.Lib.ax.txt | workspace /root/kt-x86/lean  module Keccaktree.Kernels.Avx2X6.Lib  2026-11-08T12:59:29Z 
+   Keccaktree.Kernels.Avx2X6.Lib.kernel: propext, Classical.choice, Quot.sound + 2294 bv_decide certs
+## x86.Avx2X8.Lib.ax.txt | workspace /root/kt-x86/lean  module Keccaktree.Kernels.Avx2X8.Lib  2026-11-08T12:59:30Z 
+   Keccaktree.Kernels.Avx2X8.Lib.kernel: propext, Classical.choice, Quot.sound + 1720 bv_decide certs
+## x86b.Avx512X8.Lib.ax.txt | workspace /root/kt-x86b/lean  module Keccaktree.Kernels.Avx512X8.Lib  2026-11-08T12:58:5
+   Keccaktree.Kernels.Avx512X8.Lib.kernel: propext, Classical.choice, Quot.sound + 4455 bv_decide certs
+## x86b.Avx512X8d.Lib.ax.txt | workspace /root/kt-x86b/lean  module Keccaktree.Kernels.Avx512X8d.Lib  2026-11-08T12:58:
+   Keccaktree.Kernels.Avx512X8d.Lib.kernel: propext, Classical.choice, Quot.sound + 4455 bv_decide certs
