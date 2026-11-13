@@ -234,3 +234,18 @@ read-only at /mnt/kt-sq; the kt-int symlinks point to /mnt/kt-sq/kt-int-lib/Kern
 equal to the old store; `lake build --no-build` ArmLib ArmLibInPlace RvLib RvLibUV RvLibInPlace up to date).  The sshfs
 mounts /mnt/kt-store{,2,3,4} (and the per-mount layout above) are gone; no further offloading is possible.  Old logs:
 /root/kt-archive/kt-int-logs.tar.zst; old store data /mnt/kt-sq/build1.
+
+## leanchecker over the final tree (2026-11-10 12:00 – 2026-11-12 21:34 UTC)
+`leanchecker` (Lean 4.35.0 toolchain) replayed every module of the final closure (7277 modules: results/leanchecker/
+lc_modules.txt), one module per process, scheduler results/final-tools/kt-int-lcsched.py (longest-first, admission
+by estimated peak RSS), final pass results/final-tools/kt-int-lcfinal.sh.  Result: **7246/7277 leanchecker ok, 0
+rejections**; the other **31** (in-place segment summary modules `<K>.InPlace.<Seg>` of the AVX2/AVX-512 kernels,
+Rv64X1/ZbbX1 GenSC, RvvV4/V8 GenB1/B3, NeonX3/Sha3X3r GenSB) were OOM-killed even alone inside a MemoryMax=100G
+cgroup (leanchecker's replay of these modules grows to > 100 GB, while elaborating the same file takes ≤ 2.6 s and
+≤ 1.1 GB); each was re-elaborated from source with `lake env lean <file>` under MemoryMax=60G: 31/31 rc=0.
+Re-elaboration runs the same pipeline as the build: it is not an independent check.  Lists:
+results/leanchecker/{leanchecker.tsv, elab.tsv, leanchecker_oom.tsv}, results/leanchecker_oom.txt.
+Incidents: 2026-11-11 ~12:00 a host-wide OOM (v2 scheduler under-estimated library modules at 12 GB vs 37–39 GB and
+small modules at < 1 GB vs up to 30 GB) took the box down until 2026-11-12 15:13; restarted with v4 (unit
+MemoryMax=100G, measured peaks, 40 GB for unmeasured library/All modules, exclusive ≥ 30 GB jobs); within that cap 57
+jobs were OOM-killed and retried alone, the box stayed up.  Summed wall time of the final rows: 785603 s (218 h).

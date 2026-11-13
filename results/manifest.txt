@@ -1,6 +1,6 @@
 # keccaktree Lean verification: manifest of the proved kernels (final tree, frozen base)
 # regenerate: python3 results/mkmanifest.py . results/gen_sha256.txt <axioms outputs> <leanchecker.tsv>
-# tree: 90a4950; base freeze e43c5ea (Iter 28ac8a7); src/ tree cf5f623007fe50a81143c856dafbc222792cba96
+# tree: 74f5893; base freeze e43c5ea (Iter 28ac8a7); src/ tree cf5f623007fe50a81143c856dafbc222792cba96
 # program : lean/Keccaktree/Kernels/<P>/Program.lean (lean/asm2lean.py of the object file), sha256, last commit
 # object  : keccak256_<k>.o assembled from src/keccak256_<k>.S at the src/ tree above; last commit of the .S
 # files   : the committed proof files of the kernel (All/Lib/AllU/AllUM/InPlace*), sha256
@@ -8,7 +8,8 @@
 #           tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner --mode=a=r,u+w,a+X --format=gnu -cf - <Ns>/<Gen> | sha256sum
 # axioms  : #print axioms on the frozen base (kt-int, final combined check): the standard axioms + the number of
 #           bv_decide certificate axioms (`<decl>._native.bv_decide.ax_*`); anything else would be listed as OTHER
-# checker : leanchecker (Lean 4.35.0) over the kernel's modules: modules ok / checked, summed wall time
+# checker : leanchecker (Lean 4.35.0) over the kernel's modules: modules ok / checked, summed wall time; modules whose
+#           leanchecker replay exceeded 100 GB: re-elaborated from source (`lake env lean`, same pipeline as the build)
 
 [x86_x1] x86-64
   program   lean/Keccaktree/Kernels/X86X1/Program.lean sha256 2b6c3d1642aa80a2c7cf642ef93bc6fa02ce4b34af5b55c0fc45bbf641da4793 commit 4454455
@@ -31,7 +32,7 @@
     axioms  propext, Classical.choice, Quot.sound + 721 bv_decide certificates
   theorem   Keccaktree.Kernels.X86X1.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 721 bv_decide certificates
-  checker   not run
+  checker   48/48 modules leanchecker ok, 1035 s
 
 [avx2_x2] x86-64
   program   lean/Keccaktree/Kernels/Avx2X2/Program.lean sha256 ee063deaa8fb62a06de24092db0776c31c98989a72b42a9e99880f693df4a37e commit 4454455
@@ -54,7 +55,7 @@
     axioms  propext, Classical.choice, Quot.sound + 786 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx2X2.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 786 bv_decide certificates
-  checker   not run
+  checker   92/92 modules leanchecker ok, 1405 s
 
 [avx2_x4] x86-64
   program   lean/Keccaktree/Kernels/Avx2X4/Program.lean sha256 af9a52cfdb5ec3fdd3e5eaa2eb35c27b596fe93c01aaab5f98a7725b252b41be commit 4454455
@@ -94,7 +95,7 @@
     axioms  propext, Classical.choice, Quot.sound + 813 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx2X4.InPlaceAllV.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 2201 bv_decide certificates
-  checker   not run
+  checker   241/241 modules leanchecker ok, 7826 s
 
 [avx2_x5] x86-64
   program   lean/Keccaktree/Kernels/Avx2X5/Program.lean sha256 b386aa262da42c4f8feed5008206fee9da3c446c609ef9ca14dfe26b1180dc5c commit 4454455
@@ -120,7 +121,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1597 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx2X5.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1597 bv_decide certificates
-  checker   not run
+  checker   111/112 modules leanchecker ok, 10559 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [avx2_x6] x86-64
   program   lean/Keccaktree/Kernels/Avx2X6/Program.lean sha256 0e4cf465eab3adda536aa2d4d3c29d83648087fade5e8d01d7a4989c42024f54 commit e2e4982
@@ -150,7 +151,7 @@
     axioms  propext, Classical.choice, Quot.sound + 2294 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx2X6.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 2294 bv_decide certificates
-  checker   not run
+  checker   135/136 modules leanchecker ok, 25137 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [avx2_x8] x86-64
   program   lean/Keccaktree/Kernels/Avx2X8/Program.lean sha256 af992f4edb062b38e110ad9369dca7a5e4c6fd12736e51d87ff30a585497351b commit 4454455
@@ -180,7 +181,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1720 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx2X8.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1720 bv_decide certificates
-  checker   not run
+  checker   141/142 modules leanchecker ok, 22739 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [avx2_x9] x86-64
   program   lean/Keccaktree/Kernels/Avx2X9/Program.lean sha256 1a1d108db9172b85d49bce87129eca843cd180fc739b8937a1e04ff764def311 commit 4454455
@@ -212,7 +213,7 @@
     axioms  propext, Classical.choice, Quot.sound + 2348 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx2X9.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 8348 bv_decide certificates
-  checker   not run
+  checker   349/354 modules leanchecker ok, 131164 s; 5 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [avx2_x10] x86-64
   program   lean/Keccaktree/Kernels/Avx2X10/Program.lean sha256 e8b153a0c880bfa4b81e2151242f2c9fd4002aa182a242fb8eee3c9ca564b3d2 commit 4454455
@@ -266,7 +267,7 @@
     axioms  propext, Classical.choice, Quot.sound + 2953 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx2X10.InPlaceAllV.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 11116 bv_decide certificates
-  checker   not run
+  checker   491/497 modules leanchecker ok, 279177 s; 6 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [avx512vl_x4] x86-64
   program   lean/Keccaktree/Kernels/Avx512vlX4/Program.lean sha256 10e7c061722baf45993a2313cf2133f38638f36d0f473210b30734ef69c077da commit 4454455
@@ -295,7 +296,7 @@
     axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx512vlX4.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
-  checker   not run
+  checker   346/346 modules leanchecker ok, 7287 s
 
 [avx512vl_x4d] x86-64
   program   lean/Keccaktree/Kernels/Avx512vlX4d/Program.lean sha256 a89f3c70e7e72e08dbe365a423abc89a29c612b790e795539116a1ef1a1a5020 commit e2e4982
@@ -324,7 +325,7 @@
     axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx512vlX4d.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 3297 bv_decide certificates
-  checker   not run
+  checker   346/346 modules leanchecker ok, 6880 s
 
 [avx512_x8] x86-64
   program   lean/Keccaktree/Kernels/Avx512X8/Program.lean sha256 6d59af822751d1d0138fb22da5c1b1b717d3d7031545512ed7cf580dd8d3d215 commit 4454455
@@ -361,7 +362,7 @@
     axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx512X8.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
-  checker   not run
+  checker   490/490 modules leanchecker ok, 14263 s
 
 [avx512_x8d] x86-64
   program   lean/Keccaktree/Kernels/Avx512X8d/Program.lean sha256 387f607e972d9adc4a16c1ad53160b999db9fd7f1eb07429f57fc8a9dc00dae2 commit e2e4982
@@ -398,7 +399,7 @@
     axioms  propext, Classical.choice, Quot.sound + 981 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx512X8d.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 4455 bv_decide certificates
-  checker   not run
+  checker   490/490 modules leanchecker ok, 13398 s
 
 [avx512_x9] x86-64
   program   lean/Keccaktree/Kernels/Avx512X9/Program.lean sha256 ee9b5d4ac71c9598d1fa835341a4278eb14317535a6f6f0fd33cc2b407643b3f commit 4454455
@@ -437,7 +438,7 @@
     axioms  propext, Classical.choice, Quot.sound + 2129 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx512X9.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 6182 bv_decide certificates
-  checker   not run
+  checker   542/550 modules leanchecker ok, 67707 s; 8 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [avx512_x9d] x86-64
   program   lean/Keccaktree/Kernels/Avx512X9d/Program.lean sha256 bd6f7f5d52385277859e6545443d52417ed3e68bb977804090694bcabb447a72 commit e2e4982
@@ -476,7 +477,7 @@
     axioms  propext, Classical.choice, Quot.sound + 2125 bv_decide certificates
   theorem   Keccaktree.Kernels.Avx512X9d.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 6178 bv_decide certificates
-  checker   not run
+  checker   542/550 modules leanchecker ok, 64554 s; 8 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [scalar_x1] AArch64
   program   lean/Keccaktree/Kernels/ScalarX1/Program.lean sha256 b3515a1bd1e36b7d6ccde3dadea63e3d676669a2127a68cad17671480061b152 commit a06f462
@@ -497,7 +498,7 @@
     axioms  propext, Classical.choice, Quot.sound + 609 bv_decide certificates
   theorem   Keccaktree.Kernels.ScalarX1.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 609 bv_decide certificates
-  checker   not run
+  checker   42/42 modules leanchecker ok, 2145 s
 
 [sha3_x2] AArch64
   program   lean/Keccaktree/Kernels/Sha3X2/Program.lean sha256 984458e0cf3e29dab68221caafd3190a15b8c56a33159c8892ef8951b970bd52 commit a06f462
@@ -523,7 +524,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1187 bv_decide certificates
   theorem   Keccaktree.Kernels.Sha3X2.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1187 bv_decide certificates
-  checker   not run
+  checker   91/91 modules leanchecker ok, 2505 s
 
 [neon_x2] AArch64
   program   lean/Keccaktree/Kernels/NeonX2/Program.lean sha256 be0f0f2de47d7a60032b6e39dd85a7aa11abc24ef72166cbfef20267070d07b4 commit a06f462
@@ -549,7 +550,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
   theorem   Keccaktree.Kernels.NeonX2.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
-  checker   not run
+  checker   91/91 modules leanchecker ok, 13700 s
 
 [sha3_x3] AArch64
   program   lean/Keccaktree/Kernels/Sha3X3/Program.lean sha256 a06b13b22420b113c4c0ff47d2bfc6f931f873852eed48b720430d1053004bce commit a06f462
@@ -570,7 +571,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1277 bv_decide certificates
   theorem   Keccaktree.Kernels.Sha3X3.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1277 bv_decide certificates
-  checker   not run
+  checker   41/41 modules leanchecker ok, 11534 s
 
 [sha3_x3r] AArch64
   program   lean/Keccaktree/Kernels/Sha3X3r/Program.lean sha256 2a96a57af0374b9f75585d9892716053de33b634d8e8130d9c418564045ef50e commit a06f462
@@ -591,7 +592,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1323 bv_decide certificates
   theorem   Keccaktree.Kernels.Sha3X3r.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1323 bv_decide certificates
-  checker   not run
+  checker   41/41 modules leanchecker ok, 12100 s
 
 [neon_x3] AArch64
   program   lean/Keccaktree/Kernels/NeonX3/Program.lean sha256 a1c069013325600fdf860420a427da85152d1c7d156aff2ca7b432efe6eb36ad commit a06f462
@@ -612,7 +613,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
   theorem   Keccaktree.Kernels.NeonX3.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1185 bv_decide certificates
-  checker   not run
+  checker   41/41 modules leanchecker ok, 21956 s
 
 [rv64_x1] RISC-V
   program   lean/Keccaktree/Kernels/Rv64X1/Program.lean sha256 cf05f9579c70132216ba491959fc00f3cbea421e7b0f7046230ccba5afc00677 commit 93fa04f
@@ -643,7 +644,7 @@
     axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
   theorem   Keccaktree.Kernels.Rv64X1.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
-  checker   not run
+  checker   78/79 modules leanchecker ok, 10150 s; 1 re-elaborated ok (leanchecker exceeded 100 GB)
 
 [zbb_x1] RISC-V
   program   lean/Keccaktree/Kernels/ZbbX1/Program.lean sha256 b638ac02a51972f7931976689a4bb816e51d914d2f88ccc11ae4cc87578bd4c7 commit 93fa04f
@@ -674,7 +675,7 @@
     axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
   theorem   Keccaktree.Kernels.ZbbX1.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 741 bv_decide certificates
-  checker   not run
+  checker   79/79 modules leanchecker ok, 4120 s
 
 [rvv_v2] RISC-V VLEN 128
   program   lean/Keccaktree/Kernels/Rvv/Program.lean sha256 5dc58df9d59a1ee7c936fcd1535d61ca4338447bc04a76ec50c3fc74b5971582 commit 93fa04f
@@ -705,7 +706,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
   theorem   Keccaktree.Kernels.RvvV2.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
-  checker   not run
+  checker   165/165 modules leanchecker ok, 3885 s
 
 [rvv_v4] RISC-V VLEN 256
   program   lean/Keccaktree/Kernels/Rvv/Program.lean sha256 5dc58df9d59a1ee7c936fcd1535d61ca4338447bc04a76ec50c3fc74b5971582 commit 93fa04f
@@ -740,7 +741,7 @@
     axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
   theorem   Keccaktree.Kernels.RvvV4.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
-  checker   not run
+  checker   327/327 modules leanchecker ok, 8873 s
 
 [rvv_v8] RISC-V VLEN 512
   program   lean/Keccaktree/Kernels/Rvv/Program.lean sha256 5dc58df9d59a1ee7c936fcd1535d61ca4338447bc04a76ec50c3fc74b5971582 commit 93fa04f
@@ -783,7 +784,7 @@
     axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
   theorem   Keccaktree.Kernels.RvvV8.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
-  checker   not run
+  checker   651/651 modules leanchecker ok, 22873 s
 
 [rvv_zvkb_v2] RISC-V VLEN 128
   program   lean/Keccaktree/Kernels/RvvZvkb/Program.lean sha256 42236e086f2726a6742c5568b5bdf98a393a5a141f8e7e8aee76d62f8600702c commit 93fa04f
@@ -814,7 +815,7 @@
     axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
   theorem   Keccaktree.Kernels.RvvZvkbV2.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 1186 bv_decide certificates
-  checker   not run
+  checker   165/165 modules leanchecker ok, 2065 s
 
 [rvv_zvkb_v4] RISC-V VLEN 256
   program   lean/Keccaktree/Kernels/RvvZvkb/Program.lean sha256 42236e086f2726a6742c5568b5bdf98a393a5a141f8e7e8aee76d62f8600702c commit 93fa04f
@@ -849,7 +850,7 @@
     axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
   theorem   Keccaktree.Kernels.RvvZvkbV4.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 2344 bv_decide certificates
-  checker   not run
+  checker   327/327 modules leanchecker ok, 4635 s
 
 [rvv_zvkb_v8] RISC-V VLEN 512
   program   lean/Keccaktree/Kernels/RvvZvkb/Program.lean sha256 42236e086f2726a6742c5568b5bdf98a393a5a141f8e7e8aee76d62f8600702c commit 93fa04f
@@ -892,27 +893,27 @@
     axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
   theorem   Keccaktree.Kernels.RvvZvkbV8.InPlaceAll.kernelAl
     axioms  propext, Classical.choice, Quot.sound + 4660 bv_decide certificates
-  checker   not run
+  checker   651/651 modules leanchecker ok, 11290 s
 
 [AArch64 library] lean/Keccaktree/Kernels/ArmLib.lean sha256 4f17dffdd87834792de47b151f717e605b2d44ec5a2f3df883e4d25b4ea4f690
   theorem   Keccaktree.Kernels.ArmLib.lib_arm_all
     axioms  propext, Classical.choice, Quot.sound + 6631 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 10 s
 
 [AArch64 library, in place] lean/Keccaktree/Kernels/ArmLibInPlace.lean sha256 54e9012c5f72116a6a9f4e9e66f1ac700f2b7ca88c1069277d7983092298be6c
   theorem   Keccaktree.Kernels.ArmLibInPlace.lib_inplace_arm_all
     axioms  propext, Classical.choice, Quot.sound + 6631 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 5 s
 
 [x86-64 library (every threshold configuration)] lean/Keccaktree/Kernels/X86Lib.lean sha256 1a9108ef1e611776cbec1913d371d43b464194b98f92e1805d4b05666b09bd3d
   theorem   Keccaktree.Kernels.X86Lib.lib_x86_all
     axioms  propext, Classical.choice, Quot.sound + 56296 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 25 s
 
 [x86-64 library, in place] lean/Keccaktree/Kernels/X86LibInPlace.lean sha256 dac208ebf778c8d254ae7d16527f50cff324b3acc892e6291b00945b7921a159
   theorem   Keccaktree.Kernels.X86LibInPlace.lib_inplace_x86_all
     axioms  propext, Classical.choice, Quot.sound + 56296 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 5 s
 
 [RISC-V library (VLEN 128/256/512, any vl choice)] lean/Keccaktree/Kernels/RvLib.lean sha256 b009970717816768ec9f82a5cbf5fe10066a12b6d7bda001cd15a882e071630c
   theorem   Keccaktree.Kernels.RvLib.lib2
@@ -927,14 +928,14 @@
     axioms  propext, Classical.choice, Quot.sound + 10585 bv_decide certificates
   theorem   Keccaktree.Kernels.RvLib.lib8ch
     axioms  propext, Classical.choice, Quot.sound + 10585 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 5 s
 
 [RISC-V scalar library, any buffer alignment] lean/Keccaktree/Kernels/RvLibU.lean sha256 3eb2e64353ea94c31f76515f0e7732ef1823541a72615d437c20d0ec5e4d2bdb
   theorem   Keccaktree.Kernels.RvLibU.libU
     axioms  propext, Classical.choice, Quot.sound + 1320 bv_decide certificates
   theorem   Keccaktree.Kernels.RvLibU.libU_ch
     axioms  propext, Classical.choice, Quot.sound + 1320 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 5 s
 
 [RISC-V library, any buffer alignment] lean/Keccaktree/Kernels/RvLibUV.lean sha256 bc534e6d07d8b099a4cdf4365c9fadad73a1235278c34c73c79c487c0697d554
   theorem   Keccaktree.Kernels.RvLibUV.lib2U
@@ -943,7 +944,7 @@
     axioms  propext, Classical.choice, Quot.sound + 10753 bv_decide certificates
   theorem   Keccaktree.Kernels.RvLibUV.lib8U
     axioms  propext, Classical.choice, Quot.sound + 20017 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 25 s
 
 [RISC-V library, in place] lean/Keccaktree/Kernels/RvLibInPlace.lean sha256 7ab9550ac5ffc7890320ce82827e9a6a6e9a046186ca8d49cfcea4e914aacbea
   theorem   Keccaktree.Kernels.RvLibInPlace.lib_inplace2
@@ -952,7 +953,7 @@
     axioms  propext, Classical.choice, Quot.sound + 5953 bv_decide certificates
   theorem   Keccaktree.Kernels.RvLibInPlace.lib_inplace8
     axioms  propext, Classical.choice, Quot.sound + 10585 bv_decide certificates
-  checker   not run
+  checker   1/1 modules leanchecker ok, 40 s
 
 [core] lean/Keccaktree/Asm/LibTable.lean, lean/Keccaktree/Dispatch.lean
   theorem   Keccaktree.Asm.LibTable.lib_x86
@@ -969,7 +970,9 @@
     axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
   theorem   Keccaktree.Dispatch.hash_rv
     axioms  propext, Classical.choice, Quot.sound + 0 bv_decide certificates
-  checker   not run
+  checker   67/67 modules leanchecker ok, 340 s
+
+[leanchecker total] 7246/7277 modules leanchecker ok, 785603 s summed wall time; 31/31 others re-elaborated ok (leanchecker exceeded 100 GB; listed in results/leanchecker_oom.txt; re-elaboration runs the same pipeline as the build, not an independent check)
 
 [build notes] see notes/int.md: x86 kernels replayed by hard links (closure sources identical, `lake build --no-build`
   up to date); placeholder / truncated compiled-C lists (results/x86b_replay_placeholder_c.txt and the

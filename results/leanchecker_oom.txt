@@ -1,0 +1,35 @@
+# Modules whose leanchecker replay exceeded 100 GB (OOM-killed inside a MemoryMax=100G cgroup, run alone);
+# each was instead re-elaborated from source with `lake env lean <file>` (MemoryMax=60G): rc=0 for all.
+# Re-elaboration runs the same pipeline as the build; it is NOT an independent check like leanchecker.
+# module	leanchecker_rc	leanchecker_peak_KB_at_kill	elab_rc	elab_wall_s	elab_peak_KB
+Keccaktree.Kernels.Avx2X5.InPlace.GenBb	143		0	1.74	925124
+Keccaktree.Kernels.Avx2X6.InPlace.GenBb	143		0	2.01	979064
+Keccaktree.Kernels.Avx2X8.InPlace.GenBb	143		0	1.96	963748
+Keccaktree.Kernels.Avx2X9.InPlace.GenBb	143		0	2.35	1027860
+Keccaktree.Kernels.Avx2X9.InPlace.GenX0	143		0	2.17	1002856
+Keccaktree.Kernels.Avx2X9.InPlace.GenX1	143		0	2.17	1006504
+Keccaktree.Kernels.Avx2X9.InPlace.GenX2	143		0	2.15	1017276
+Keccaktree.Kernels.Avx2X9.InPlace.GenX3	143		0	2.14	1015748
+Keccaktree.Kernels.Avx2X10.InPlace.GenBb	143		0	2.61	1085280
+Keccaktree.Kernels.Avx2X10.InPlace.GenX0	143		0	2.17	1010792
+Keccaktree.Kernels.Avx2X10.InPlace.GenX1	143		0	2.19	1018252
+Keccaktree.Kernels.Avx2X10.InPlace.GenX2	143		0	2.20	1018320
+Keccaktree.Kernels.Avx2X10.InPlace.GenX3	143		0	2.25	1022688
+Keccaktree.Kernels.Avx2X10.InPlace.GenX4	143		0	2.49	1067452
+Keccaktree.Kernels.Avx512X9.InPlace.GenBb	143		0	0.66	946284
+Keccaktree.Kernels.Avx512X9.InPlace.GenX0	143		0	1.48	911920
+Keccaktree.Kernels.Avx512X9.InPlace.GenX1	143		0	1.49	909432
+Keccaktree.Kernels.Avx512X9.InPlace.GenX2	143		0	1.47	915536
+Keccaktree.Kernels.Avx512X9.InPlace.GenX3	143		0	1.51	916728
+Keccaktree.Kernels.Avx512X9.InPlace.GenX4	143		0	1.44	915624
+Keccaktree.Kernels.Avx512X9.InPlace.GenX5	143		0	1.57	918852
+Keccaktree.Kernels.Avx512X9.InPlace.GenX6	143		0	1.56	928032
+Keccaktree.Kernels.Avx512X9d.InPlace.GenBb	143		0	1.62	929200
+Keccaktree.Kernels.Avx512X9d.InPlace.GenX0	143		0	1.44	910476
+Keccaktree.Kernels.Avx512X9d.InPlace.GenX1	143		0	1.51	909792
+Keccaktree.Kernels.Avx512X9d.InPlace.GenX2	143		0	1.61	913624
+Keccaktree.Kernels.Avx512X9d.InPlace.GenX3	143		0	1.45	1026132
+Keccaktree.Kernels.Avx512X9d.InPlace.GenX4	143		0	1.34	915300
+Keccaktree.Kernels.Avx512X9d.InPlace.GenX5	143		0	1.56	924156
+Keccaktree.Kernels.Avx512X9d.InPlace.GenX6	143		0	1.56	930080
+Keccaktree.Kernels.Rv64X1.InPlace.GenSC	143		0	0.76	907764
