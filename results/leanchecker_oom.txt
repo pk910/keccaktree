@@ -1,6 +1,9 @@
 # Modules whose leanchecker replay exceeded 100 GB (OOM-killed inside a MemoryMax=100G cgroup, run alone);
 # each was instead re-elaborated from source with `lake env lean <file>` (MemoryMax=60G): rc=0 for all.
 # Re-elaboration runs the same pipeline as the build; it is NOT an independent check like leanchecker.
+# leanchecker_rc 143 is the SIGTERM systemd sends when it stops the scope after the cgroup OOM kill, so /usr/bin/time
+# recorded no peak. The kills are in the kernel log, results/leanchecker/lcfinal_kernel_oom.txt: 31 memcg OOM kills of
+# leanchecker, one per module, each in its own run-*.scope, at anon-rss 104617764-104649480 kB (the 100 GB cap).
 # module	leanchecker_rc	leanchecker_peak_KB_at_kill	elab_rc	elab_wall_s	elab_peak_KB
 Keccaktree.Kernels.Avx2X5.InPlace.GenBb	143		0	1.74	925124
 Keccaktree.Kernels.Avx2X6.InPlace.GenBb	143		0	2.01	979064
