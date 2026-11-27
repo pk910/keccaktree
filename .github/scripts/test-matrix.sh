@@ -33,7 +33,7 @@ run() { # arch qemu cpu expect
 	local arch="$1" qemu="$2" cpu="$3" expect="$4"
 	local log="$BIN_DIR/$arch.log"
 	KECCAKTREE_EXPECT_PATH="$expect" "$qemu" -cpu "$cpu" "$BIN_DIR/$arch.test" \
-		-test.run 'TestHash|TestZeroHashChain|TestErrors|TestForcedPaths|TestActivePathMatchesEnv' \
+		-test.run 'TestHash|TestZeroHashChain|TestErrors|TestForcedPaths|TestActivePathMatchesEnv|TestSelect' \
 		>"$log" 2>&1
 	local rc=$?
 	if [ $rc -eq 0 ]; then
@@ -50,28 +50,28 @@ build amd64 gcc
 build arm64 aarch64-linux-gnu-gcc
 build riscv64 riscv64-linux-gnu-gcc
 
-# Where several kernels run, detection times them and keeps the fastest, so
-# under TCG any of them may win: the matrix checks the feature tier.
-SHA3='sha3_x3|sha3_x3r|sha3_x2'
-# the AVX2 kernels need BMI1/BMI2 for their x86_x1 tail; BMI without AVX2
-# runs x86_x1 alone
-AVX2='avx2_x10|avx2_x9|avx2_x6|avx2_x5|avx2_x8|avx2_x4'
+# Selection reads the CPU's feature bits and identification only (vendor,
+# family, MIDR), so every -cpu model has exactly one kernel, and
+# TestSelectionMatchesC checks that Go and the C library agree on it.
+# The AVX2 kernels need BMI1/BMI2 for their x86_x1 tail; BMI without AVX2
+# runs x86_x1 alone. qemu's "max" arm64 CPU has no known implementer.
 
 echo "=== matrix ==="
 run amd64 qemu-x86_64  'qemu64'     generic
-run amd64 qemu-x86_64  'Haswell'    "$AVX2"
+run amd64 qemu-x86_64  'Haswell'    avx2_x8
+run amd64 qemu-x86_64  'EPYC'       avx2_x10
 run amd64 qemu-x86_64  'Haswell,avx2=off' x86_x1
 run amd64 qemu-x86_64  'Haswell,bmi1=off,bmi2=off' generic
-run arm64 qemu-aarch64 'cortex-a57' 'neon_x3|neon_x2|scalar_x1'
-run arm64 qemu-aarch64 'max'        "$SHA3"
-run arm64 qemu-aarch64 'neoverse-n1' 'neon_x3|neon_x2|scalar_x1'
-run arm64 qemu-aarch64 'neoverse-n2' "$SHA3"
+run arm64 qemu-aarch64 'cortex-a57' neon_x2
+run arm64 qemu-aarch64 'max'        sha3_x2
+run arm64 qemu-aarch64 'neoverse-n1' neon_x3
+run arm64 qemu-aarch64 'neoverse-n2' sha3_x3
 run riscv64 qemu-riscv64 'rv64,zbb=false'                 rv64_x1
-run riscv64 qemu-riscv64 'rv64'                           'rv64_x1|zbb_x1'
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=128'           'rv64_x1|zbb_x1|rvv'
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=256'           'rv64_x1|zbb_x1|rvv'
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zbb=false' 'rv64_x1|rvv'
-run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zvkb=true' 'rv64_x1|zbb_x1|rvv|rvv_zvkb'
+run riscv64 qemu-riscv64 'rv64'                           zbb_x1
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128'           zbb_x1
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=256'           rvv
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zbb=false' rvv
+run riscv64 qemu-riscv64 'rv64,v=true,vlen=128,zvkb=true' rvv_zvkb
 
 echo "=== result: $([ $fail -eq 0 ] && echo ALL GREEN || echo FAILURES) ==="
 exit $fail

@@ -86,7 +86,7 @@ int main(void) {
     uint32_t a = 0, b = 0, c = 0, d = 0;
     __get_cpuid_count(7, 0, &a, &b, &c, &d);
     int bmi = (b & bit_BMI) && (b & bit_BMI2), avx2 = bmi && (b & bit_AVX2);
-    int avx512 = (b & bit_AVX512F) && (b & bit_AVX512VL), sha = b & bit_SHA;
+    int avx512 = (b & bit_AVX512F) && (b & bit_AVX512VL) && (b & bit_AVX512BW), sha = b & bit_SHA;
     (void)sha;
     if (bmi) row("keccak256 x86_x1", keccaktree_keccak256_x86_x1);
     if (avx2) row("keccak256 avx2_x2", keccaktree_keccak256_avx2_x2);
@@ -96,6 +96,7 @@ int main(void) {
     if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x10", keccaktree_keccak256_avx2_x10);
     if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x5", keccaktree_keccak256_avx2_x5);
     if (avx2 && (b & bit_BMI) && (b & bit_BMI2)) row("keccak256 avx2_x6", keccaktree_keccak256_avx2_x6);
+    if (avx2 && (c & (1u << 22))) row("keccak256 avx2_hybrid", keccaktree_keccak256_avx2_hybrid);
     if (avx512) row("keccak256 avx512vl_x4", keccaktree_keccak256_avx512vl_x4);
     if (avx512) row("keccak256 avx512_x8", keccaktree_keccak256_avx512_x8);
     if (avx512) row("keccak256 avx512_x9", keccaktree_keccak256_avx512_x9);

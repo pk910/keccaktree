@@ -24,7 +24,7 @@
  * (1.025x / 1.31x at 64..1024 nodes); the chunk pacing does not matter
  * (2.0..3.0 per hook within 0.7%). On Golden Cove the scalar ops take
  * the vector ports (0.72x of avx2_x4), on Zen 3 avx2_x10 wins (x6 0.77x
- * of it); the calibration picks.
+ * of it), so keccaktree_detect picks this kernel for Atom cores only.
  *
  * Tail (Gracemont costs per node: a batch here 183 ns, avx2_x5 188, avx2_x4
  * 239, a padded x4 batch of 3 nodes 320, x86_x1 278, the lane-pair kernel
