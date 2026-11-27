@@ -42,6 +42,7 @@ static int cpu_supports(const char* name) {
         return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
     if (!strncmp(name, "avx512", 6))
         return __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512vl") &&
+               __builtin_cpu_supports("avx512bw") &&
                __builtin_cpu_supports("bmi") && __builtin_cpu_supports("bmi2");
 #elif defined(__aarch64__) && defined(__APPLE__)
     if (!strncmp(name, "sha3_", 5))

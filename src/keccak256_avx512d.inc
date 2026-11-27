@@ -35,8 +35,8 @@
  * the macro-ops it renames (avx512_x8 and avx512vl_x4 take the same time
  * per round there), and this round has 5 fewer. Ice Lake, bound by its
  * two 512-bit ALU ports, loses 6.5% to the 5 extra ALU ops, so these
- * rounds are separate kernels and keccaktree_detect times them against the
- * old ones:
+ * rounds are separate kernels and keccaktree_detect picks by the core
+ * (keccaktree.c):
  *   Zen 4 (EPYC 9V74): avx512_x8d 1.12x avx512_x8, avx512_x9d 1.166x
  *     avx512_x9 (43.4 ns/node), avx512vl_x4d 1.18x avx512vl_x4
  *   Zen 5 (EPYC 9V45): avx512_x8d 1.19x (20.9 ns/node), avx512vl_x4d 1.17x

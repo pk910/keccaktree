@@ -6,8 +6,8 @@ package cgo
 #cgo CFLAGS: -I${SRCDIR}/../src
 #include "keccaktree.h"
 
-// Name of the kernel keccaktree_detect picks; the Go wrappers call the
-// kernels directly and set their dispatch flags from it.
+// Name of the kernel keccaktree_detect picks. The Go bindings select the
+// kernel themselves, by the same rules; the tests compare the two.
 static const char* keccaktree_go_detect(void) {
 	keccaktree_hash_fcn f = keccaktree_detect();
 #ifdef __x86_64__
@@ -17,6 +17,7 @@ static const char* keccaktree_go_detect(void) {
 	if (f == keccaktree_keccak256_avx512_x9) return "avx512_x9";
 	if (f == keccaktree_keccak256_avx512_x8) return "avx512_x8";
 	if (f == keccaktree_keccak256_avx512vl_x4) return "avx512vl_x4";
+	if (f == keccaktree_keccak256_avx2_hybrid) return "avx2_hybrid";
 	if (f == keccaktree_keccak256_avx2_x10) return "avx2_x10";
 	if (f == keccaktree_keccak256_avx2_x9) return "avx2_x9";
 	if (f == keccaktree_keccak256_avx2_x5) return "avx2_x5";
@@ -45,9 +46,8 @@ static const char* keccaktree_go_detect(void) {
 import "C"
 
 // Detect returns the name of the kernel the C library's auto-detection
-// picks on this CPU: it probes the CPU features, then times the supported
-// kernels once on a small batch and keeps the fastest. Each call measures
-// again, so call it once.
+// picks on this CPU. It only reads what the CPU reports (CPUID, AT_HWCAP,
+// hw.optional, riscv_hwprobe); nothing is run or timed.
 func Detect() string {
 	return C.GoString(C.keccaktree_go_detect())
 }

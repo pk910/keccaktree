@@ -5,8 +5,8 @@ package keccaktree
 import (
 	"github.com/klauspost/cpuid/v2"
 
-	// links the static library; Detect runs its kernel selection
-	ktcgo "github.com/pk910/keccaktree/cgo"
+	// links the static library
+	_ "github.com/pk910/keccaktree/cgo"
 )
 
 //go:noescape
@@ -16,10 +16,8 @@ func KeccaktreeHash(output *byte, input *byte, count uint64)
 var hasSHA3 = cpuid.CPU.Supports(cpuid.SHA3)
 
 // The kernels KeccaktreeHash can call: the values are the ones
-// wrapper_arm64.s switches on (its KERNEL_* defines), the names the ones
-// cgo.Detect returns. Which supported kernel is fastest depends on the
-// core, not on a feature bit, so init takes the choice of the C library's
-// detection, which times them once (keccaktree_detect in src/keccaktree.c).
+// wrapper_arm64.s switches on (its KERNEL_* defines), the names those of
+// the C library (keccaktree_keccak256_<name>).
 const (
 	kernelNeonX2 uint8 = iota // also the wrapper's default
 	kernelNeonX3
@@ -41,17 +39,13 @@ var kernelNames = [...]string{
 // kernel is the one KeccaktreeHash calls, read by the wrapper.
 var kernel uint8
 
-// kernelByName maps a cgo.Detect name to the wrapper's kernel id. A name
-// the wrapper does not know (a kernel added to the C library but not
-// wired here yet) falls back to the widest kernel of the feature tier.
-func kernelByName(name string) uint8 {
-	for id, n := range kernelNames {
-		if n == name {
-			return uint8(id)
-		}
-	}
-	if hasSHA3 {
-		return kernelSha3X2
+// selectKernel is keccaktree_detect of src/keccaktree.c for macOS: Apple
+// cores run an EOR/BIC with a rotated operand at a lower rate, so they get
+// sha3_x3r, the hybrid with explicit rotations (M1: 66 ns per node against
+// 77 for sha3_x2). Nothing is run or timed.
+func selectKernel(sha3 bool) uint8 {
+	if sha3 {
+		return kernelSha3X3r
 	}
 	return kernelNeonX2
 }
@@ -61,5 +55,5 @@ func init() {
 	// neon_x2 path is always safe; the id only selects faster paths.
 	supportedCPU = true
 	keccaktreeHash = KeccaktreeHash
-	kernel = kernelByName(ktcgo.Detect())
+	kernel = selectKernel(hasSHA3)
 }

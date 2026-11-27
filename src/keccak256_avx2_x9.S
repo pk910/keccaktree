@@ -36,28 +36,30 @@
  * x9 730, a padded x10 batch 660. So after a batch: 1..2 nodes to
  * x86_x1, 3..4 to avx2_x4 (3 padded there), 5 to avx2_x5, 6..9 a padded
  * batch here (x5 and the scalar kernel for 6: 1443 vs 1301 for 16
- * nodes), unless the calibration (keccaktree_avx2_x10_mid_tail) found
- * that avx2_x5 and its tail are faster for 6..9 as well (Gracemont: x5 +
- * x1 for 6 nodes 1210 vs a padded x10 1900).
+ * nodes). Gracemont would hash 6..9 faster through avx2_x5 and its tail
+ * (x5 + x1 for 6 nodes 1210 vs a padded x10 1900), but runs avx2_x6.
  * At entry everything is hot and the counts below go whole to the kernel
  * that wins there: 5..6 to avx2_x5 (375, 593 with its x1 tail; the x4
  * chain costs 592, 728), 8 to avx2_x8 (650 vs 660), 12 to x8 + x4 (1022
  * vs x10 + 2 x1 1110) and 16 to two x8 batches (1300 vs x10 + a padded
- * x10 1330). Everything else: 1 and 2 at entry go through avx2_x4 (so 2
- * nodes reach the lane-pair kernel, 356), 7 and 9 are padded batches
- * (660 vs 744 and 870 through x8). */
+ * x10 1330), 2 to the lane-pair kernel avx2_x2 (356; 1.08x a padded
+ * avx2_x4 batch on Zen 3, while it loses 13% on Raptor Cove, which runs
+ * avx2_x8 and pads). Everything else: 1 at entry goes to x86_x1, 7 and 9
+ * are padded batches (660 vs 744 and 870 through x8). */
 #define SMALL_TAIL_X1	keccaktree_keccak256_x86_x1
 #define SMALL_TAIL_X1_MAX_AFTER	2
 #define SMALL_TAIL	keccaktree_keccak256_avx2_x4
 #define SMALL_TAIL_MAX	4
 #if NS == 2
 #define SMALL_TAIL_MID	keccaktree_keccak256_avx2_x5
-#define SMALL_TAIL_MID_MAX_VAR	.Lmid_tail_max
+#define SMALL_TAIL_MID_MAX	5
 #endif
 #define ENTRY_ALT	keccaktree_keccak256_avx2_x8
 #define ENTRY_ALT_MASK	((1 << 8) | (1 << 12) | (1 << 16))
 #define ENTRY_ALT2	keccaktree_keccak256_avx2_x5
 #define ENTRY_ALT2_MASK	((1 << 5) | (1 << 6))
+#define ENTRY_ALT3	keccaktree_keccak256_avx2_x2
+#define ENTRY_ALT3_MASK	(1 << 2)
 #define SAVE_GPRS
 #include "keccak256_x86_frame.inc"
 
@@ -218,27 +220,6 @@
 	FUNCTION keccaktree_keccak256_avx2_x9
 #else
 	FUNCTION keccaktree_keccak256_avx2_x10
-
-/* void keccaktree_avx2_x10_mid_tail(uint64_t max): after an x10 batch,
- * 5..max remaining nodes go to keccaktree_keccak256_avx2_x5 (and its
- * tail), more to a padded x10 batch; max = 4 pads 5..9 (the default;
- * keccaktree_detect sets 5 or 9) */
-.data
-.p2align 3
-.Lmid_tail_max:
-	.quad 4
-.text
-.p2align 4
-.globl keccaktree_avx2_x10_mid_tail
-#ifndef _WIN64
-.type keccaktree_avx2_x10_mid_tail,%function
-#endif
-keccaktree_avx2_x10_mid_tail:
-	mov		qword ptr [rip + .Lmid_tail_max], ARG_OUT
-	ret
-#ifndef _WIN64
-.size keccaktree_avx2_x10_mid_tail, .-keccaktree_avx2_x10_mid_tail
-#endif
 #endif
 	AVX2_RODATA
 

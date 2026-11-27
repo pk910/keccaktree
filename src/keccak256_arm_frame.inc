@@ -7,6 +7,13 @@
  * Calling convention (both ABIs): x0 = output, x1 = input, x2 = count;
  * x19..x28, d8..d15 (low halves) are callee-saved; x18 is reserved on macOS
  * and never used here.
+ *
+ * Branch target identification: every entry starts with `bti c` (hint
+ * #34, a NOP before Armv8.5), since the kernels are called through
+ * function pointers and tail-called across objects (a veneer or PLT stub
+ * branches through x16/x17, which `bti c` accepts); all other branches are
+ * direct. The ELF objects say so in .note.gnu.property: one object
+ * without the note switches BTI off for the whole program.
  */
 .macro FUNCTION name
 .text
@@ -19,6 +26,7 @@ _\name:
 .type \name,%function
 \name:
 #endif
+	hint		#34			/* bti c */
 .endm
 
 .macro END_FUNCTION name
@@ -63,5 +71,12 @@ _\name:
 .macro GNU_STACK_NOTE
 #if defined(__ELF__)
 .section .note.GNU-stack,"",@progbits
+/* GNU_PROPERTY_AARCH64_FEATURE_1_AND = BTI */
+.pushsection .note.gnu.property, "a"
+.p2align 3
+	.long 4, 16, 5			/* namesz, descsz, NT_GNU_PROPERTY_TYPE_0 */
+	.asciz "GNU"
+	.long 0xc0000000, 4, 1, 0
+.popsection
 #endif
 .endm

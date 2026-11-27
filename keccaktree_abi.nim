@@ -65,6 +65,7 @@ else:
       {.compile(asmDir & "keccak256_avx2_x5.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x6.S", asmFlags).}
       {.compile(asmDir & "keccak256_avx2_x2.S", asmFlags).}
+      {.compile(asmDir & "keccak256_avx2_hybrid.S", asmFlags).}
       {.compile(asmDir & "keccak256_x86_x1.S", asmFlags).}
     elif defined(arm64):
       {.compile(asmDir & "keccak256_neon_x2.S", asmFlags).}
@@ -111,17 +112,12 @@ when keccaktreeAsm and defined(amd64):
     keccaktreedecl.}
   func keccaktree_keccak256_avx2_x10*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
-  # the AVX2 kernels' tails: lane pairs for 2 remaining nodes (when
-  # keccaktree_avx2_small_tail(2) enables them, as detection does where
-  # they win), one node in the integer registers (BMI1 + BMI2)
+  # lane pairs (avx2_x10 hands calls of 2 nodes to them) and one node in
+  # the integer registers (BMI1 + BMI2), the AVX2 kernels' single-node tail
   func keccaktree_keccak256_avx2_x2*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_x86_x1*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
-  proc keccaktree_avx2_small_tail*(max: uint64) {.keccaktreedecl.}
-  # 5..max remaining nodes of avx2_x10/x9 go to avx2_x5 (4..9), the rest run
-  # as a padded batch; detection times both and sets it
-  proc keccaktree_avx2_x10_mid_tail*(max: uint64) {.keccaktreedecl.}
   func keccaktree_keccak256_avx512vl_x4*(output: pointer, input: pointer, count: uint64) {.
     keccaktreedecl.}
   func keccaktree_keccak256_avx512_x8*(output: pointer, input: pointer, count: uint64) {.

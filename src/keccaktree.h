@@ -18,15 +18,15 @@ extern "C" {
  * `output` may alias `input` (in-place layer reduction, output == input). */
 typedef void (*keccaktree_hash_fcn)(unsigned char*, const unsigned char*, uint64_t);
 
-/** Select the implementation, or auto-detect from the CPU when `NULL`:
- * probe the CPU features, then time the kernels the CPU supports once on a
- * small batch and keep the fastest (well under a millisecond).
+/** Select the implementation, or auto-detect from the CPU when `NULL`.
  * Optional: auto-detection also happens on the first hash call. */
 void keccaktree_init(keccaktree_hash_fcn override);
 
-/** The kernel auto-detection picks (feature probe plus the one-time timing
- * of the supported kernels), without installing it. Each call measures
- * again; keccaktree_init(NULL) caches the result. */
+/** The kernel auto-detection picks, without installing it. It only reads
+ * what the CPU reports (feature bits, vendor, family, core type: a few
+ * CPUID reads or one getauxval / sysctl / riscv_hwprobe call); nothing is
+ * run or timed, so it is cheap and returns the same kernel on every call
+ * and in every process on a machine. */
 keccaktree_hash_fcn keccaktree_detect(void);
 
 void keccaktree_hash(unsigned char* output, const unsigned char* input, uint64_t count);
@@ -38,34 +38,32 @@ void keccaktree_keccak256_generic(unsigned char* output, const unsigned char* in
 /* Undefined behavior if called without appropriate hardware support */
 void keccaktree_keccak256_avx2_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x8(unsigned char* output, const unsigned char* input, uint64_t count);
-/* 2 nodes at a time (lane pairs); avx2_x4 hands 2 remaining nodes to it
- * once keccaktree_avx2_small_tail(2) enables that (keccaktree_detect does
- * where it beats a padded batch; 1 restores the padded batch) */
+/* 2 nodes at a time (lane pairs); avx2_x10 hands calls of 2 nodes to it */
 void keccaktree_keccak256_avx2_x2(unsigned char* output, const unsigned char* input, uint64_t count);
-void keccaktree_avx2_small_tail(uint64_t max);
 /* avx2_x8 interleaved with one or two nodes in the general registers, and
  * avx2_x4 with one or two (AVX2 + BMI1 + BMI2) */
 void keccaktree_keccak256_avx2_x9(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x10(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x5(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx2_x6(unsigned char* output, const unsigned char* input, uint64_t count);
-/* after an avx2_x10 batch, 5..max remaining nodes go to avx2_x5 (max = 9,
- * or 5: just five; the default is 4, a padded x10 batch for all;
- * keccaktree_detect times 5 and 9) */
-void keccaktree_avx2_x10_mid_tail(uint64_t max);
+/* the AVX-512 kernels need AVX-512F, VL and BW, and BMI1 + BMI2 */
 void keccaktree_keccak256_avx512vl_x4(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8(unsigned char* output, const unsigned char* input, uint64_t count);
 /* avx512_x8 interleaved with one node in the general registers (AVX-512F
- * + VL + BMI1 + BMI2): cores whose 512-bit units leave the integer side
+ * + VL + BW + BMI1 + BMI2): cores whose 512-bit units leave the integer side
  * and the dispatch width idle (Zen 4) */
 void keccaktree_keccak256_avx512_x9(unsigned char* output, const unsigned char* input, uint64_t count);
 /* the same three with the D-form rounds (all 25 lanes in registers, 35
  * instead of 60 vpternlogq per round): faster on AMD (Zen 4 avx512_x9d
  * 1.17x avx512_x9, Zen 5 avx512_x8d 1.19x avx512_x8), slower on Ice Lake;
- * keccaktree_detect times them against the others */
+ * keccaktree_detect picks them by vendor, family and AVX512-FP16 */
 void keccaktree_keccak256_avx512vl_x4d(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x8d(unsigned char* output, const unsigned char* input, uint64_t count);
 void keccaktree_keccak256_avx512_x9d(unsigned char* output, const unsigned char* input, uint64_t count);
+/* per-core dispatch for CPUs with two kinds of cores (CPUID hybrid flag;
+ * needs RDPID): avx2_x8 on the P-cores, avx2_x6 on the E-cores, looked up
+ * on every call from the logical CPU the call runs on */
+void keccaktree_keccak256_avx2_hybrid(unsigned char* output, const unsigned char* input, uint64_t count);
 /* one node at a time in the general registers (BMI1 + BMI2); the AVX2
  * kernels hand their single remaining node to it */
 void keccaktree_keccak256_x86_x1(unsigned char* output, const unsigned char* input, uint64_t count);

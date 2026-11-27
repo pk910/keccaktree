@@ -14,8 +14,7 @@
  *                       SMALL_TAIL_X1_MAX_AFTER instead (default
  *                       SMALL_TAIL_X1_MAX): see below why they differ.
  *   SMALL_TAIL          a smaller batch kernel for r <= SMALL_TAIL_MAX (or
- *                       the count in the quadword SMALL_TAIL_MAX_VAR, which
- *                       a kernel can expose for run-time calibration).
+ *                       the count in the quadword SMALL_TAIL_MAX_VAR).
  *   SMALL_TAIL_MID      another kernel for r <= SMALL_TAIL_MID_MAX (or the
  *                       quadword SMALL_TAIL_MID_MAX_VAR), above SMALL_TAIL;
  *                       or, with SMALL_TAIL_MID_MASK, for the counts whose
@@ -24,7 +23,7 @@
  *                       copied to a stack buffer, the batch hashes NODES
  *                       lanes (the rest whatever is there) and r digests
  *                       are copied out.
- * ENTRY_ALT / ENTRY_ALT2 with ENTRY_ALT_MASK / ENTRY_ALT2_MASK hand a whole
+ * ENTRY_ALT / ENTRY_ALT2 / ENTRY_ALT3 with their ..._MASK hand a whole
  * call to another kernel, before the prologue, when bit count of the mask
  * is set (count < 64): for the counts where that kernel, with its own
  * tail, is faster than a batch of this one plus a tail. BATCH_ALT_MASK
@@ -44,9 +43,10 @@
  * a padded x10 batch (683 ns; the x8 chain costs 950..1300 cold), while
  * at entry, with nothing cold, x5 (5..6 nodes) and x8 (8, 12, 16 nodes)
  * are faster than x10 batches with a tail. Cores whose op cache holds
- * both (Gracemont) hash 5..9 remaining nodes faster through x5, so that
- * limit is calibrated (keccaktree.c). The thresholds are documented with
- * the measurements in each kernel.
+ * both (Gracemont) hash 5..9 remaining nodes faster through x5, but they
+ * do not run avx2_x10 (keccaktree_detect gives them avx2_x6), so its
+ * limits are Zen 3's. The thresholds are fixed at assembly time and
+ * documented with the measurements in each kernel.
  *
  * Calling convention: SysV (rdi, rsi, rdx) or Windows x64 (rcx, rdx, r8),
  * where xmm6..15, rsi and rdi are callee-saved. Inside, rdi = output,
@@ -56,6 +56,18 @@
  * after rbp and restores them on exit. The tail kernels are tail-called
  * after the epilogue, with the remaining nodes in the argument registers.
  */
+/* Intel CET: with -fcf-protection (__CET__) cet.h marks the object as IBT
+ * and shadow-stack compatible (.note.gnu.property) and _CET_ENDBR is the
+ * endbr64 every entry needs, since the kernels are called through
+ * function pointers; one object without the note switches both off for
+ * the whole program. The code needs nothing else: calls and returns are
+ * balanced and every other branch is direct. */
+#if defined(__CET__) && defined(__ELF__)
+#include <cet.h>
+#else
+#define _CET_ENDBR
+#endif
+
 #ifdef _WIN64
 #define ARG_OUT		rcx
 #define ARG_IN		rdx
@@ -83,7 +95,15 @@
 #ifndef _WIN64
 .type \name,%function
 #endif
+#ifdef __ELF__
+/* a sized local symbol for the batch code, which sits in front of the
+ * entry point: profilers and debuggers attribute it to name.batch */
+.set \name\().batch, .Lbatch
+.type \name\().batch,%function
+.size \name\().batch, \name - .Lbatch
+#endif
 \name:
+	_CET_ENDBR
 #ifdef SMALL_TAIL_X1
 #ifndef SMALL_TAIL_X1_MAX
 #define SMALL_TAIL_X1_MAX 1
@@ -95,7 +115,7 @@
 	cmp		ARG_COUNT, SMALL_TAIL_X1_MAX
 	jbe		SMALL_TAIL_X1
 #endif
-#if defined(ENTRY_ALT) || defined(ENTRY_ALT2)
+#if defined(ENTRY_ALT) || defined(ENTRY_ALT2) || defined(ENTRY_ALT3)
 	/* counts another kernel handles faster as a whole: no frame */
 	cmp		ARG_COUNT, 63
 	ja		1f
@@ -108,6 +128,11 @@
 	mov		rax, ENTRY_ALT2_MASK
 	bt		rax, ARG_COUNT
 	jc		ENTRY_ALT2
+#endif
+#ifdef ENTRY_ALT3
+	mov		rax, ENTRY_ALT3_MASK
+	bt		rax, ARG_COUNT
+	jc		ENTRY_ALT3
 #endif
 1:
 #endif

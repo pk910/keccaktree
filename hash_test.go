@@ -223,8 +223,7 @@ func TestForcedPaths(t *testing.T) {
 
 // TestActivePathMatchesEnv asserts the naturally selected implementation is
 // one of KECCAKTREE_EXPECT_PATH ("|"-separated; set per emulated -cpu by the
-// CI matrix). Several names are listed where detection times the supported
-// kernels and the winner depends on the core.
+// CI matrix).
 func TestActivePathMatchesEnv(t *testing.T) {
 	want := os.Getenv("KECCAKTREE_EXPECT_PATH")
 	if want == "" {

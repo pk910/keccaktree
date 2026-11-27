@@ -57,6 +57,7 @@
 .type \name,%function
 #endif
 \name:
+	_CET_ENDBR
 	push		rbp
 	push		rbx
 	push		r12

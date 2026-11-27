@@ -7,7 +7,7 @@
 // shadow space). The top 32 bytes are the shadow space the Windows ABI
 // gives every callee, which compiled C code may write to.
 //
-// Kernel ids, as in bindings_windows_amd64.go (kernelAVX2X8 is the default).
+// Kernel ids, as in select_amd64.go (kernelAVX2X8 is the default).
 #define KERNEL_AVX2_X4     1
 #define KERNEL_AVX2_X5     2
 #define KERNEL_AVX2_X9     3
@@ -20,6 +20,7 @@
 #define KERNEL_AVX512_X8D  10
 #define KERNEL_AVX512_X9D  11
 #define KERNEL_AVX512VL_X4D 12
+#define KERNEL_AVX2_HYBRID 13
 
 TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	MOVQ output+0(FP), CX
@@ -32,6 +33,8 @@ TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	ANDQ $~31, SP
 
 	MOVBLZX ·kernel(SB), AX
+	CMPB AX, $KERNEL_AVX2_HYBRID
+	JE   avx2hybrid
 	CMPB AX, $KERNEL_AVX2_X10
 	JE   avx2x10
 	CMPB AX, $KERNEL_AVX2_X9
@@ -57,6 +60,12 @@ TEXT ·KeccaktreeHash(SB), 0, $8192-24
 	CMPB AX, $KERNEL_AVX512VL_X4
 	JE   avx512vlx4
 	CALL keccaktree_keccak256_avx2_x8(SB)
+	JMP  epilog
+
+// picks avx2_x8 or avx2_x6 from the core the call is on and jumps there:
+// three pushes on the first call per CPU, otherwise no stack of its own
+avx2hybrid:
+	CALL keccaktree_keccak256_avx2_hybrid(SB)
 	JMP  epilog
 
 avx2x10:

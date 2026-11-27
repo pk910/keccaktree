@@ -5,8 +5,8 @@
  * keccak256 (Ethereum, pad 0x01) of count 64-byte nodes, 2 at a time with
  * the lane-pair rounds of keccak256_avx2_pair.inc: for 2 nodes a padded
  * 4-node batch of keccak256_avx2_x4 does the vector work of 4 nodes, this
- * does about 80% of it; a single node goes to the scalar code. Meant as
- * the remainder path of the 4- and 8-node kernels (counts 2, 6).
+ * does about 80% of it; a single node goes to the scalar code. avx2_x10
+ * hands calls of two nodes here (Zen 3: 1.08x the padded batch).
  *
  * Registers: ymm0..15; rcx, rsi here and the frame's r9..r11.
  */
