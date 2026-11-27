@@ -1,1 +1,1 @@
-Apple clang version 17.0.0 (clang-1700.0.13.5)
+zig cc 0.17.1 -target aarch64-macos.11.0 (temporary PR build, replaced on merge)
